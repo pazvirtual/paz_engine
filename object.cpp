@@ -143,13 +143,20 @@ void paz::physics()
             YDown[i] = dv;
             ZDown[i] = dw;
         }
-        const double invNorm = 1./std::sqrt(XDown[i]*XDown[i] + YDown[i]*YDown[
-            i] + ZDown[i]*ZDown[i]);
-        if(std::isfinite(invNorm))
+        const double normSq = XDown[i]*XDown[i] + YDown[i]*YDown[i] + ZDown[i]*
+            ZDown[i];
+        if(normSq > 1e-6*1e-6)
         {
+            const double invNorm = 1./std::sqrt(normSq);
             XDown[i] *= invNorm;
             YDown[i] *= invNorm;
             ZDown[i] *= invNorm;
+        }
+        else
+        {
+            XDown[i] = 0.;
+            YDown[i] = 0.;
+            ZDown[i] = 1.;
         }
     }
     for(std::size_t i = 0; i < n; ++i)

@@ -46,7 +46,7 @@ static paz::RenderPass _plotPass;
 static paz::VertexBuffer _quadVertices;
 
 static paz::Texture _font;
-std::stringstream _msgStream;
+static std::stringstream _msgStream;
 
 static const paz::Object* _cameraObject = nullptr;
 
@@ -94,6 +94,10 @@ layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
 layout(location = 2) in uint material;
 layout(location = 3) in vec2 coord;
+layout(location = 4) in vec4 model0;
+layout(location = 5) in vec4 model1;
+layout(location = 6) in vec4 model2;
+layout(location = 7) in vec4 model3;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
@@ -103,6 +107,7 @@ out vec4 norCs;
 out vec2 uv;
 void main()
 {
+    mat4 model = mat4(model0, model1, model2, model3);
     mat4 mv = view*model;
     mtl = material;
     posCs = mv*position;
@@ -612,9 +617,13 @@ latHist.pop_front();
 latHist.push_back(lat);
 }
 
-        for(const auto& n : objects())
+        const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
+        for(const auto& n : tempObjects)
         {
-            reinterpret_cast<Object*>(n.first)->update();
+            if(objects().count(n.first))
+            {
+                reinterpret_cast<Object*>(n.first)->update();
+            }
         }
 
         const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
@@ -628,7 +637,7 @@ latHist.push_back(lat);
         Mat view = Mat::Zero(4);
         view(3, 3) = 1.;
         view.setBlock(0, 0, 3, 3, Mat{{1., 0., 0.}, {0., 0., 1.}, {0., -1.,
-            0.}}*paz::to_mat(cameraAtt));
+            0.}}*to_mat(cameraAtt));
 
         // Get geometry map.
 timer.start();
@@ -638,25 +647,49 @@ timer.start();
         _geometryPass.depth(DepthTestMode::Less);
         _geometryPass.uniform("projection", projection);
         _geometryPass.uniform("view", convert_mat(view));
-        _geometryPass.uniform("model", convert_mat(Mat::Identity(4)));
+        std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
             if(!o->model()._i.empty())
             {
-                const double q0 = o->xAtt();
-                const double q1 = o->yAtt();
-                const double q2 = o->zAtt();
+                // Address held to by `paz::Model::_t` identifies all copies of
+                // the same model.
+                objectsByModel[o->model()._t.get()].push_back(o);
+            }
+        }
+        for(const auto& m : objectsByModel)
+        {
+            std::array<std::vector<float>, 4> modelMats;
+            for(auto& n : modelMats)
+            {
+                n.resize(4*m.second.size());
+            }
+            for(std::size_t i = 0; i < m.second.size(); ++i)
+            {
+                const double q0 = m.second[i]->xAtt();
+                const double q1 = m.second[i]->yAtt();
+                const double q2 = m.second[i]->zAtt();
                 const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
                 Mat model = Mat::Identity(4);
-                model(0, 3) = o->x() - _cameraObject->x();
-                model(1, 3) = o->y() - _cameraObject->y();
-                model(2, 3) = o->z() - _cameraObject->z();
+                model(0, 3) = m.second[i]->x() - _cameraObject->x();
+                model(1, 3) = m.second[i]->y() - _cameraObject->y();
+                model(2, 3) = m.second[i]->z() - _cameraObject->z();
                 model.setBlock(0, 0, 3, 3, to_mat(Vec{{q0, q1, q2, q3}}));
-                _geometryPass.uniform("model", convert_mat(model));
-                _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
-                    model()._i);
+                for(int j = 0; j < 4; ++j)
+                {
+                    std::copy(model.begin() + 4*j, model.begin() + 4*j + 4,
+                        modelMats[j].begin() + 4*i);
+                }
             }
+            const VertexBuffer verts = m.second.back()->model()._v;
+            const IndexBuffer inds = m.second.back()->model()._i;
+            paz::VertexBuffer buf;
+            for(const auto& n : modelMats)
+            {
+                buf.attribute(4, n);
+            }
+            _geometryPass.draw(PrimitiveType::Triangles, verts, buf, inds);
         }
         _geometryPass.end();
 const double gTime = timer.getAndRestart();
