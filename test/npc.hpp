@@ -12,7 +12,7 @@ public:
     paz::Object _head;
     Npc();
     void update() override;
-    void onCollide(const Object&) override;
+    void onCollide(const Object&, double, double, double) override;
 };
 
 #endif

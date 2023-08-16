@@ -69,7 +69,7 @@ static void grav_ode(double x, double y, double z, double u, double v, double w,
     }
 }
 
-void paz::physics(double gravity)
+void paz::do_physics(double gravity)
 {
     std::vector<std::size_t> massiveIds;
     const auto n = X.size();
@@ -184,7 +184,7 @@ void paz::physics(double gravity)
     }
 }
 
-void paz::collisions()
+void paz::do_collisions()
 {
     // Identify all objects that can collide and precompute as much as possible.
     std::vector<std::size_t> a;
@@ -248,7 +248,8 @@ void paz::collisions()
     }
 
     // Find and handle collisions.
-    std::vector<std::unordered_set<std::size_t>> collisionPairs(a.size());
+    std::vector<std::unordered_map<std::size_t, std::array<double, 3>>>
+        collisions(a.size());
     for(std::size_t i = 0; i < NumSteps; ++i)
     {
         for(std::size_t j = 0; j < a.size(); ++j)
@@ -278,7 +279,11 @@ void paz::collisions()
                     xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp);
                 if(dist < CRadius[a[j]])
                 {
-                    collisionPairs[j].insert(n);
+                    if(!collisions[j].count(n))
+                    {
+                        collisions[j].emplace(n, std::array<double, 3>{xNorTemp,
+                            yNorTemp, zNorTemp});
+                    }
                     const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew, zNew}};
                     xNew = newPos(0);
                     yNew = newPos(1);
@@ -328,11 +333,11 @@ void paz::collisions()
     for(std::size_t i = 0; i < a.size(); ++i)
     {
         Object* aObj = reinterpret_cast<Object*>(Ids[a[i]]);
-        for(auto n : collisionPairs[i])
+        for(const auto& n : collisions[i])
         {
-            Object* bObj = reinterpret_cast<Object*>(Ids[b[n]]);
-            aObj->onCollide(*bObj);
-            bObj->onCollide(*aObj);
+            Object* bObj = reinterpret_cast<Object*>(Ids[b[n.first]]);
+            aObj->onCollide(*bObj, n.second[0], n.second[1], n.second[2]);
+            bObj->onCollide(*aObj, n.second[0], n.second[1], n.second[2]);
         }
     }
 }
@@ -477,7 +482,8 @@ paz::Object::~Object()
 
 void paz::Object::update() {}
 
-void paz::Object::onCollide(const Object& /* o */) {}
+void paz::Object::onCollide(const Object& /* o */, double /* xNor */, double
+    /* yNor */, double /* zNor */) {}
 
 void paz::Object::onInteract(const Object& /* o */) {}
 

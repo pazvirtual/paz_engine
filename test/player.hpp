@@ -29,7 +29,8 @@ class Player : public paz::Object
 public:
     Player();
     void update() final;
-    void onCollide(const paz::Object& o) final;
+    void onCollide(const paz::Object& o, double xNor, double yNor, double zNor)
+        final;
     const paz::Object& head() const;
 };
 

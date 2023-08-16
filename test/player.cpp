@@ -3,7 +3,7 @@
 
 #define NO_FRICTION
 
-static constexpr double CosMaxAngle = 0.8;
+static constexpr double CosMaxAngle = 0.7;
 
 Player::Player()
 {
@@ -32,7 +32,7 @@ void Player::update()
     if(alt < LowAltitude)
     {
         reg = Regime::Low;
-        if(_collided && nor.dot(gravDir) < CosMaxAngle)
+        if(_collided && -nor.dot(gravDir) > CosMaxAngle)
         {
             reg = Regime::Grounded;
         }
@@ -337,27 +337,25 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     }
 }
 
-void Player::onCollide(const paz::Object& o)
+void Player::onCollide(const paz::Object& o, double xNor, double yNor, double
+    zNor)
 {
-    _parent.reset(o);
-    _relX = x() - _parent->x();
-    _relY = y() - _parent->y();
-    _relZ = z() - _parent->z();
-    if(!_moving)
+    const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
+    const paz::Vec nor{{xNor, yNor, zNor}};
+    if(-nor.dot(gravDir) > CosMaxAngle)
     {
-        const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
-        double alt;
-        paz::Vec nor;
-        paz::Vec surfVel;
-        computeAltitude(alt, nor, surfVel);
-        if(nor.dot(gravDir) < CosMaxAngle)
+        _collided = 2;
+        _parent.reset(o);
+        _relX = x() - _parent->x();
+        _relY = y() - _parent->y();
+        _relZ = z() - _parent->z();
+        if(!_moving)
         {
             xVel() = _parent->xVel();
             yVel() = _parent->yVel();
             zVel() = _parent->zVel();
         }
     }
-    _collided = 2;
 }
 
 const paz::Object& Player::head() const

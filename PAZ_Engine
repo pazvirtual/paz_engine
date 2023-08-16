@@ -25,7 +25,7 @@ namespace paz
     {
         friend class App;
         friend class Object;
-        friend void collisions();
+        friend void do_collisions();
 
         std::shared_ptr<std::vector<Triangle>> _t;
         double _radius = 0.;
@@ -57,10 +57,11 @@ namespace paz
             {});
     };
 
+
     class Object
     {
         friend class App;
-        friend void collisions();
+        friend void do_collisions();
 
         const std::uintptr_t _id;
 
@@ -69,7 +70,8 @@ namespace paz
         double zPrev() const;
 
         virtual void update();
-        virtual void onCollide(const Object& o);
+        virtual void onCollide(const Object& o, double xNor, double yNor, double
+            zNor);
         virtual void onInteract(const Object& o);
         virtual void onNotify(const Object& o, const Bytes& data);
 

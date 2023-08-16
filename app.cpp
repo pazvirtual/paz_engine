@@ -420,9 +420,9 @@ void paz::App::Run()
 
         if(!_paused)
         {
-            physics(_gravity);
+            do_physics(_gravity);
 
-            collisions();
+            do_collisions();
 
             const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
             for(const auto& n : tempObjects)

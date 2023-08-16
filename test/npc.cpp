@@ -41,7 +41,7 @@ void Npc::update()
     _head.zAtt() = -att(2);
 }
 
-void Npc::onCollide(const Object&)
+void Npc::onCollide(const Object&, double, double, double)
 {
     const paz::Vec att{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()*xAtt() -
         yAtt()*yAtt() - zAtt()*zAtt())}};
