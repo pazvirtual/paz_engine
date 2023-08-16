@@ -15,7 +15,8 @@ namespace paz
         double z1t, y2t, z2t;
         const std::array<double, 3> _centroid;
         double _radius;
-        double dist_transformed(double xt, double yt, double zt) const;
+        double dist_transformed(double xt, double yt, double zt, double&
+            deltaYt, double& deltaZt) const;
 
     public:
         Triangle(double x0, double y0, double z0, double x1, double y1, double

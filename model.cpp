@@ -57,7 +57,7 @@ double paz::Model::collide(double x, double y, double z, double& gx, double& gy,
             d);
         if(d < radius)
         {
-            const double a = radius + d;
+            const double a = radius - d;
             gx += a*nx;
             gy += a*ny;
             gz += a*nz;

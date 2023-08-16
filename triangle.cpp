@@ -4,8 +4,13 @@
 
 static constexpr std::size_t NumSteps = 20;
 
+inline double square(double x)
+{
+    return x*x;
+}
+
 inline double segment_dist_sq(double x, double y, double x0, double y0, double
-    x1, double y1)
+    x1, double y1, double& nearestDeltaX, double& nearestDeltaY)
 {
     const double deltaX0 = x - x0;
     const double deltaY0 = y - y0;
@@ -14,9 +19,9 @@ inline double segment_dist_sq(double x, double y, double x0, double y0, double
     const double lenSq = deltaX01*deltaX01 + deltaY01*deltaY01;
     const double t = std::max(0., std::min(1., (deltaX0*deltaX01 + deltaY0*
         deltaY01)/lenSq));
-    const double nearestX = x0 + t*deltaX01;
-    const double nearestY = y0 + t*deltaY01;
-    return (x - nearestX)*(x - nearestX) + (y - nearestY)*(y - nearestY);
+    nearestDeltaX = x - x0 - t*deltaX01;
+    nearestDeltaY = y - y0 - t*deltaY01;
+    return square(nearestDeltaX) + square(nearestDeltaY);
 }
 
 inline std::array<double, 3> cross(double x0, double y0, double z0, double x1,
@@ -29,11 +34,6 @@ inline std::array<double, 3> normalize(const std::array<double, 3>& v)
 {
     const double norm = std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     return {v[0]/norm, v[1]/norm, v[2]/norm};
-}
-
-inline double square(double x)
-{
-    return x*x;
 }
 
 paz::Triangle::Triangle(double x0, double y0, double z0, double x1, double y1,
@@ -70,7 +70,8 @@ paz::Triangle::Triangle(double x0, double y0, double z0, double x1, double y1,
     _radius = std::sqrt(_radius);
 }
 
-double paz::Triangle::dist_transformed(double xt, double yt, double zt) const
+double paz::Triangle::dist_transformed(double xt, double yt, double zt, double&
+    deltaYt, double& deltaZt) const
 {
     // The triangle is degenerate.
     if(_degenerate)
@@ -83,7 +84,8 @@ double paz::Triangle::dist_transformed(double xt, double yt, double zt) const
     // Check bottom edge.
     if(yt < 0.)
     {
-        return std::sqrt(segment_dist_sq(yt, zt, 0., 0., 0., z1t) + xt*xt);
+        return std::sqrt(segment_dist_sq(yt, zt, 0., 0., 0., z1t, deltaYt,
+            deltaZt) + xt*xt);
     }
 
     // Check interior.
@@ -125,9 +127,17 @@ double paz::Triangle::dist_transformed(double xt, double yt, double zt) const
     }
 
     // Check remaining edges.
-    double dyzSq = std::numeric_limits<double>::infinity();
-    dyzSq = std::min(dyzSq, segment_dist_sq(yt, zt, 0., 0., y2t, z2t));
-    dyzSq = std::min(dyzSq, segment_dist_sq(yt, zt, 0., z1t, y2t, z2t));
+    double dyzSq = segment_dist_sq(yt, zt, 0., 0., y2t, z2t, deltaYt, deltaZt);
+    double deltaYtNew;
+    double deltaZtNew;
+    const double dyzSqNew = segment_dist_sq(yt, zt, 0., z1t, y2t, z2t,
+        deltaYtNew, deltaZtNew);
+    if(dyzSqNew < dyzSq)
+    {
+        dyzSq = dyzSqNew;
+        deltaYt = deltaYtNew;
+        deltaZt = deltaZtNew;
+    }
     return std::sqrt(dyzSq + xt*xt);
 }
 
@@ -176,6 +186,8 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
     const double deltaXt = xt - xPrevt;
 
     // Find closest approach to the triangle.
+    double nearestYt = 0.;
+    double nearestZt = 0.;
     if(deltaXt)
     {
         const double ySlope = (yt - yPrevt)/deltaXt;
@@ -186,12 +198,21 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
             const double xTempt = deltaXTempt + xPrevt;
             const double yTempt = ySlope*deltaXTempt + yPrevt;
             const double zTempt = zSlope*deltaXTempt + zPrevt;
-            d = std::min(d, dist_transformed(xTempt, yTempt, zTempt));
+            double nearestYTempt = 0.;
+            double nearestZTempt = 0.;
+            const double dNew = dist_transformed(xTempt, yTempt, zTempt,
+                nearestYTempt, nearestZTempt);
+            if(dNew < d)
+            {
+                d = dNew;
+                nearestYt = nearestYTempt;
+                nearestZt = nearestZTempt;
+            }
         }
     }
     else
     {
-        d = dist_transformed(xt, yt, zt);
+        d = dist_transformed(xt, yt, zt, nearestYt, nearestZt);
     }
 
     // The sphere has never touched the triangle.
@@ -200,9 +221,12 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
         return;
     }
 
-//TEMP - incorrect for edge contact (causes bouncing)
-    nx = -basisX[0];
-    ny = -basisX[1];
-    nz = -basisX[2];
-//TEMP
+    const double norm = std::sqrt(square(xt) + square(nearestYt) + square(
+        nearestZt));
+    const double dirX = xt/norm;
+    const double dirY = nearestYt/norm;
+    const double dirZ = nearestZt/norm;
+    nx = basisX[0]*dirX + basisY[0]*dirY + basisZ[0]*dirZ;
+    ny = basisX[1]*dirX + basisY[1]*dirY + basisZ[1]*dirZ;
+    nz = basisX[2]*dirX + basisY[2]*dirY + basisZ[2]*dirZ;
 }
