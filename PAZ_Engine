@@ -42,6 +42,7 @@ namespace paz
         friend class App;
 
         const std::uintptr_t _id;
+        bool _moved = false;
 
         void setLocalNorX(double n);
         void setLocalNorY(double n);
@@ -61,6 +62,7 @@ namespace paz
         Object();
         Object(const Object& o) = delete;
         Object& operator=(const Object& o) = delete;
+        Object(Object&& o);
         virtual ~Object();
         void notify(Object& o, const Bytes& data) const;
         void notifyTagged(const std::string& tag, const Bytes& data) const;

@@ -119,7 +119,8 @@ void paz::physics()
             XVel[i] += XDown[i];
             YVel[i] += YDown[i];
             ZVel[i] += ZDown[i];
-            const double invNorm = 1./std::sqrt(XDown[i]*XDown[i] + YDown[i]*YDown[i] + ZDown[i]*ZDown[i]);
+            const double invNorm = 1./std::sqrt(XDown[i]*XDown[i] + YDown[i]*
+                YDown[i] + ZDown[i]*ZDown[i]);
             if(std::isfinite(invNorm))
             {
                 XDown[i] *= invNorm;
@@ -185,8 +186,20 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     ZDown.push_back(0.);
 }
 
+paz::Object::Object(Object&& o) : _id(reinterpret_cast<std::uintptr_t>(this))
+{
+    const std::size_t idx = objects().at(o._id);
+    objects().erase(o._id);
+    objects()[_id] = idx;
+    o._moved = true;
+}
+
 paz::Object::~Object()
 {
+    if(_moved)
+    {
+        return;
+    }
     const std::size_t idx = objects().at(_id);
     objects().erase(_id);
     SWAP_AND_POP(X);
