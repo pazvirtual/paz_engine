@@ -1,5 +1,5 @@
-#ifndef PAZ_ENGINE_SHARED_CPP
-#define PAZ_ENGINE_SHARED_CPP
+#ifndef PAZ_ENGINE_SHARED_HPP
+#define PAZ_ENGINE_SHARED_HPP
 
 #include "PAZ_IO"
 

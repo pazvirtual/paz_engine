@@ -1,5 +1,5 @@
 #include "object.hpp"
-#include "shared.cpp"
+#include "shared.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
