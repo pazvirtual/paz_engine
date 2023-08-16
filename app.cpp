@@ -188,14 +188,14 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
 
 static const std::vector<std::vector<std::string>> Buttons = {{"Start",
     "Options", "Quit"}, {"Fullscreen", "HiDPI", "FXAA", "Back"}, {"Resume",
-    "Fullscreen", "HiDPI", "FXAA", "Quit"}};
+    "Options", "Quit"}};
 
 void paz::App::Run()
 {
-    int curButton = -1;
+    int curButton = 0;
+    int menuPage = 0;
     {
         bool done = false;
-        int menuPage = 0;
         while(!Window::Done() && !done)
         {
             if(Window::MouseActive())
@@ -205,6 +205,13 @@ void paz::App::Run()
             else
             {
                 Window::SetCursorMode(CursorMode::Disable);
+            }
+
+            if(menuPage == 1 && (Window::KeyPressed(Key::Escape) || Window::
+                GamepadPressed(GamepadButton::Start)))
+            {
+                menuPage = 0;
+                curButton = 1;
             }
 
             if(curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
@@ -217,7 +224,10 @@ void paz::App::Run()
                     switch(curButton)
                     {
                         case 0: done = true; break;
-                        case 1: menuPage = 1; break;
+                        case 1:
+                            menuPage = 1;
+                            curButton = 0;
+                            break;
                         case 2: Window::Quit(); break;
                     }
                 }
@@ -228,7 +238,10 @@ void paz::App::Run()
                         case 0: Window::MakeFullscreen(); break;
                         case 1: Window::DisableHidpi(); break;
                         case 2: _fxaaEnabled = false; break;
-                        case 3: menuPage = 0; break;
+                        case 3:
+                            menuPage = 0;
+                            curButton = 1;
+                            break;
                     }
                 }
             }
@@ -342,13 +355,14 @@ void paz::App::Run()
 
     while(!Window::Done())
     {
-        if(!_paused)
+        bool justPaused = false;
+        if(!_paused && (Window::KeyPressed(Key::Escape) || Window::
+            GamepadPressed(GamepadButton::Start)))
         {
-            if(Window::KeyPressed(Key::Escape) || Window::GamepadPressed(GamepadButton::Start))
-            {
-                _paused = true;
-                curButton = -1;
-            }
+            justPaused = true;
+            _paused = true;
+            curButton = 0;
+            menuPage = 2;
         }
 
         if(_micObject && !_paused && objects().count(reinterpret_cast<std::
@@ -866,25 +880,60 @@ tempDone[j] = true;
                 Window::SetCursorMode(CursorMode::Disable);
             }
 
+            if(!justPaused && (Window::KeyPressed(Key::Escape) || Window::
+                GamepadPressed(GamepadButton::Start)))
+            {
+                if(menuPage == 1)
+                {
+                    menuPage = 2;
+                    curButton = 1;
+                }
+                else if(menuPage == 2)
+                {
+                    _paused = false;
+                    Window::SetCursorMode(CursorMode::Disable);
+                }
+            }
+
             if(curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
                 Key::Space) || Window::KeyPressed(Key::Enter) || Window::
                 KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
                 GamepadButton::A)))
             {
-                switch(curButton)
+                if(menuPage == 2)
                 {
-                    case 0: _paused = false; Window::SetCursorMode(CursorMode::Disable); break;
-                    case 1: Window::MakeFullscreen(); break;
-                    case 2: Window::DisableHidpi(); break;
-                    case 3: _fxaaEnabled = false; break;
-                    case 4: Window::Quit(); break;
+                    switch(curButton)
+                    {
+                        case 0:
+                            _paused = false;
+                            Window::SetCursorMode(CursorMode::Disable);
+                            break;
+                        case 1:
+                            menuPage = 1;
+                            curButton = 0;
+                            break;
+                        case 2: Window::Quit(); break;
+                    }
+                }
+                else if(menuPage == 1)
+                {
+                    switch(curButton)
+                    {
+                        case 0: Window::MakeFullscreen(); break;
+                        case 1: Window::DisableHidpi(); break;
+                        case 2: _fxaaEnabled = false; break;
+                        case 3:
+                            menuPage = 2;
+                            curButton = 1;
+                            break;
+                    }
                 }
             }
             if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
                 Window::GamepadPressed(GamepadButton::Down))
             {
                 curButton = std::min(static_cast<std::size_t>(curButton) + 1,
-                    Buttons.back().size() - 1);
+                    Buttons[menuPage].size() - 1);
             }
             if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
                  Window::GamepadPressed(GamepadButton::Up))
@@ -894,16 +943,16 @@ tempDone[j] = true;
             const float scale = std::round(2.f*FontScale*Window::UiScale());
             int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
                 height()));
-            const int startRow = (maxVisRows + Buttons.back().size() - 1)/2;
+            const int startRow = (maxVisRows + Buttons[menuPage].size() - 1)/2;
 
             if(Window::MouseActive())
             {
                 curButton = -1;
-                for(std::size_t i = 0; i < Buttons.back().size(); ++i)
+                for(std::size_t i = 0; i < Buttons[menuPage].size(); ++i)
                 {
                     const double x0 = 0;
-                    const double x1 = x0 + (Buttons.back()[i].size() + 2)*scale*
-                        (CharWidth + 1);
+                    const double x1 = x0 + (Buttons[menuPage][i].size() + 2)*
+                        scale*(CharWidth + 1);
                     const double y0 = (startRow - i - 1)*scale*_font.height();
                     const double y1 = y0 + scale*_font.height();
                     if(Window::MousePos().first >= x0 && Window::MousePos().
@@ -921,11 +970,12 @@ tempDone[j] = true;
             std::vector<int> rowAttr;
             int row = 0;
             int col = 0;
-            for(std::size_t i = 0; i < Buttons.back().size() + 1; ++i)
+            for(std::size_t i = 0; i < Buttons[menuPage].size() + 1; ++i)
             {
                 const bool highlight = curButton >= 0 && i == static_cast<std::
                     size_t>(curButton) + 1;
-                std::string str = (i ? Buttons.back()[i - 1] : "Paused");
+                std::string str = (i ? Buttons[menuPage][i - 1] : (menuPage == 1
+                    ? "Options" : "Paused"));
                 if(i)
                 {
                     if(highlight)
