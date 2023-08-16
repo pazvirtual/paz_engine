@@ -1,6 +1,7 @@
 #include "PAZ_Engine"
 #include "PAZ_Math"
 
+static paz::Model Sphere50;
 static paz::Model Sphere;
 static paz::Model Ground;
 static paz::Model Tri;
@@ -112,7 +113,7 @@ class World : public paz::Object
 public:
     World()
     {
-        model() = Sphere;
+        model() = Sphere50;
         collisionType() = paz::CollisionType::World;
     }
 };
@@ -123,6 +124,7 @@ public:
     World1()
     {
         model() = Ground;
+        z() = Radius;
         collisionType() = paz::CollisionType::World;
     }
 };
@@ -135,32 +137,33 @@ public:
     Platform()
     {
         model() = PlatformModel;
+        z() = Radius;
         collisionType() = paz::CollisionType::World;
     }
     void update() override
     {
         if(_timeAtTop < 0.1)
         {
-            if(z() < 3.)
+            if(z() < Radius + 10.)
             {
-                zVel() = std::min(1., 1.7 - std::abs(z() - 1.5));
+                zVel() = std::min(1., 5.2 - std::abs(z() - Radius - 5.));
             }
             else
             {
-                z() = 3.;
+                z() = Radius + 10.;
                 zVel() = 0.;
                 _timeAtTop += paz::Window::FrameTime();
             }
         }
         else
         {
-            if(z() > 0.)
+            if(z() > Radius)
             {
-                zVel() = -std::min(1., 1.7 - std::abs(z() - 1.5));
+                zVel() = -std::min(1., 5.2 - std::abs(z() - Radius - 5.));
             }
             else
             {
-                z() = 0.;
+                z() = Radius;
                 zVel() = 0.;
             }
         }
@@ -184,7 +187,8 @@ int main()
     Ground = paz::Model("plane.obj");
     Tri = paz::Model("tri.obj");
     PlatformModel = paz::Model("platform.obj");
-    Sphere = paz::Model("sphere50.obj");
+    Sphere50 = paz::Model("sphere50.obj");
+    Sphere = paz::Model("unitsphere.obj");
     Body = paz::Model("persontest.obj");
     Head = paz::Model("persontest.obj", 1);
     Player player;
@@ -196,8 +200,8 @@ int main()
         w1[i].y() = 20.*i;
         w1[i].z() = Radius - 2.;
     }
-//    Platform p;
-    player.z() = Radius + 10;
+    Platform p;
+    player.z() = Radius + 10.;
 //    Npc npc;
 //    npc.x() = 0.5;
 //    npc.z() = Radius;

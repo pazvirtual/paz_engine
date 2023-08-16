@@ -587,6 +587,9 @@ tempDone[j] = true;
                         a[i]->zVel() += zVelBPlane - zVelAPlane;
                     }
 #endif
+
+                    a[i]->onCollide(*b[j]);
+                    b[j]->onCollide(*a[i]);
                     break;
                 }
             }
