@@ -22,22 +22,10 @@ namespace paz
 
     class Threadpool;
     class Triangle;
-    class VertexBuffer;
-    class IndexBuffer;
-    class Texture;
-    class Model
+    class CollisionMesh
     {
-        friend class App;
         friend class Object;
         friend void do_collisions(Threadpool&, double);
-
-        std::shared_ptr<std::vector<Triangle>> _t;
-        double _radius = 0.;
-        VertexBuffer _v;
-        IndexBuffer _i;
-        Texture _diffTex;
-        std::array<float, 3> _emiss;
-        VertexBuffer _transp;
 
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
@@ -47,6 +35,30 @@ namespace paz
             const;
         std::vector<std::size_t> sweepVol(const Vec& relPosPrev, const Vec&
             relPos, double radius) const;
+
+    protected:
+        std::shared_ptr<std::vector<Triangle>> _t;
+        double _radius = 0.;
+
+    public:
+        CollisionMesh() = default;
+        CollisionMesh(const std::string& path, int idx = 0, double zOffset = 0.,
+            double scale = 1.);
+        CollisionMesh(const std::vector<float>& positions);
+    };
+
+    class VertexBuffer;
+    class IndexBuffer;
+    class Texture;
+    class Model : public CollisionMesh
+    {
+        friend class App;
+
+        VertexBuffer _v;
+        IndexBuffer _i;
+        Texture _diffTex;
+        std::array<float, 3> _emiss;
+        VertexBuffer _transp;
 
     public:
         Model() = default;
@@ -163,6 +175,8 @@ namespace paz
         double zAngRate() const;
         Model& model();
         const Model& model() const;
+        CollisionMesh& collisionMesh();
+        const CollisionMesh& collisionMesh() const;
         CollisionType& collisionType();
         const CollisionType& collisionType() const;
         GravityType& gravityType();

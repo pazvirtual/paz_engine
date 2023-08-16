@@ -5,9 +5,8 @@
 #include <cmath>
 #include <numeric>
 
-paz::Model::Model(const std::string& path, int idx, double zOffset, double
-    scale, const std::string& diffTexPath, const std::array<float, 3>& emiss,
-    const std::vector<std::array<double, 9>>& transp) : _emiss(emiss)
+paz::CollisionMesh::CollisionMesh(const std::string& path, int idx, double
+    zOffset, double scale)
 {
     std::vector<std::vector<float>> positions;
     std::vector<std::vector<float>> uvs;
@@ -73,52 +72,10 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
         radiusSq = std::max(radiusSq, t1x*t1x + t1y*t1y + t1z*t1z);
         radiusSq = std::max(radiusSq, t2x*t2x + t2y*t2y + t2z*t2z);
     }
-    _v.addAttribute(4, positions[idx]);
-    _v.addAttribute(4, normals[idx]);
-    _v.addAttribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
-    _v.addAttribute(2, uvs[idx]);
-    _i = IndexBuffer(indices[idx]);
-    if(!diffTexPath.empty())
-    {
-        _diffTex = Texture(get_asset_image(diffTexPath), MinMagFilter::Linear,
-            MinMagFilter::Linear, MipmapFilter::Linear);
-    }
-    if(!transp.empty())
-    {
-        std::vector<float> transpPos, transpNor;
-        transpPos.reserve(12*transp.size());
-        transpNor.reserve(12*transp.size());
-        _t->reserve(_t->size() + 2.*transp.size());
-        for(const auto& n : transp)
-        {
-            // Store front and back face because triangles are directional.
-            _t->emplace_back(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[
-                8]);
-            _t->emplace_back(n[6], n[7], n[8], n[3], n[4], n[5], n[0], n[1], n[
-                2]);
-            radiusSq = std::max(radiusSq, n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
-            radiusSq = std::max(radiusSq, n[3]*n[3] + n[4]*n[4] + n[5]*n[5]);
-            radiusSq = std::max(radiusSq, n[6]*n[6] + n[7]*n[7] + n[8]*n[8]);
-            std::array<double, 3> nor;
-            _t->back().getNormal(nor[0], nor[1], nor[2]);
-            for(int i = 0; i < 3; ++i)
-            {
-                transpNor.insert(transpNor.end(), nor.begin(), nor.end());
-                transpNor.push_back(0.);
-                transpPos.insert(transpPos.end(), n.begin() + 3*i, n.begin() +
-                    3*i + 3);
-                transpPos.push_back(1.);
-            }
-        }
-        _transp.addAttribute(4, transpPos);
-        _transp.addAttribute(4, transpNor);
-    }
     _radius = std::sqrt(radiusSq);
 }
 
-paz::Model::Model(const std::vector<float>& positions, const std::vector<float>&
-    uvs, const std::string& diffTexPath, const std::array<float, 3>& emiss,
-    const std::vector<std::array<double, 9>>& transp) : _emiss(emiss)
+paz::CollisionMesh::CollisionMesh(const std::vector<float>& positions)
 {
     _t = std::make_shared<std::vector<Triangle>>();
     double radiusSq = 0.;
@@ -153,48 +110,103 @@ paz::Model::Model(const std::vector<float>& positions, const std::vector<float>&
             radiusSq = std::max(radiusSq, t1x*t1x + t1y*t1y + t1z*t1z);
             radiusSq = std::max(radiusSq, t2x*t2x + t2y*t2y + t2z*t2z);
         }
-        _v.addAttribute(4, positions);
-        _v.addAttribute(4, normals);
-        _v.addAttribute(1, std::vector<unsigned int>(numVertices, 1));
-        _v.addAttribute(2, uvs);
-        std::vector<unsigned int> indices(numVertices);
-        std::iota(indices.begin(), indices.end(), 0);
-        _i = IndexBuffer(indices);
-    }
-    if(!diffTexPath.empty())
-    {
-        _diffTex = Texture(get_asset_image(diffTexPath), MinMagFilter::Linear,
-            MinMagFilter::Linear, MipmapFilter::Linear);
-    }
-    if(!transp.empty())
-    {
-        std::vector<float> transpPos, transpNor;
-        transpPos.reserve(12*transp.size());
-        transpNor.reserve(12*transp.size());
-        _t->reserve(_t->size() + 2.*transp.size());
-        for(const auto& n : transp)
-        {
-            // Store front and back face because triangles are directional.
-            _t->emplace_back(n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[
-                8]);
-            _t->emplace_back(n[6], n[7], n[8], n[3], n[4], n[5], n[0], n[1], n[
-                2]);
-            radiusSq = std::max(radiusSq, n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
-            radiusSq = std::max(radiusSq, n[3]*n[3] + n[4]*n[4] + n[5]*n[5]);
-            radiusSq = std::max(radiusSq, n[6]*n[6] + n[7]*n[7] + n[8]*n[8]);
-            std::array<double, 3> nor;
-            _t->back().getNormal(nor[0], nor[1], nor[2]);
-            for(int i = 0; i < 3; ++i)
-            {
-                transpNor.insert(transpNor.end(), nor.begin(), nor.end());
-                transpNor.push_back(0.);
-                transpPos.insert(transpPos.end(), n.begin() + 3*i, n.begin() +
-                    3*i + 3);
-                transpPos.push_back(1.);
-            }
-        }
-        _transp.addAttribute(4, transpPos);
-        _transp.addAttribute(4, transpNor);
     }
     _radius = std::sqrt(radiusSq);
+}
+
+double paz::CollisionMesh::collide(double x, double y, double z, double radius, double&
+    xNew, double& yNew, double& zNew, double& xNor, double& yNor, double& zNor,
+    const std::vector<std::size_t>& tris) const
+{
+    double minDist = std::numeric_limits<double>::infinity();
+    xNor = 0.;
+    yNor = 0.;
+    zNor = 1.;
+    if(std::sqrt(x*x + y*y + z*z) > _radius + radius)
+    {
+        return minDist;
+    }
+    double gx = 0.;
+    double gy = 0.;
+    double gz = 0.;
+    for(auto n : tris)
+    {
+        double xNorTemp, yNorTemp, zNorTemp, d;
+        (*_t)[n].collide(x, y, z, radius, xNorTemp, yNorTemp, zNorTemp, d);
+        if(d < radius)
+        {
+            const double a = radius - d;
+            gx += a*xNorTemp;
+            gy += a*yNorTemp;
+            gz += a*zNorTemp;
+            if(d < minDist)
+            {
+                minDist = d;
+                xNor = xNorTemp;
+                yNor = yNorTemp;
+                zNor = zNorTemp;
+            }
+        }
+    }
+    xNew = x + gx;
+    yNew = y + gy;
+    zNew = z + gz;
+    return minDist;
+}
+
+void paz::CollisionMesh::castRay(double x, double y, double z, double xDir, double yDir,
+    double zDir, double& xNor, double& yNor, double& zNor, double& dist) const
+{
+    dist = std::numeric_limits<double>::infinity();
+    xNor = 0.;
+    yNor = 0.;
+    zNor = 1.;
+    // The bounding sphere does not touch the ray.
+    const double t = std::max(0., -xDir*x - yDir*y - zDir*z);
+    const double deltaX = x + t*xDir;
+    const double deltaY = y + t*yDir;
+    const double deltaZ = z + t*zDir;
+    if(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ > _radius*_radius)
+    {
+        return;
+    }
+    // Check each triangle.
+    for(const auto& n : *_t)
+    {
+        const double d = n.castRay(x, y, z, xDir, yDir, zDir);
+        if(d < dist)
+        {
+            dist = d;
+            n.getNormal(xNor, yNor, zNor);
+        }
+    }
+}
+
+std::vector<std::size_t> paz::CollisionMesh::sweepVol(const Vec& relPosPrev,
+    const Vec& relPos, double radius) const
+{
+    //TEMP - capped cylinders would give a tighter bound
+    const Vec mean = 0.5*(relPosPrev + relPos);
+    const double delta = (relPos - mean).norm();
+    {
+        const double rTotal = delta + _radius + radius;
+        const double distSq = relPos.normSq();
+        if(distSq > rTotal*rTotal)
+        {
+            return {};
+        }
+    }
+    std::vector<std::size_t> tris;
+    for(std::size_t i = 0; i < _t->size(); ++i)
+    {
+        const Vec mean1{{(*_t)[i].centroid()[0], (*_t)[i].centroid()[1], (*_t)[
+            i].centroid()[2]}};
+        const double rTotal = delta + (*_t)[i].radius() + radius;
+        const double distSq = (mean1 - mean).normSq();
+        if(distSq < rTotal*rTotal)
+        {
+            tris.push_back(i);
+        }
+    }
+    return tris;
 }

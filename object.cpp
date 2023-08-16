@@ -4,12 +4,15 @@
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
 
-static constexpr std::size_t NumSteps = 100;
+static constexpr std::size_t NumSteps = 10;
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
 #define PUSH_COPY(x) x.push_back(x[otherIdx]);
 #define COPY(x) x[idx] = x[otherIdx];
+
+#define GET_CMESH(idx) (CMesh[idx]._t ? CMesh[idx] : Mod[idx])
 
 std::unordered_map<std::uintptr_t, std::size_t>& paz::objects()
 {
@@ -31,6 +34,7 @@ static std::vector<double> XAngRate;
 static std::vector<double> YAngRate;
 static std::vector<double> ZAngRate;
 static std::vector<paz::Model> Mod;
+static std::vector<paz::CollisionMesh> CMesh;
 static std::vector<paz::CollisionType> CType;
 static std::vector<paz::GravityType> GType;
 static std::vector<double> XPrev;
@@ -255,7 +259,7 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                 Vec relPos{{X[a[i]] - X[b[j]], Y[a[i]] - Y[b[j]], Z[a[i]] - Z[b[
                     j]]}};
                 relPos = bRot[j]*relPos;
-                const auto temp = Mod[b[j]].sweepVol(relPosPrev, relPos,
+                const auto temp = GET_CMESH(b[j]).sweepVol(relPosPrev, relPos,
                     CRadius[a[i]]);
                 if(!temp.empty())
                 {
@@ -285,8 +289,8 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                     const double y2 = relPos(1);
                     const double z2 = relPos(2);
                     double xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp;
-                    const double dist = Mod[b[n.first]].collide(x2, y2, z2,
-                        CRadius[a[i]], xNew, yNew, zNew, xNorTemp, yNorTemp,
+                    const double dist = GET_CMESH(b[n.first]).collide(x2, y2,
+                        z2, CRadius[a[i]], xNew, yNew, zNew, xNorTemp, yNorTemp,
                         zNorTemp, n.second);
                     if(dist < CRadius[a[i]])
                     {
@@ -386,6 +390,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     YAngRate.push_back(0.);
     ZAngRate.push_back(0.);
     Mod.emplace_back();
+    CMesh.emplace_back();
     CType.push_back(CollisionType::Default);
     GType.push_back(GravityType::Default);
     XPrev.push_back(std::nan(""));
@@ -421,6 +426,7 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(YAngRate)
     PUSH_COPY(ZAngRate)
     PUSH_COPY(Mod)
+    PUSH_COPY(CMesh)
     PUSH_COPY(CType)
     PUSH_COPY(GType)
     PUSH_COPY(XPrev);
@@ -470,6 +476,7 @@ paz::Object& paz::Object::operator=(const Object& o)
         COPY(YAngRate)
         COPY(ZAngRate)
         COPY(Mod)
+        COPY(CMesh)
         COPY(CType)
         COPY(GType)
         COPY(XPrev);
@@ -513,6 +520,7 @@ paz::Object& paz::Object::operator=(const Object& o)
         PUSH_COPY(YAngRate)
         PUSH_COPY(ZAngRate)
         PUSH_COPY(Mod)
+        PUSH_COPY(CMesh)
         PUSH_COPY(CType)
         PUSH_COPY(GType)
         PUSH_COPY(XPrev);
@@ -589,6 +597,7 @@ paz::Object& paz::Object::operator=(Object&& o) noexcept
         PUSH_COPY(YAngRate)
         PUSH_COPY(ZAngRate)
         PUSH_COPY(Mod)
+        PUSH_COPY(CMesh)
         PUSH_COPY(CType)
         PUSH_COPY(GType)
         PUSH_COPY(XPrev);
@@ -641,6 +650,7 @@ paz::Object::~Object()
     SWAP_AND_POP(YAngRate)
     SWAP_AND_POP(ZAngRate)
     SWAP_AND_POP(Mod)
+    SWAP_AND_POP(CMesh)
     SWAP_AND_POP(CType)
     SWAP_AND_POP(GType)
     SWAP_AND_POP(XPrev);
@@ -817,6 +827,16 @@ const paz::Model& paz::Object::model() const
     return Mod[objects().at(_id)];
 }
 
+paz::CollisionMesh& paz::Object::collisionMesh()
+{
+    return CMesh[objects().at(_id)];
+}
+
+const paz::CollisionMesh& paz::Object::collisionMesh() const
+{
+    return CMesh[objects().at(_id)];
+}
+
 paz::CollisionType& paz::Object::collisionType()
 {
     return CType[objects().at(_id)];
@@ -943,8 +963,8 @@ void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
         const Vec dir = rot*Vec{{XDown[idx], YDown[idx], ZDown[idx]}};
         double dist;
         Vec tempNor(3);
-        Mod[n.second].castRay(relPos(0), relPos(1), relPos(2), dir(0), dir(1),
-            dir(2), tempNor(0), tempNor(1), tempNor(2), dist);
+        GET_CMESH(n.second).castRay(relPos(0), relPos(1), relPos(2), dir(0),
+            dir(1), dir(2), tempNor(0), tempNor(1), tempNor(2), dist);
         if(dist < alt)
         {
             alt = dist;
