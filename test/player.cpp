@@ -3,6 +3,8 @@
 
 #define NO_FRICTION
 
+static constexpr double CosMaxAngle = 0.8;
+
 Player::Player()
 {
     _head.collisionType() = paz::CollisionType::None;
@@ -30,10 +32,14 @@ void Player::update()
     if(alt < LowAltitude)
     {
         reg = Regime::Low;
-        if(alt < 0.1)//TEMP - should be function of maxangle
+        if(_collided && nor.dot(gravDir) < CosMaxAngle)
         {
             reg = Regime::Grounded;
         }
+    }
+    if(_collided)
+    {
+        --_collided;
     }
 const double r = std::sqrt(x()*x() + y()*y() + z()*z());
 const double lat = std::asin(z()/r);
@@ -315,6 +321,11 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         const paz::Vec vel{{xVel(), yVel(), zVel()}};
         _paintball.launch(pos, vel, dir);
     }
+}
+
+void Player::onCollide(const paz::Object&)
+{
+    _collided = 2;
 }
 
 const paz::Object& Player::head() const

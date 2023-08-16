@@ -18,12 +18,14 @@ class Player : public paz::Object
     double _prevGravPitch = 0.;
     paz::Vec _mousePos = paz::Vec::Zero(2);
     paz::Object _head; // camera
+    int _collided = 0;
 
     Paintball _paintball;
 
 public:
     Player();
     void update() final;
+    void onCollide(const paz::Object&) final;
     const paz::Object& head() const;
 };
 
