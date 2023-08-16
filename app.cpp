@@ -265,6 +265,40 @@ float edge_blend_fac(in sampler2D lum, in vec2 texOffset, in LumData l, in
 
     return float(deltaSign == (l.m - edgeLum >= 0.))*numEdgeSteps*shortestDist;
 }
+////A
+uniform float seed;
+uint hash(in uint x)
+{
+    x += (x << 10u);
+    x ^= (x >>  6u);
+    x += (x <<  3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+uint hash(in uvec3 v)
+{
+    return hash(v.x^hash(v.y)^hash(v.z));
+}
+float floatConstruct(in uint m)
+{
+    const uint ieeeMantissa = 0x007FFFFFu;
+    const uint ieeeOne = 0x3F800000u;
+    m &= ieeeMantissa;
+    m |= ieeeOne;
+    float f = uintBitsToFloat(m);
+    return f - 1.;
+}
+float unif_rand(in vec3 v)
+{
+    return floatConstruct(hash(floatBitsToUint(v)));
+}
+float random_dither(in vec3 col, in vec2 uv, in float seed)
+{
+    float l = dot(col, vec3(0.2126, 0.7152, 0.0722)); //TEMP - can't call it `lum` because opengl2metal thinks it conflicts with uniform `lum`
+    return sign(max(0., l - unif_rand(vec3(uv, seed))));
+}
+////B
 void main()
 {
     ivec2 texSize = textureSize(lum, 0);
@@ -277,6 +311,9 @@ void main()
     vec2 deltaUv = mix(vec2(e.pixelStep*fac, 0.), vec2(0., e.pixelStep*fac),
         float(e.isHorizontal));
     color = texture(img, uv + deltaUv);
+////A
+    color.rgb = vec3(random_dither(color.rgb, uv, seed));
+////B
     color.rgb = pow(color.rgb, vec3(0.4545));
 }
 )===";
@@ -320,10 +357,47 @@ vec3 reinhard(in vec3 col, in float w)
     float lNew = lOld*(1. + lOld/max(eps, w*w))/(1. + lOld);
     return col*lNew/lOld;
 }
+////A
+uniform float seed;
+uint hash(in uint x)
+{
+    x += (x << 10u);
+    x ^= (x >>  6u);
+    x += (x <<  3u);
+    x ^= (x >> 11u);
+    x += (x << 15u);
+    return x;
+}
+uint hash(in uvec3 v)
+{
+    return hash(v.x^hash(v.y)^hash(v.z));
+}
+float floatConstruct(in uint m)
+{
+    const uint ieeeMantissa = 0x007FFFFFu;
+    const uint ieeeOne = 0x3F800000u;
+    m &= ieeeMantissa;
+    m |= ieeeOne;
+    float f = uintBitsToFloat(m);
+    return f - 1.;
+}
+float unif_rand(in vec3 v)
+{
+    return floatConstruct(hash(floatBitsToUint(v)));
+}
+float random_dither(in vec3 col, in vec2 uv, in float seed)
+{
+    float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    return sign(max(0., lum - unif_rand(vec3(uv, seed))));
+}
+////B
 void main()
 {
     vec3 hdrCol = texture(hdrRender, uv).rgb;
     color = vec4(reinhard(hdrCol, whitePoint), 1.);
+////A
+    color.rgb = vec3(random_dither(color.rgb, uv, seed));
+////B
     color.rgb = pow(color.rgb, vec3(0.4545));
 }
 )===";
@@ -857,6 +931,11 @@ _msg = ss.str();
         _postPass.begin();
         _postPass.read("hdrRender", _hdrRender);
         _postPass.uniform("whitePoint", 1.f);
+////A
+#ifndef DO_FXAA
+        _postPass.uniform("seed", static_cast<float>(Window::FrameTime()));
+#endif
+////B
         _postPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _postPass.end();
 
@@ -871,6 +950,9 @@ _msg = ss.str();
         _fxaaPass.begin();
         _fxaaPass.read("img", _finalRender);
         _fxaaPass.read("lum", _finalLumMap);
+////A
+        _fxaaPass.uniform("seed", static_cast<float>(Window::FrameTime()));
+////B
         _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _fxaaPass.end();
 #endif
