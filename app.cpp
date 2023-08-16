@@ -209,14 +209,16 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
-    _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1, BlendMode::
-        Additive);
+    _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1,
+        {BlendMode::One_One});
     _postPass0 = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
     _fxaaPass = RenderPass(quadVert, fxaaFrag);
     _postPass1 = RenderPass(quadVert, postFrag);
-    _consolePass = RenderPass(quadVert, consoleFrag, BlendMode::Blend);
-    _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
+    _consolePass = RenderPass(quadVert, consoleFrag, {BlendMode::
+        SrcAlpha_InvSrcAlpha});
+    _textPass = RenderPass(textVert, textFrag, {BlendMode::
+        SrcAlpha_InvSrcAlpha});
 
     _quadVertices.addAttribute(2, QuadPos);
 
