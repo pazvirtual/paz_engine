@@ -321,13 +321,25 @@ void paz::do_collisions()
                 Z[a[j]] = z + time1*ZVel[a[j]];
 
                 // Collision response.
+                std::swap(X[a[j]], x);
+                std::swap(Y[a[j]], y);
+                std::swap(Z[a[j]], z);
                 Object& aObj = *reinterpret_cast<Object*>(Ids[a[j]]);
                 for(const auto& n : collisions)
                 {
+                    std::swap(X[b[n.first]], bX[n.first][i]);
+                    std::swap(Y[b[n.first]], bY[n.first][i]);
+                    std::swap(Z[b[n.first]], bZ[n.first][i]);
                     Object& bObj = *reinterpret_cast<Object*>(Ids[b[n.first]]);
                     aObj.onCollide(bObj, n.second[0], n.second[1], n.second[2]);
                     bObj.onCollide(aObj, n.second[0], n.second[1], n.second[2]);
+                    std::swap(X[b[n.first]], bX[n.first][i]);
+                    std::swap(Y[b[n.first]], bY[n.first][i]);
+                    std::swap(Z[b[n.first]], bZ[n.first][i]);
                 }
+                std::swap(X[a[j]], x);
+                std::swap(Y[a[j]], y);
+                std::swap(Z[a[j]], z);
 
                 // Adjust positions again.
                 XPrev[a[j]] = x - time0*XVel[a[j]];
