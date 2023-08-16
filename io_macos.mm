@@ -9,17 +9,36 @@
 #include <regex>
 #include <map>
 
+static const std::string CompanyName = "PAZ Virtual"; //TEMP
+static const std::string AppName = "temp-demo"; //TEMP
+
 static const bool IsSandboxed = [[[NSProcessInfo processInfo] environment]
     objectForKey:@"APP_SANDBOX_CONTAINER_ID"] != nil;
 
+static void ensure_dir(const std::string& path)
+{
+    NSError* error = nil;
+    if(![[NSFileManager defaultManager] createDirectoryAtPath:[NSString
+        stringWithUTF8String:path.c_str()] withIntermediateDirectories:YES
+        attributes:nil error:&error])
+    {
+        throw std::runtime_error([[NSString stringWithFormat:@"Failed to create"
+            " directory: %@", [error localizedDescription]] UTF8String]);
+    }
+}
+
 static std::string get_home()
 {
-    if(!IsSandboxed)
+    if(IsSandboxed)
     {
-        throw std::runtime_error("App is not sandboxed.");
+        return [NSHomeDirectory() UTF8String];
     }
-
-    return [NSHomeDirectory() UTF8String];
+    std::string path = [NSHomeDirectory() UTF8String];
+    path += "/" + CompanyName;
+    ensure_dir(path);
+    path += "/" + AppName;
+    ensure_dir(path);
+    return path;
 }
 
 void paz::save_setting(const std::string& name, const std::string& val)

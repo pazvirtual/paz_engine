@@ -10,6 +10,9 @@
 #include <map>
 #include <regex>
 
+static const std::string CompanyName = "PAZ Virtual"; //TEMP
+static const std::string AppName = "temp-demo"; //TEMP
+
 static void ensure_dir(const std::filesystem::path& path)
 {
     std::filesystem::file_status status;
@@ -75,7 +78,7 @@ static std::filesystem::path ensure_settings_file(const std::string& company,
 
 void paz::save_setting(const std::string& name, const std::string& val)
 {
-    const auto path = ensure_settings_file("PAZ Virtual", "temp-demo");
+    const auto path = ensure_settings_file(CompanyName, AppName);
 
     std::map<std::string, std::string> settings = {{name, val}};
 
@@ -125,8 +128,8 @@ std::string paz::load_setting(const std::string& name)
         path /= ".local";
         path /= "share";
 #endif
-        path /= "PAZ Virtual";
-        path /= "temp-demo";
+        path /= CompanyName;
+        path /= AppName;
         path /= "settings.txt";
     }
     catch(...)
