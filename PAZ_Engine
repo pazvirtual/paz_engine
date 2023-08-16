@@ -26,7 +26,7 @@ namespace paz
             double& nx, double& ny, double& nz) const;
 
     public:
-        Model();
+        Model() = default;
         Model(const std::string& path, int idx = 0);
     };
 

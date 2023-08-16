@@ -3,8 +3,6 @@
 #include <limits>
 #include <cmath>
 
-paz::Model::Model() {}
-
 paz::Model::Model(const std::string& path, int idx)
 {
     std::vector<std::string> names;
