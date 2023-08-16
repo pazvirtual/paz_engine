@@ -45,8 +45,8 @@ endif
 
 print-% : ; @echo $* = $($*)
 
-.PHONY: test
 ifeq ($(OSPRETTY), macOS)
+.PHONY: build/test_arm64 build/test_x86_64
 test: build/test_arm64 build/test_x86_64
 	lipo -create -output $@ $^
 
@@ -56,6 +56,7 @@ build/test_arm64: build $(ARMOBJ)
 build/test_x86_64: build $(INTOBJ)
 	$(CXX) -arch x86_64 $(CXXFLAGS) -o $@ $(INTOBJ) $(LDLIBS)
 else
+.PHONY: test
 test: build $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDLIBS)
 endif
