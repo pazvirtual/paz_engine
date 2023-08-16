@@ -400,9 +400,10 @@ void paz::App::Run()
             const auto yw = q1*q3;
             const auto yz = q1*q2;
             const auto xw = q0*q3;
-            offsetX[i] = a[i]->collisionRadius()*2.*(xz + yw);
-            offsetY[i] = a[i]->collisionRadius()*2.*(yz - xw);
-            offsetZ[i] = a[i]->collisionRadius()*(1. - 2.*(xx + yy));
+            const double h = a[i]->height();// - a[i]->collisionRadius();
+            offsetX[i] = h*2.*(xz + yw);
+            offsetY[i] = h*2.*(yz - xw);
+            offsetZ[i] = h*(1. - 2.*(xx + yy));
         }
 
         std::vector<std::vector<double>> bX(b.size(), std::vector<double>(NumSteps));
@@ -469,7 +470,7 @@ tempDone[j] = true;
 const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
 const double lat = std::asin(_cameraObject->z()/r);
 const double lon = std::atan2(_cameraObject->y(), _cameraObject->x());
-std::cout << lat*180./M_PI << " " << lon*180./M_PI << std::endl;
+std::cout << r << " " << lat*180./M_PI << " " << lon*180./M_PI << " | " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
 }
 
 
