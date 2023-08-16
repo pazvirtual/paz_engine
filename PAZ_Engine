@@ -3,6 +3,7 @@
 
 #include <PAZ_Graphics>
 #include <PAZ_IO>
+#include <unordered_set>
 
 namespace paz
 {
@@ -20,10 +21,18 @@ namespace paz
         double y() const;
         double& z();
         double z() const;
-        VertexBuffer v();
-        const VertexBuffer v() const;
-        IndexBuffer i();
-        const IndexBuffer i() const;
+        double& xVel();
+        double xVel() const;
+        double& yVel();
+        double yVel() const;
+        double& zVel();
+        double zVel() const;
+        VertexBuffer& v();
+        const VertexBuffer& v() const;
+        IndexBuffer& i();
+        const IndexBuffer& i() const;
+        char& vis();
+        bool vis() const;
     };
 
     class App
@@ -32,7 +41,7 @@ namespace paz
         App() = delete;
         static void Init(const std::string& sceneShaderPath, const std::unordered_set<std::string>& objPaths);
         static void Run();
-        static void AttachCamera(const Object& o);
+        static void AttachCamera(/*const*/ Object& o);
         static double CameraYaw();
     };
 }
