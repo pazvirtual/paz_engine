@@ -38,7 +38,7 @@ Paintball::Paintball(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
 
 void Paintball::onCollide(const Object&)
 {
-    paz::AudioEngine::Play(SoundEffect, false);
+    //paz::AudioEngine::Play(SoundEffect, false);
     xVel() = 0.;
     yVel() = 0.;
     zVel() = 0.;

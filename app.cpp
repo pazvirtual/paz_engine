@@ -59,6 +59,9 @@ static paz::UiDescriptor _startMenu;
 static paz::Texture _defaultTex;
 
 static const paz::Object* _cameraObject;
+static const paz::Object* _micObject;
+
+static const paz::Object* _soundSrc;
 
 static bool _paused;
 
@@ -620,6 +623,47 @@ void paz::App::Run()
             _paused = !_paused;
         }
 
+        if(_micObject && !_paused && objects().count(reinterpret_cast<std::
+            uintptr_t>(_soundSrc)))
+        {
+            const Vec relPos{{_soundSrc->x() - _micObject->x(), _soundSrc->y() -
+                _micObject->y(), _soundSrc->z() - _micObject->z()}};
+            const Vec relVel{{_soundSrc->xVel() - _micObject->xVel(),
+                _soundSrc->yVel() - _micObject->yVel(), _soundSrc->zVel() -
+                _micObject->zVel()}};
+            const double dist = relPos.norm();
+            const Vec dir = relPos/dist;
+            const Vec micAtt{{_micObject->xAtt(), _micObject->yAtt(),
+                _micObject->zAtt(), std::sqrt(1. - _micObject->xAtt()*
+                _micObject->xAtt() - _micObject->yAtt()*_micObject->yAtt() -
+                _micObject->zAtt()*_micObject->zAtt())}};
+            const Mat micRot = to_mat(micAtt);
+            const Vec micX = micRot.row(1).trans();
+            const Vec micY = -micRot.row(0).trans();
+            const Vec lEar = std::sin(0.5)*micX + std::cos(0.5)*micY;
+            const Vec rEar = std::sin(0.5)*micX - std::cos(0.5)*micY;
+            const double vlos = dir.dot(relVel);
+            const double txPwr = 400.;
+            static constexpr double vs = 343.;
+            static constexpr double maxRxPwr = 0.3;
+            const double t0 = (vs + vlos)/(800.*M_PI*dist); // assuming f = 200
+            const double rxPwr = std::min(maxRxPwr, txPwr*t0*t0);
+            const double lPwr = rxPwr*(0.6 + 0.4*(dir.dot(lEar))); //TEMP
+            const double rPwr = rxPwr*(0.6 + 0.4*(dir.dot(rEar))); //TEMP
+            const double lVol = std::sqrt(std::sqrt(std::max(0., lPwr)));
+            const double rVol = std::sqrt(std::sqrt(std::max(0., rPwr)));
+            const double lFreqScale = 1./(1. + vlos/vs);
+            const double rFreqScale = 1./(1. + vlos/vs);
+            AudioEngine::SetVolume(lVol, 0);
+            AudioEngine::SetVolume(rVol, 1);
+            AudioEngine::SetFreqScale(lFreqScale, 0);
+            AudioEngine::SetFreqScale(rFreqScale, 1);
+        }
+        else
+        {
+            AudioEngine::SetVolume(0.);
+        }
+
 if(!_paused)
 {
         physics(_gravity);
@@ -1013,6 +1057,11 @@ void paz::App::AttachCamera(const Object& o)
     _cameraObject = &o;
 }
 
+void paz::App::AttachMic(const Object& o)
+{
+    _micObject = &o;
+}
+
 std::stringstream& paz::App::MsgStream()
 {
     return _msgStream;
@@ -1036,4 +1085,10 @@ void paz::App::SetConsole(ConsoleMode mode)
 void paz::App::SetGravity(double acc)
 {
     _gravity = acc;
+}
+
+void paz::App::SetSound(const Object& o, const AudioTrack& sound, bool loop)
+{
+    _soundSrc = &o;
+    AudioEngine::Play(sound, loop);
 }
