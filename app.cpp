@@ -51,6 +51,7 @@ static paz::VertexBuffer SphereVertices;
 static paz::IndexBuffer SphereIndices;
 
 static paz::Texture FontTex;
+static paz::Texture ConsoleFontTex;
 static std::stringstream MsgStream;
 static std::deque<std::string> Console;
 static paz::ConsoleMode CurConsoleMode = paz::ConsoleMode::Disable;
@@ -290,7 +291,15 @@ void paz::App::Init(const std::string& title)
         SphereIndices = IndexBuffer(indices);
     }
 
-    FontTex = Texture(get_asset_image("font.pbm")); //TEMP - note that only red channel is used
+    ConsoleFontTex = Texture(get_builtin_image("consolefont.pbm")); //TEMP - note that only red channel is used
+    try
+    {
+        FontTex = Texture(get_asset_image("font.pbm")); //TEMP - note that only red channel is used
+    }
+    catch(...)
+    {
+        FontTex = ConsoleFontTex;
+    }
 
     std::vector<unsigned char> temp(4*512*512);
     for(int i = 0; i < 512; ++i)
@@ -932,11 +941,10 @@ void paz::App::Run()
         InstanceBuffer consoleChars; //TEMP - needs wider scope because of MTLBuffer purge issue
         if(CurConsoleMode != ConsoleMode::Disable && !Console.empty())
         {
-            const float scale = std::max(1.f, std::round(FontScale*Window::
-                UiScale()));
+            const float scale = std::max(1.f, std::round(Window::UiScale()));
 
-            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*FontTex.
-                height()));
+            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*
+                ConsoleFontTex.height()));
             maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
                 Console.size());
             if(CurConsoleMode == ConsoleMode::CurrentFrame || CurConsoleMode ==
@@ -946,8 +954,9 @@ void paz::App::Run()
                     numNewRows);
             }
 
-            const float consoleHeight = std::min(1.f, (maxVisRows + 1.f/FontTex.
-                height())*scale*FontTex.height()/Window::ViewportHeight());
+            const float consoleHeight = std::min(1.f, (maxVisRows + 1.f/
+                ConsoleFontTex.height())*scale*ConsoleFontTex.height()/Window::
+                ViewportHeight());
             std::size_t maxCols = 0;
             for(int i = 0; i < maxVisRows; ++i)
             {
@@ -974,11 +983,7 @@ void paz::App::Run()
                 int col = 0;
                 for(auto n : Console.rbegin()[row])
                 {
-                    if(n == '`')
-                    {
-                        highlight = !highlight;
-                    }
-                    else if(n == ' ')
+                    if(n == ' ')
                     {
                         ++col;
                     }
@@ -1003,14 +1008,14 @@ void paz::App::Run()
             consoleChars.addAttribute(1, rowAttr);
 
             TextPass.begin({LoadAction::Load});
-            TextPass.read("font", FontTex);
+            TextPass.read("font", ConsoleFontTex);
             TextPass.uniform("u", 0.f);
             TextPass.uniform("v", 0.f);
             TextPass.uniform("width", Window::ViewportWidth());
             TextPass.uniform("height", Window::ViewportHeight());
             TextPass.uniform("charWidth", CharWidth);
-            TextPass.uniform("baseWidth", FontTex.width());
-            TextPass.uniform("baseHeight", FontTex.height());
+            TextPass.uniform("baseWidth", ConsoleFontTex.width());
+            TextPass.uniform("baseHeight", ConsoleFontTex.height());
             TextPass.uniform("scale", static_cast<int>(scale));
             TextPass.draw(PrimitiveType::TriangleStrip, QuadVertices,
                 consoleChars);
