@@ -17,6 +17,7 @@ static constexpr int CharWidth = 5;
 static paz::Framebuffer GeometryBuffer;
 static paz::Framebuffer OitAccumBuffer;
 static paz::Framebuffer RenderBuffer;
+static paz::Framebuffer DofBuffer;
 static paz::Framebuffer PostBuffer;
 static paz::Framebuffer LumBuffer;
 
@@ -26,6 +27,7 @@ static paz::RenderTarget EmissMap(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget NormalMap(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget DepthMap(paz::TextureFormat::Depth32Float);
 static paz::RenderTarget HdrRender(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget DofRender(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget FinalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget FinalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget OitAccumTex(paz::TextureFormat::RGBA16Float);
@@ -36,6 +38,7 @@ static std::unordered_map<void*, paz::InstanceBuffer> Instances;
 static paz::RenderPass GeometryPass;
 static paz::RenderPass RenderPass0;
 static paz::RenderPass RenderPass1;
+static paz::RenderPass DofPass;
 static paz::RenderPass OitAccumPass;
 static paz::RenderPass OitCompositePass;
 static paz::RenderPass PostPass0;
@@ -82,6 +85,9 @@ static double GravAcc;
 static paz::Threadpool Threads;
 
 static bool FxaaEnabled = true;
+
+static float DofMinDepth = 0.;//0.97;
+static float DofMaxDepth = 0.99;
 
 static paz::Vec SunDir = paz::Vec::Zero(4);
 static std::array<float, 4> SunIll;
@@ -229,6 +235,8 @@ void paz::App::Init(const std::string& title)
 
     RenderBuffer.attach(HdrRender);
 
+    DofBuffer.attach(DofRender);
+
     OitAccumBuffer.attach(OitAccumTex);
     OitAccumBuffer.attach(OitRevealTex);
     OitAccumBuffer.attach(DepthMap);
@@ -255,11 +263,13 @@ void paz::App::Init(const std::string& title)
     const FragmentFunction cursorFrag(get_builtin("cursor.frag").str());
     const FragmentFunction oitFrag(get_asset("oit.frag").str());
     const FragmentFunction compositeFrag(get_builtin("composite.frag").str());
+    const FragmentFunction dofFrag(get_builtin("dof.frag").str());
 
     GeometryPass = RenderPass(GeometryBuffer, geometryVert, geometryFrag);
     RenderPass0 = RenderPass(RenderBuffer, sceneVert0, sceneFrag0);
     RenderPass1 = RenderPass(RenderBuffer, sceneVert1, sceneFrag1, {BlendMode::
         One_One});
+    DofPass = RenderPass(DofBuffer, quadVert, dofFrag);
     OitAccumPass = RenderPass(OitAccumBuffer, oitVert, oitFrag, {BlendMode::
         One_One, BlendMode::Zero_InvSrcAlpha});
     OitCompositePass = RenderPass(RenderBuffer, quadVert, compositeFrag,
@@ -720,60 +730,95 @@ void paz::App::Run()
         RenderPass0.draw(PrimitiveType::TriangleStrip, QuadVertices);
         RenderPass0.end();
 
-        RenderPass1.begin({LoadAction::Load});//, LoadAction::Load);
-        RenderPass1.cull(CullMode::Front);
-//        RenderPass1.depth(DepthTestMode::GreaterNoMask);
-        RenderPass1.read("diffuseMap", DiffuseMap);
-        // ...
-        RenderPass1.read("emissMap", EmissMap);
-        RenderPass1.read("normalMap", NormalMap);
-        RenderPass1.read("depthMap", DepthMap);
-        RenderPass1.uniform("projection", projection);
-        RenderPass1.uniform("invProjection", convert_mat(convert_mat(
-            projection).inv()));
-        RenderPass1.draw(PrimitiveType::Triangles, SphereVertices, lights,
-            SphereIndices);
-        RenderPass1.end();
-
-        // Render transparent objects. //TEMP - skip if possible
-        unsigned int numLights = lightsData0.size()/4;
-        if(numLights > 100)
+        if(!lights.empty())
         {
-            throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 100).");
+            RenderPass1.begin({LoadAction::Load});//, LoadAction::Load);
+            RenderPass1.cull(CullMode::Front);
+//            RenderPass1.depth(DepthTestMode::GreaterNoMask);
+            RenderPass1.read("diffuseMap", DiffuseMap);
+            // ...
+            RenderPass1.read("emissMap", EmissMap);
+            RenderPass1.read("normalMap", NormalMap);
+            RenderPass1.read("depthMap", DepthMap);
+            RenderPass1.uniform("projection", projection);
+            RenderPass1.uniform("invProjection", convert_mat(convert_mat(
+                projection).inv()));
+            RenderPass1.draw(PrimitiveType::Triangles, SphereVertices, lights,
+                SphereIndices);
+            RenderPass1.end();
         }
-        OitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::
-            Load);
-        OitAccumPass.depth(DepthTestMode::LessNoMask);
-        OitAccumPass.uniform("numLights", numLights);
-        OitAccumPass.uniform("light0", lightsData0);
-        OitAccumPass.uniform("light1", lightsData1);
-        OitAccumPass.uniform("projection", projection);
-        OitAccumPass.uniform("invProjection", convert_mat(convert_mat(
-            projection).inv())); //TEMP - precompute - used elsewhere
-        OitAccumPass.uniform("sunDir", convert_vec(view*SunDir)); //TEMP - precompute
-        OitAccumPass.uniform("sunIll", SunIll);
-        OitAccumPass.uniform("view", convert_mat(view));
+
+        // Render transparent objects.
+        bool oitEnabled = false;
         for(const auto& n : objectsByModel)
         {
             if(!n.second.back()->model()._transp.empty())
             {
-                OitAccumPass.draw(PrimitiveType::Triangles, n.second.back()->
-                    model()._transp, Instances.at(n.first));
+                oitEnabled = true;
             }
         }
-        OitAccumPass.end();
 
-        OitCompositePass.begin({LoadAction::Load});
-        OitCompositePass.read("accumTex", OitAccumTex);
-        OitCompositePass.read("revealTex", OitRevealTex);
-        OitCompositePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-        OitCompositePass.end();
+        if(oitEnabled)
+        {
+            unsigned int numLights = lightsData0.size()/4;
+            if(numLights > 100)
+            {
+                throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 100).");
+            }
+            OitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::Load);
+            OitAccumPass.depth(DepthTestMode::LessNoMask);
+            OitAccumPass.uniform("numLights", numLights);
+            OitAccumPass.uniform("light0", lightsData0);
+            OitAccumPass.uniform("light1", lightsData1);
+            OitAccumPass.uniform("projection", projection);
+            OitAccumPass.uniform("invProjection", convert_mat(convert_mat(projection).inv())); //TEMP - precompute - used elsewhere
+            OitAccumPass.uniform("sunDir", convert_vec(view*SunDir)); //TEMP - precompute
+            OitAccumPass.uniform("sunIll", SunIll);
+            OitAccumPass.uniform("view", convert_mat(view));
+            for(const auto& n : objectsByModel)
+            {
+                if(!n.second.back()->model()._transp.empty())
+                {
+                    OitAccumPass.draw(PrimitiveType::Triangles, n.second.back()->model()._transp, Instances.at(n.first));
+                }
+            }
+            OitAccumPass.end();
+
+            OitCompositePass.begin({LoadAction::Load});
+            OitCompositePass.read("accumTex", OitAccumTex);
+            OitCompositePass.read("revealTex", OitRevealTex);
+            OitCompositePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
+            OitCompositePass.end();
+        }
+
+        const bool dofEnabled = DofMinDepth < DofMaxDepth;
+        if(dofEnabled)
+        {
+//            if(oitEnabled) //TEMP - can we get nearest transparent depth while performing OIT earlier ?
+//            {
+//                OitDepthPass.begin();
+//                OitDepthPass.uniform(...);
+//                for(const auto& n : objectsByModel)
+//                {
+//                    ...;
+//                }
+//                OitDepthPass.end();
+//            }
+
+            DofPass.begin();
+            DofPass.read("hdrRender", HdrRender);
+            DofPass.read("depthMap", DepthMap);
+            DofPass.uniform("minDepth", DofMinDepth);
+            DofPass.uniform("maxDepth", DofMaxDepth);
+            DofPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
+            DofPass.end();
+        }
 
         if(FxaaEnabled)
         {
             // Tonemap to linear LDR.
             PostPass0.begin();
-            PostPass0.read("hdrRender", HdrRender);
+            PostPass0.read("hdrRender", dofEnabled ? DofRender : HdrRender);
             PostPass0.uniform("whitePoint", 1.f);
             PostPass0.draw(PrimitiveType::TriangleStrip, QuadVertices);
             PostPass0.end();
@@ -795,7 +840,7 @@ void paz::App::Run()
         {
             // Tonemap to linear LDR.
             PostPass1.begin();
-            PostPass1.read("hdrRender", HdrRender);
+            PostPass1.read("hdrRender", dofEnabled ? DofRender : HdrRender);
             PostPass1.uniform("whitePoint", 1.f);
             PostPass1.draw(PrimitiveType::TriangleStrip, QuadVertices);
             PostPass1.end();
