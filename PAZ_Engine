@@ -61,7 +61,7 @@ namespace paz
     public:
         Object();
         Object(const Object& o) = delete;
-        Object& operator=(const Object& o) = delete;
+        Object& operator=(const Object& o);
         Object(Object&& o);
         virtual ~Object();
         void notify(Object& o, const Bytes& data) const;

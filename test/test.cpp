@@ -366,7 +366,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
 
 class Npc : public paz::Object
 {
-    double _destYaw = 0.;
+    double _destYaw = paz::uniform(0., 2.*M_PI);
     double _walkTime = 0.;
 
 public:
@@ -461,6 +461,9 @@ int main()
     Npc npc1;
     npc1.x() = 2.*Radius;
     npc1.z() = 10.;
+    Npc npc2;
+    npc2 = npc0;
+    npc2.x() += 2.;
     paz::App::AttachCamera(player.head());
     paz::App::Run();
 }

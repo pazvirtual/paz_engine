@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
+#define COPY(x) x[idx] = x[otherIdx];
 
 std::unordered_map<std::uintptr_t, std::size_t>& paz::objects()
 {
@@ -186,6 +187,35 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     ZDown.push_back(0.);
 }
 
+paz::Object& paz::Object::operator=(const Object& o)
+{
+    const std::size_t idx = objects().at(_id);
+    const std::size_t otherIdx = objects().at(o._id);
+    COPY(X)
+    COPY(Y)
+    COPY(Z)
+    COPY(XVel)
+    COPY(YVel)
+    COPY(ZVel)
+    COPY(XAtt)
+    COPY(YAtt)
+    COPY(ZAtt)
+    COPY(XAngRate)
+    COPY(YAngRate)
+    COPY(ZAngRate)
+    COPY(Mod)
+    COPY(CType)
+    COPY(LocalNorX)
+    COPY(LocalNorY)
+    COPY(LocalNorZ)
+    COPY(Altitude)
+    COPY(CRadius)
+    COPY(XDown)
+    COPY(YDown)
+    COPY(ZDown)
+    return *this;
+}
+
 paz::Object::Object(Object&& o) : _id(reinterpret_cast<std::uintptr_t>(this))
 {
     const std::size_t idx = objects().at(o._id);
@@ -202,28 +232,28 @@ paz::Object::~Object()
     }
     const std::size_t idx = objects().at(_id);
     objects().erase(_id);
-    SWAP_AND_POP(X);
-    SWAP_AND_POP(Y);
-    SWAP_AND_POP(Z);
-    SWAP_AND_POP(XVel);
-    SWAP_AND_POP(YVel);
-    SWAP_AND_POP(ZVel);
-    SWAP_AND_POP(XAtt);
-    SWAP_AND_POP(YAtt);
-    SWAP_AND_POP(ZAtt);
-    SWAP_AND_POP(XAngRate);
-    SWAP_AND_POP(YAngRate);
-    SWAP_AND_POP(ZAngRate);
-    SWAP_AND_POP(Mod);
-    SWAP_AND_POP(CType);
-    SWAP_AND_POP(LocalNorX);
-    SWAP_AND_POP(LocalNorY);
-    SWAP_AND_POP(LocalNorZ);
-    SWAP_AND_POP(Altitude);
-    SWAP_AND_POP(CRadius);
-    SWAP_AND_POP(XDown);
-    SWAP_AND_POP(YDown);
-    SWAP_AND_POP(ZDown);
+    SWAP_AND_POP(X)
+    SWAP_AND_POP(Y)
+    SWAP_AND_POP(Z)
+    SWAP_AND_POP(XVel)
+    SWAP_AND_POP(YVel)
+    SWAP_AND_POP(ZVel)
+    SWAP_AND_POP(XAtt)
+    SWAP_AND_POP(YAtt)
+    SWAP_AND_POP(ZAtt)
+    SWAP_AND_POP(XAngRate)
+    SWAP_AND_POP(YAngRate)
+    SWAP_AND_POP(ZAngRate)
+    SWAP_AND_POP(Mod)
+    SWAP_AND_POP(CType)
+    SWAP_AND_POP(LocalNorX)
+    SWAP_AND_POP(LocalNorY)
+    SWAP_AND_POP(LocalNorZ)
+    SWAP_AND_POP(Altitude)
+    SWAP_AND_POP(CRadius)
+    SWAP_AND_POP(XDown)
+    SWAP_AND_POP(YDown)
+    SWAP_AND_POP(ZDown)
     for(auto& n : ObjectsByTag)
     {
         n.second.erase(this);
