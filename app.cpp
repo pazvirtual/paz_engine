@@ -729,7 +729,7 @@ void paz::App::Run()
         unsigned int numLights = lightsData0.size()/4;
         if(numLights > 100)
         {
-            throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 16).");
+            throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 100).");
         }
         OitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::
             Load);
