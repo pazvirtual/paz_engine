@@ -482,12 +482,11 @@ paz::Object::~Object()
 
 void paz::Object::update() {}
 
-void paz::Object::onCollide(const Object& /* o */, double /* xNor */, double
-    /* yNor */, double /* zNor */) {}
+void paz::Object::onCollide(const Object&, double, double, double) {}
 
-void paz::Object::onInteract(const Object& /* o */) {}
+void paz::Object::onInteract(const Object&) {}
 
-void paz::Object::onNotify(const Object& /* o */, const Bytes& /* data */) {}
+void paz::Object::onNotify(const Object&, const Bytes&) {}
 
 void paz::Object::notify(Object& o, const Bytes& data) const
 {
