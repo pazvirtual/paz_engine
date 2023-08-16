@@ -1,6 +1,6 @@
 #include "object.hpp"
 #include "PAZ_Engine"
-#include "math.hpp"
+#include "PAZ_Math"
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
 

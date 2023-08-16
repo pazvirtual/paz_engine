@@ -1,21 +1,16 @@
 #include "object.hpp"
 #include "PAZ_Engine"
-#include "math.hpp"
+#include "PAZ_Math"
 #include <limits>
 
 #define _cameraGrounded _cameraObject->grounded()
-#define _cameraX (_cameraObject->x() + _cameraObject->height()*_cameraUpX)
-#define _cameraY (_cameraObject->y() + _cameraObject->height()*_cameraUpY)
-#define _cameraZ (_cameraObject->z() + _cameraObject->height()*_cameraUpZ)
-#define _cameraXVel _cameraObject->xVel()
-#define _cameraYVel _cameraObject->yVel()
-#define _cameraZVel _cameraObject->zVel()
-#define _cameraXAngRate _cameraObject->xAngRate()
-#define _cameraYAngRate _cameraObject->yAngRate()
-#define _cameraZAngRate _cameraObject->zAngRate()
+#define _cameraBasePos Vec{{_cameraObject->x(), _cameraObject->y(), _cameraObject->z()}}
+#define _cameraVel Vec{{_cameraObject->xVel(), _cameraObject->yVel(), _cameraObject->zVel()}}
+#define _cameraAtt Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(), _cameraObject->zAtt(), std::sqrt(1. - _cameraObject->xAtt()*_cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() - _cameraObject->zAtt()*_cameraObject->zAtt())}}
+#define _cameraAngRate Vec{{_cameraObject->xAngRate(), _cameraObject->yAngRate(), _cameraObject->zAngRate()}}
 
 static constexpr double CosMaxAngle = 0.6; // 53.13 deg
-static constexpr std::array<float, 4> SunVec = {0.57735, 0.57735, 0.57735, 0.};
+static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 
@@ -40,82 +35,40 @@ static paz::RenderPass _fxaaPass;
 
 static paz::VertexBuffer _quadVertices;
 
-static double _cameraPitch = 0.5*M_PI;
-
-static double _cameraRightX;
-static double _cameraRightY;
-static double _cameraRightZ;
-static double _cameraForwardX;
-static double _cameraForwardY;
-static double _cameraForwardZ;
-static double _cameraUpX;
-static double _cameraUpY;
-static double _cameraUpZ;
+static double _cameraPitch = 0.;
 
 static /*const*/ paz::Object* _cameraObject = nullptr;
+
+static paz::Vec _mousePos = paz::Vec::Zero(2);
 ////
 
-static std::array<float, 16> mat_mult(const std::array<float, 16>& a, const
-    std::array<float, 16>& b)
+static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
-    std::array<float, 16> m = {};
-    for(std::size_t i = 0; i < 4; ++i)
-    {
-        for(std::size_t j = 0; j < 4; ++j)
-        {
-            for(std::size_t k = 0; k < 4; ++k)
-            {
-                m[4*j + i] += a[4*k + i]*b[4*j + k];
-            }
-        }
-    }
-    return m;
+    paz::Mat res(4, 4);
+    std::copy(m.begin(), m.end(), res.begin());
+    return res;
 }
 
-static std::array<float, 4> mat_mult(const std::array<float, 16>& a, const std::
-    array<float, 4>& b)
+static std::array<float, 16> convert_mat(const paz::Mat& m)
 {
-    std::array<float, 4> m = {};
-    for(std::size_t i = 0; i < 4; ++i)
+    if(m.rows() != 4 || m.cols() != 4)
     {
-        for(std::size_t j = 0; j < 4; ++j)
-        {
-            m[i] += a[4*j + i]*b[j];
-        }
+        throw std::runtime_error("Must be a 4x4 matrix.");
     }
-    return m;
+    std::array<float, 16> res;
+    std::copy(m.begin(), m.end(), res.begin());
+    return res;
 }
 
-static std::array<float, 16> mat_inv(const std::array<float, 16>& m)
+static std::array<float, 4> convert_vec(const paz::Vec& v)
 {
-    std::array<float, 32> a = {};
-    std::copy(m.begin(), m.end(), a.begin());
-    for(std::size_t i = 0; i < 4; ++i)
+    if(v.size() != 4)
     {
-        a[16 + i + 4*i] = 1.;
+        throw std::runtime_error("Must be a four-vector.");
     }
-    for(std::size_t i = 0; i < 4; ++i)
-    {
-        const double t0 = a[i + 4*i];
-        for(std::size_t j = i; j < 8; ++j)
-        {
-            a[i + 4*j] /= t0;
-        }
-        for(std::size_t j = 0; j < 4; ++j)
-        {
-            if(i != j)
-            {
-                const double t1 = a[j + 4*i];
-                for(std::size_t k = 0; k < 8; ++k)
-                {
-                    a[j + 4*k] -= t1*a[i + 4*k];
-                }
-            }
-        }
-    }
-    std::array<float, 16> b;
-    std::copy(a.begin() + 16, a.end(), b.begin());
-    return b;
+    std::array<float, 4> res;
+    std::copy(v.begin(), v.end(), res.begin());
+    return res;
 }
 
 static const std::string QuadVertSrc = 1 + R"===(
@@ -367,74 +320,112 @@ void paz::App::Run()
     while(!Window::Done())
     {
         physics();
+//const Vec gravDir = -_cameraBasePos.normalized();
+const Vec gravDir{{0., 0., -1.}};
 
-        // Invert attitude quaternion to get basis vectors.
-        {
-            const double q0 = _cameraObject->xAtt();
-            const double q1 = _cameraObject->yAtt();
-            const double q2 = _cameraObject->zAtt();
-            const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
-            const auto xx = q0*q0;
-            const auto yy = q1*q1;
-            const auto zz = q2*q2;
-            const auto xy = q0*q1;
-            const auto zw = q2*q3;
-            const auto xz = q0*q2;
-            const auto yw = q1*q3;
-            const auto yz = q1*q2;
-            const auto xw = q0*q3;
-            _cameraRightX = 1. - 2.*(yy + zz);
-            _cameraRightY = 2.*(xy - zw);
-            _cameraRightZ = 2.*(xz + yw);
-            _cameraForwardX = 2.*(xy + zw);
-            _cameraForwardY = 1. - 2.*(xx + zz);
-            _cameraForwardZ = 2.*(yz - xw);
-            _cameraUpX = 2.*(xz - yw);
-            _cameraUpY = 2.*(yz + xw);
-            _cameraUpZ = 1. - 2.*(xx + yy);
-        }
+        Vec cameraAtt = _cameraAtt;
 
-        _cameraZAngRate = -0.1*Window::MousePos().first;
+        // Get basis vectors (rows of rotation matrix).
+        Mat cameraRot = to_mat(cameraAtt);
+        Vec cameraForward = cameraRot.row(1).trans();
+        Vec cameraRight = gravDir.cross(cameraForward);
+        cameraRight /= cameraRight.norm();
+
+        _cameraObject->yAngRate() = 0.;
         if(_cameraGrounded)
         {
-            _cameraPitch = normalize_angle(std::max(0.05*M_PI, std::min(0.95*
-                M_PI, _cameraPitch + 0.1*Window::MousePos().second*Window::
-                FrameTime())));
+            _mousePos = Vec::Zero(2);
+            _cameraObject->xAngRate() = 0.;
+            _cameraObject->zAngRate() = -0.1*Window::MousePos().first;
+            Vec baseForward = cameraRight.cross(gravDir);
+            baseForward /= baseForward.norm();
+            const double deltaPitch = std::acos(std::max(0., std::min(1.,
+                baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) >
+                0. ? -1. : 1.) + 0.1*Window::MousePos().second*Window::
+                FrameTime();
+            if(std::abs(deltaPitch) > 1e-6)
+            {
+                _cameraPitch = std::max(-0.45*M_PI, std::min(0.45*
+                    M_PI, _cameraPitch + deltaPitch));
+            }
+            cameraRot.setRow(0, cameraRight.trans());
+            cameraRot.setRow(1, baseForward.trans());
+            cameraRot.setRow(2, -gravDir.trans());
+            Vec cameraBaseAtt = to_quat(cameraRot);
+            if(cameraBaseAtt(3) < 0.)
+            {
+                cameraBaseAtt = -cameraBaseAtt;
+            }
+            _cameraObject->xAtt() = cameraBaseAtt(0);
+            _cameraObject->yAtt() = cameraBaseAtt(1);
+            _cameraObject->zAtt() = cameraBaseAtt(2);
+            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch + 0.5*
+                M_PI), _cameraAtt);
         }
         else
         {
-            // NEED TO TRADE OFF PITCH AND ATT ROTATION
-//            _cameraXAngRate += 0.1*Window::MousePos().first;
+            if(_cameraPitch)
+            {
+                cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch),
+                    cameraAtt);
+                _cameraObject->xAtt() = cameraAtt(0);
+                _cameraObject->yAtt() = cameraAtt(1);
+                _cameraObject->zAtt() = cameraAtt(2);
+                cameraRot = to_mat(_cameraAtt);
+                _cameraPitch = 0.;
+            }
+            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, 0.5*M_PI), cameraAtt);
+            _mousePos(0) += Window::MousePos().first;
+            _mousePos(1) += Window::MousePos().second;
+            const double norm = _mousePos.norm();
+            if(norm > 100.)
+            {
+                _mousePos *= 100./norm;
+            }
+            else if(norm > 0.1)
+            {
+                _mousePos -= 50.0/norm*Window::FrameTime()*_mousePos;
+            }
+            else
+            {
+                _mousePos = Vec::Zero(2);
+            }
+            _cameraObject->xAngRate() = 0.006*_mousePos(1);
+            _cameraObject->zAngRate() = -0.006*_mousePos(0);
         }
+
+        cameraRight = cameraRot.row(0).trans();
+        cameraForward = cameraRot.row(1).trans();
+        const Vec cameraUp = cameraRot.row(2).trans();
 
         if(_cameraGrounded)
         {
-            _cameraXVel = 0.;
-            _cameraYVel = 0.;
-            _cameraZVel = 0.;
+            _cameraObject->xVel() = 0.;
+            _cameraObject->yVel() = 0.;
+            _cameraObject->zVel() = 0.;
             if(Window::KeyDown(Key::A))
             {
-                _cameraXVel -= 3.*_cameraRightX;
-                _cameraYVel -= 3.*_cameraRightY;
-                _cameraZVel -= 3.*_cameraRightZ;
+                _cameraObject->xVel() -= 3.*cameraRight(0);
+                _cameraObject->yVel() -= 3.*cameraRight(1);
+                _cameraObject->zVel() -= 3.*cameraRight(2);
             }
             if(Window::KeyDown(Key::D))
             {
-                _cameraXVel += 3.*_cameraRightX;
-                _cameraYVel += 3.*_cameraRightY;
-                _cameraZVel += 3.*_cameraRightZ;
+                _cameraObject->xVel() += 3.*cameraRight(0);
+                _cameraObject->yVel() += 3.*cameraRight(1);
+                _cameraObject->zVel() += 3.*cameraRight(2);
             }
             if(Window::KeyDown(Key::W))
             {
-                _cameraXVel += 3.*_cameraForwardX;
-                _cameraYVel += 3.*_cameraForwardY;
-                _cameraZVel += 3.*_cameraForwardZ;
+                _cameraObject->xVel() += 3.*cameraForward(0);
+                _cameraObject->yVel() += 3.*cameraForward(1);
+                _cameraObject->zVel() += 3.*cameraForward(2);
             }
             if(Window::KeyDown(Key::S))
             {
-                _cameraXVel -= 3.*_cameraForwardX;
-                _cameraYVel -= 3.*_cameraForwardY;
-                _cameraZVel -= 3.*_cameraForwardZ;
+                _cameraObject->xVel() -= 3.*cameraForward(0);
+                _cameraObject->yVel() -= 3.*cameraForward(1);
+                _cameraObject->zVel() -= 3.*cameraForward(2);
             }
         }
 
@@ -459,30 +450,18 @@ void paz::App::Run()
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             100.);
-        const std::array<float, 16> baseMat =
-        {
-            static_cast<float>(_cameraRightX), static_cast<float>(_cameraForwardX), static_cast<float>(_cameraUpX), 0,
-            static_cast<float>(_cameraRightY), static_cast<float>(_cameraForwardY), static_cast<float>(_cameraUpY), 0,
-            static_cast<float>(_cameraRightZ), static_cast<float>(_cameraForwardZ), static_cast<float>(_cameraUpZ), 0,
-            0, 0, 0, 1
-        };
-        const double cosPitch = std::cos(_cameraPitch);
-        const double sinPitch = std::sin(_cameraPitch);
-        const std::array<float, 16> pitchMat =
-        {
-            1,               0,                0, 0,
-            0, static_cast<float>(cosPitch), -static_cast<float>(sinPitch), 0,
-            0, static_cast<float>(sinPitch),  static_cast<float>(cosPitch), 0,
-            0,               0,                0, 1
-        };
-        const auto view = mat_mult(pitchMat, baseMat);
+        Mat view = Mat::Zero(4);
+        view(3, 3) = 1.;
+        view.setBlock(0, 0, 3, 3, to_mat(cameraAtt));
 
         for(const auto& n : objects())
         {
             Object* o = reinterpret_cast<Object*>(n.first);
             if(o->collisionType() == CollisionType::Default)
             {
-                o->zVel() -= 9.81*Window::FrameTime();
+                o->xVel() += 9.81*Window::FrameTime()*gravDir(0);//TEMP - needs to be per-object
+                o->yVel() += 9.81*Window::FrameTime()*gravDir(1);
+                o->zVel() += 9.81*Window::FrameTime()*gravDir(2);
             }
         }
 
@@ -602,8 +581,8 @@ for(auto& a0 : objects())
         _geometryPass.cull(CullMode::Back);
         _geometryPass.depth(DepthTestMode::Less);
         _geometryPass.uniform("projection", projection);
-        _geometryPass.uniform("view", view);
-        _geometryPass.uniform("model", std::array<float, 16>{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1});
+        _geometryPass.uniform("view", convert_mat(view));
+        _geometryPass.uniform("model", convert_mat(Mat::Identity(4)));
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
@@ -622,11 +601,12 @@ for(auto& a0 : objects())
                 const auto upX = 2.*(xz + yw);
                 const auto upY = 2.*(yz - xw);
                 const auto upZ = 1. - 2.*(xx + yy);
-                _geometryPass.uniform("model", std::array<float, 16>{1, 0, 0, 0,
-                    0, 1, 0, 0, 0, 0, 1, 0, static_cast<float>(o->x() + o->
-                    height()*upX - _cameraX), static_cast<float>(o->y() + o->
-                    height()*upY - _cameraY), static_cast<float>(o->z() + o->
-                    height()*upZ - _cameraZ), 1});
+                _geometryPass.uniform("model", convert_mat(Mat{
+{1, 0, 0, o->x() + o->height()*upX - _cameraObject->x() - _cameraObject->height()*cameraUp(0)},
+{0, 1, 0, o->y() + o->height()*upY - _cameraObject->y() - _cameraObject->height()*cameraUp(1)},
+{0, 0, 1, o->z() + o->height()*upZ - _cameraObject->z() - _cameraObject->height()*cameraUp(2)},
+{0, 0, 0, 1}
+                }));
                 _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
                     model()._i);
             }
@@ -638,8 +618,8 @@ for(auto& a0 : objects())
 //        _renderPass.read("materialMap", _materialMap);
         _renderPass.read("normalMap", _normalMap);
         _renderPass.read("depthMap", _depthMap);
-        _renderPass.uniform("invProjection", mat_inv(projection));
-        _renderPass.uniform("sun", mat_mult(view, SunVec));
+        _renderPass.uniform("invProjection", convert_mat(convert_mat(projection).inv()));
+        _renderPass.uniform("sun", convert_vec(view*SunVec));
         _renderPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();
 
