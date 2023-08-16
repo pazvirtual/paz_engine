@@ -545,6 +545,7 @@ const double colTime0 = timer.getAndRestart();
         // Find and handle collisions. (Time is the outer loop to ensure
         // collision repsonses occur in the correct order.)
 std::vector<bool> tempDone(a.size(), false);
+        const double stepSize = Window::FrameTime()/NumSteps;
         for(std::size_t i = 0; i < NumSteps; ++i)
         {
             for(std::size_t j = 0; j < a.size(); ++j)
@@ -594,14 +595,15 @@ if(tempDone[j]){ continue; }
                             a[j]->zVel() = b[n]->zVel();
 #endif
                         }
-                        a[j]->x() = xNew + bX[n][i] + (NumSteps - i - 1)*a[j]->
-                            xVel()/NumSteps*Window::FrameTime();
-                        a[j]->y() = yNew + bY[n][i] + (NumSteps - i - 1)*a[j]->
-                            yVel()/NumSteps*Window::FrameTime();
-                        a[j]->z() = zNew + bZ[n][i] + (NumSteps - i - 1)*a[j]->
-                            zVel()/NumSteps*Window::FrameTime();
+                        a[j]->x() = xNew + bX[n][i];
+                        a[j]->y() = yNew + bY[n][i];
+                        a[j]->z() = zNew + bZ[n][i];
                         a[j]->onCollide(*b[n]);
                         b[n]->onCollide(*a[j]);
+                        const double extraTime = (NumSteps - i - 1)*stepSize;
+                        a[j]->x() += extraTime*a[j]->xVel();
+                        a[j]->y() += extraTime*a[j]->yVel();
+                        a[j]->z() += extraTime*a[j]->zVel();
 tempDone[j] = true;
                     }
                 }
