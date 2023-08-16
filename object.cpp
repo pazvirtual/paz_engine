@@ -529,16 +529,21 @@ void paz::Object::computeAltitude(double& alt, paz::Vec& nor) const
         {
             continue;
         }
-        double dist, xNor, yNor, zNor;
-        Mod[n.second].castRay(X[idx] - X[n.second], Y[idx] - Y[n.second], Z[idx]
-            - Z[n.second], XDown[idx], YDown[idx], ZDown[idx], xNor, yNor, zNor,
-            dist);
+        const double wAtt = std::sqrt(1. - XAtt[n.second]*XAtt[n.second] - YAtt[
+            n.second]*YAtt[n.second] - ZAtt[n.second]*ZAtt[n.second]);
+        const Mat rot = to_mat(Vec{{XAtt[n.second], YAtt[n.second], ZAtt[n.
+            second], wAtt}});
+        const Vec relPos = rot*Vec{{X[idx] - X[n.second], Y[idx] - Y[n.second],
+            Z[idx] - Z[n.second]}};
+        const Vec dir = rot*Vec{{XDown[idx], YDown[idx], ZDown[idx]}};
+        double dist;
+        Vec tempNor(3);
+        Mod[n.second].castRay(relPos(0), relPos(1), relPos(2), dir(0), dir(1),
+            dir(2), tempNor(0), tempNor(1), tempNor(2), dist);
         if(dist < alt)
         {
             alt = dist;
-            nor(0) = xNor;
-            nor(1) = yNor;
-            nor(2) = zNor;
+            nor = rot.trans()*tempNor;
         }
     }
     alt -= CRadius[idx];

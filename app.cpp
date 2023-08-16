@@ -502,6 +502,7 @@ paz::Timer colTimer;
         }
 const double colTime0 = colTimer.getAndRestart();
 
+        std::vector<Mat> bRot(b.size());
         std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
             NumSteps));
         std::vector<std::vector<double>> bY(b.size(), std::vector<double>(
@@ -510,6 +511,10 @@ const double colTime0 = colTimer.getAndRestart();
             NumSteps));
         for(std::size_t i = 0; i < b.size(); ++i)
         {
+            const double wAtt = std::sqrt(1. - b[i]->xAtt()*b[i]->xAtt() - b[
+                i]->yAtt()*b[i]->yAtt() - b[i]->zAtt()*b[i]->zAtt());
+            const Vec att{{b[i]->xAtt(), b[i]->yAtt(), b[i]->zAtt(), wAtt}};
+            bRot[i] = to_mat(att);
             for(std::size_t j = 0; j < NumSteps; ++j)
             {
                 static constexpr double t0 = 1./NumSteps;
@@ -532,18 +537,31 @@ std::vector<bool> tempDone(a.size(), false);
 if(tempDone[j]){ continue; }
                 for(auto n : c[j])
                 {
-                    const double x = a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->
+                    double x = a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->
                         xPrev())/NumSteps - bX[n][i];
-                    const double y = a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->
+                    double y = a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->
                         yPrev())/NumSteps - bY[n][i];
-                    const double z = a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->
+                    double z = a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->
                         zPrev())/NumSteps - bZ[n][i];
+                    const Vec relPos = bRot[n]*Vec{{x, y, z}};
+                    x = relPos(0);
+                    y = relPos(1);
+                    z = relPos(2);
 
                     double xNew, yNew, zNew, xNor, yNor, zNor;
                     const double dist = b[n]->model().collide(x, y, z, a[j]->
                         collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
                     if(dist < a[j]->collisionRadius())
                     {
+                        const Vec nor = bRot[n].trans()*Vec{{xNor, yNor, zNor}};
+                        xNor = nor(0);
+                        yNor = nor(1);
+                        zNor = nor(2);
+                        const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew,
+                            zNew}};
+                        xNew = newPos(0);
+                        yNew = newPos(1);
+                        zNew = newPos(2);
                         const double xVel = a[j]->xVel() - b[n]->xVel();
                         const double yVel = a[j]->yVel() - b[n]->yVel();
                         const double zVel = a[j]->zVel() - b[n]->zVel();
@@ -602,7 +620,7 @@ latHist.push_back(lat);
         const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
             _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt()
             - _cameraObject->zAtt()*_cameraObject->zAtt());
-        const paz::Vec cameraAtt{{_cameraObject->xAtt(), _cameraObject->yAtt(),
+        const Vec cameraAtt{{_cameraObject->xAtt(), _cameraObject->yAtt(),
             _cameraObject->zAtt(), cameraWAtt}};
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,

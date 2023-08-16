@@ -8,6 +8,7 @@ static paz::Model Sphere50;
 static paz::Model Body;
 static paz::Model Head;
 static paz::Model PaintballModel;
+static paz::Model FancyBox;
 
 static constexpr double Radius = 50.;
 
@@ -26,16 +27,13 @@ public:
         collisionRadius() = 0.01;
         model() = PaintballModel;
     }
-    void onCollide(const Object& o) override
+    void onCollide(const Object&) override
     {
-        if(o.collisionType() == paz::CollisionType::World)
-        {
-            xVel() = 0.;
-            yVel() = 0.;
-            zVel() = 0.;
-            collisionType() = paz::CollisionType::None;
-            gravityType() = paz::GravityType::None;
-        }
+        xVel() = 0.;
+        yVel() = 0.;
+        zVel() = 0.;
+        collisionType() = paz::CollisionType::None;
+        gravityType() = paz::GravityType::None;
     }
 };
 
@@ -46,10 +44,7 @@ public:
         Paintball(pos, vel, dir) {}
     void onCollide(const Object& o) override
     {
-        if(o.collisionType() == paz::CollisionType::World)
-        {
-            addTag("done");
-        }
+        addTag("done");
         Paintball::onCollide(o);
     }
 };
@@ -58,27 +53,31 @@ class Fountain : public paz::Object
 {
     double _timer = 0.;
     std::vector<Droplet> _droplets;
-    paz::Vec _dir; //TEMP - replace w/ just setting attitude
 
 public:
     Fountain()
     {
-        collisionType() = paz::CollisionType::None;
+        model() = FancyBox;
+        collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None;
     }
     void update() final
     {
         _timer += paz::Window::FrameTime();
-        if(_timer > 0.05)
+        if(_timer > 0.1)
         {
             const paz::Vec pos{{x(), y(), z()}};
             const paz::Vec vel{{xVel(), yVel(), zVel()}};
-            for(int i = 0; i < 1/*5*/; ++i)
+            for(int i = 0; i < 2; ++i)
             {
-                const paz::Vec dir = (0.01*paz::Vec{{paz::randn(), paz::randn(),
-                    paz::randn()}} + _dir).normalized();
-                _droplets.emplace_back(pos + paz::uniform(0.05, 0.8)*dir, vel,
-                    dir);
+                const double wAtt = std::sqrt(1. - xAtt()*xAtt() - yAtt()*yAtt()
+                    - zAtt()*zAtt());
+                const paz::Vec att{{xAtt(), yAtt(), zAtt(), wAtt}};
+                paz::Vec dir = paz::to_mat(paz::qinv(att)).col(2);
+                dir += 0.01*paz::Vec{{paz::randn(), paz::randn(), paz::
+                    randn()}};
+                const double offset = 1.3 + i*0.1*10./2;
+                _droplets.emplace_back(pos + offset*dir, vel, dir);
             }
             _timer = 0.;
         }
@@ -98,7 +97,26 @@ public:
     }
     void setDir(double xDir, double yDir, double zDir)
     {
-        _dir = paz::Vec{{xDir, yDir, zDir}};
+        const paz::Vec up{{xDir, yDir, zDir}};
+        paz::Vec right{{1., 0., 0.}};
+        if(std::abs(up.dot(right)) > 0.99)
+        {
+            right = paz::Vec{{0., 1., 0.}};
+        }
+        const paz::Vec forward = up.cross(right).normalized();
+        right = forward.cross(up).normalized();
+        paz::Mat rot(3);
+        rot.setCol(0, right);
+        rot.setCol(1, forward);
+        rot.setCol(2, up);
+        paz::Vec att = paz::to_quat(rot);
+        if(att(3) < 0.)
+        {
+            att = -att;
+        }
+        xAtt() = att(0);
+        yAtt() = att(1);
+        zAtt() = att(2);
     }
 };
 
@@ -108,6 +126,8 @@ class Player : public paz::Object
     {
         Grounded, Low, Floating
     };
+
+    static constexpr double LowAltitude = 10.;
 
     double _pitch = 0.;
     double _prevGravPitch = 0.;
@@ -139,7 +159,7 @@ public:
         double alt;
         paz::Vec nor;
         computeAltitude(alt, nor);
-        if(alt < 1.)
+        if(alt < LowAltitude)
         {
             reg = Regime::Low;
             if(alt < 0.1)//TEMP - should be function of maxangle
@@ -184,7 +204,9 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             }
             if((baseAtt - att).normSq() > 1e-6)
             {
-                baseAtt = (0.9*att + 0.1*baseAtt).normalized();
+                const double fac = std::max(0., std::min(1., 1. - std::sqrt(alt/
+                    LowAltitude)));
+                baseAtt = ((1. - fac)*att + fac*baseAtt).normalized();
                 if(baseAtt(3) < 0.)
                 {
                     baseAtt = -baseAtt;
@@ -206,13 +228,14 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             if(std::abs(_pitch) > 1e-6)
             {
-                att = paz::qmult(paz::axis_angle(paz::Vec{{1, 0, 0}}, 0.1*
+                const double fac = 0.1;
+                att = paz::qmult(paz::axis_angle(paz::Vec{{1, 0, 0}}, fac*
                     _pitch), att);
                 xAtt() = att(0);
                 yAtt() = att(1);
                 zAtt() = att(2);
                 rot = paz::to_mat(att);
-                _pitch *= 0.9;
+                _pitch *= 1. - fac;
             }
 
             _mousePos(0) += (paz::Window::GamepadActive() ? 15.*paz::Window::
@@ -518,6 +541,7 @@ int main()
     Body = paz::Model("persontest.obj", 0, -0.2);
     Head = paz::Model("persontest.obj", 1, -0.1);
     PaintballModel = paz::Model("unitsphere.obj", 0, 0., 0.1);
+    FancyBox = paz::Model("fancybox.obj");
     Player player;
     player.z() = Radius + 10.;
     std::vector<World> w(5);
