@@ -49,6 +49,7 @@ public:
         model() = FancyBox;
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None;
+        lights().push_back({0., 0., 1.3});
     }
     void update() final
     {
@@ -216,12 +217,12 @@ int main()
             normalized();
         n.setDir(up(0), up(1), up(2));
     }
-    paz::App::AddLight(paz::Vec{{Radius + 5. + 10., 0., 0.}});
-    paz::App::AddLight(paz::Vec{{-Radius - 5. - 10., 0., 0.}});
-    paz::App::AddLight(paz::Vec{{0., Radius + 5. + 10., 0.}});
-    paz::App::AddLight(paz::Vec{{0., -Radius - 5. - 10., 0.}});
-    paz::App::AddLight(paz::Vec{{0., 0., Radius + 10.}});
-    paz::App::AddLight(paz::Vec{{0., 0., -Radius - 10.}});
+    w.lights().push_back({Radius + 5. + 10., 0., 0.});
+    w.lights().push_back({-Radius - 5. - 10., 0., 0.});
+    w.lights().push_back({0., Radius + 5. + 10., 0.});
+    w.lights().push_back({0., -Radius - 5. - 10., 0.});
+    w.lights().push_back({0., 0., Radius + 10.});
+    w.lights().push_back({0., 0., -Radius - 10.});
     paz::App::AttachCamera(player.head());
     paz::App::AttachMic(player.head());
     paz::App::SetConsole(paz::ConsoleMode::CurrentFrame);

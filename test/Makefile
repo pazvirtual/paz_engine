@@ -36,7 +36,7 @@ ASSETS := $(wildcard assets/*)
 SRC := $(wildcard *.cpp)
 OBJ := build/assets.o $(SRC:%.cpp=build/%.o)
 
-#.PHONY: $(SRC)
+.PHONY: test
 test: build $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDLIBS)
 

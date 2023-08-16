@@ -39,6 +39,7 @@ static std::vector<double> XDown;
 static std::vector<double> YDown;
 static std::vector<double> ZDown;
 static std::vector<double> StdGravParam;
+static std::vector<std::vector<std::array<double, 3>>> Lights;
 static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
     ObjectsByTag;
 
@@ -205,6 +206,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     YDown.push_back(0.);
     ZDown.push_back(0.);
     StdGravParam.push_back(0.);
+    Lights.emplace_back();
 }
 
 paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
@@ -233,6 +235,7 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(YDown)
     PUSH_COPY(ZDown)
     PUSH_COPY(StdGravParam)
+    PUSH_COPY(Lights)
     for(auto& m : ObjectsByTag) //TEMP - inefficient
     {
         if(m.second.count(o._id))
@@ -266,6 +269,7 @@ paz::Object& paz::Object::operator=(const Object& o)
     COPY(YDown)
     COPY(ZDown)
     COPY(StdGravParam)
+    COPY(Lights)
     for(auto& m : ObjectsByTag) //TEMP - inefficient
     {
         if(m.second.count(o._id))
@@ -309,6 +313,7 @@ paz::Object::~Object()
     SWAP_AND_POP(YDown)
     SWAP_AND_POP(ZDown)
     SWAP_AND_POP(StdGravParam)
+    SWAP_AND_POP(Lights)
     for(auto& n : ObjectsByTag)
     {
         n.second.erase(_id);
@@ -538,6 +543,16 @@ double& paz::Object::stdGravParam()
 double paz::Object::stdGravParam() const
 {
     return StdGravParam[objects().at(_id)];
+}
+
+std::vector<std::array<double, 3>>& paz::Object::lights()
+{
+    return Lights[objects().at(_id)];
+}
+
+const std::vector<std::array<double, 3>>& paz::Object::lights() const
+{
+    return Lights[objects().at(_id)];
 }
 
 void paz::Object::addTag(const std::string& tag)

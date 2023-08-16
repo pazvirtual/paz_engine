@@ -110,6 +110,8 @@ namespace paz
         double zDown() const;
         double& stdGravParam();
         double stdGravParam() const;
+        std::vector<std::array<double, 3>>& lights();
+        const std::vector<std::array<double, 3>>& lights() const;
         void addTag(const std::string& tag);
         bool isTagged(const std::string& tag) const;
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
@@ -168,7 +170,6 @@ namespace paz
         static void SetGravity(double acc);
         static void SetSound(const Object& o, const AudioTrack& sound, bool
             loop);
-        static void AddLight(const Vec& pos);
     };
 }
 

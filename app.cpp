@@ -2,7 +2,6 @@
 #include "shared.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
-#include "timer.hpp"
 #include <limits>
 #include <iomanip>
 #include <deque>
@@ -57,16 +56,14 @@ static paz::UiDescriptor _startMenu;
 
 static paz::Texture _defaultTex;
 
-static const paz::Object* _cameraObject;
-static const paz::Object* _micObject;
+static const paz::Object* _cameraObject; //TEMP - vector realloc breaks ptrs
+static const paz::Object* _micObject; //TEMP - vector realloc breaks ptrs
 
-static const paz::Object* _soundSrc;
+static const paz::Object* _soundSrc; //TEMP - vector realloc breaks ptrs
 
 static bool _paused;
 
 static double _gravity;
-
-static std::vector<paz::Vec> _lightPos;
 
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
@@ -669,7 +666,6 @@ if(!_paused)
 {
         physics(_gravity);
 
-Timer timer;
         // Identify all objects that can collide and precompute as much as
         // possible.
         std::vector<Object*> a;
@@ -705,7 +701,6 @@ Timer timer;
                 }
             }
         }
-const double colTime0 = timer.getAndRestart();
 
         std::vector<double> times(NumSteps);
         for(std::size_t i = 0; i < NumSteps; ++i)
@@ -801,17 +796,6 @@ tempDone[j] = true;
                 }
             }
         }
-#if 0
-const double colTime1 = timer.getAndRestart();
-static double avgColTime0Sq = 0.;
-avgColTime0Sq = 0.99*avgColTime0Sq + 0.01*colTime0*colTime0;
-static double avgColTime1Sq = 0.;
-avgColTime1Sq = 0.99*avgColTime1Sq + 0.01*colTime1*colTime1;
-_msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgColTime0Sq) << " " << std::setw(8) << std::sqrt(avgColTime1Sq) << std::endl;
-static double avgFrameTimeSq = 1./(60.*60.);
-avgFrameTimeSq = 0.99*avgFrameTimeSq + 0.01*PhysTime()*PhysTime();
-_msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
-#endif
 
         const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
         for(const auto& n : tempObjects)
@@ -831,14 +815,6 @@ _msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6)
 
         const Vec cameraPos{{_cameraObject->x(), _cameraObject->y(),
             _cameraObject->z()}};
-static std::deque<double> rHist(60*30, cameraPos.norm());
-static std::deque<double> latHist(60*30, cameraPos(2)/rHist.back());
-{
-rHist.pop_front();
-rHist.push_back(cameraPos.norm());
-latHist.pop_front();
-latHist.push_back(cameraPos(2)/rHist.back());
-}
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             1e3);
@@ -847,22 +823,7 @@ latHist.push_back(cameraPos(2)/rHist.back());
         view.setBlock(0, 0, 3, 3, Mat{{1., 0., 0.}, {0., 0., 1.}, {0., -1.,
             0.}}*to_mat(cameraAtt));
 
-        // Define light sources.
-        std::vector<float> lightsData(4*_lightPos.size());
-        for(std::size_t i = 0; i < _lightPos.size(); ++i)
-        {
-            const Vec p = view*Vec{{_lightPos[i](0) - cameraPos(0), _lightPos[
-                i](1) - cameraPos(1), _lightPos[i](2) - cameraPos(2), 1.}};
-            lightsData[4*i + 0] = p(0);
-            lightsData[4*i + 1] = p(1);
-            lightsData[4*i + 2] = p(2);
-            lightsData[4*i + 3] = 1.; //TEMP
-        }
-        Texture lights(TextureFormat::RGBA32Float, 1, _lightPos.size(),
-            lightsData.data());
-
-        // Get geometry map.
-Timer timer;
+        // Prepare for rendering.
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
         for(const auto& n : objects())
         {
@@ -884,17 +845,9 @@ Timer timer;
                 _instances.at(n.first).addAttribute(2, DataType::Float);
             }
         }
-        _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
-            LoadAction::Clear);
-        _geometryPass.cull(CullMode::Back);
-        _geometryPass.depth(DepthTestMode::Less);
-        _geometryPass.uniform("projection", projection);
-        _geometryPass.uniform("view", convert_mat(view));
-std::array<double, 4> timeSum = {};
-timeSum[0] += timer.get();
-        for(const auto& n : objectsByModel)
+        std::vector<float> lightsData;
+        for(const auto& n : objectsByModel) //TEMP - this means that only objects with models can have lights !
         {
-Timer timer1;
             std::array<std::vector<float>, 2> modelMatData;
             modelMatData[0].resize(4*n.second.size());
             modelMatData[1].resize(2*n.second.size());
@@ -906,11 +859,49 @@ Timer timer1;
                 modelMatData[0][4*i + 3] = n.second[i]->x() - cameraPos(0);
                 modelMatData[1][2*i + 0] = n.second[i]->y() - cameraPos(1);
                 modelMatData[1][2*i + 1] = n.second[i]->z() - cameraPos(2);
+                if(!n.second[i]->lights().empty())
+                {
+                    const Vec model0{{modelMatData[0][4*i + 0], modelMatData[0][4*i + 1], modelMatData[0][4*i + 2], modelMatData[0][4*i + 3]}};
+                    const Vec model1{{modelMatData[1][2*i + 0], modelMatData[1][2*i + 1]}};
+                    const Vec att{{model0(0), model0(1), model0(2), std::sqrt(1. - model0.head(3).normSq())}};
+                    const double xx = att(0)*att(0);
+                    const double yy = att(1)*att(1);
+                    const double zz = att(2)*att(2);
+                    const double xy = att(0)*att(1);
+                    const double zw = att(2)*att(3);
+                    const double xz = att(0)*att(2);
+                    const double yw = att(1)*att(3);
+                    const double yz = att(1)*att(2);
+                    const double xw = att(0)*att(3);
+                    const Mat mv = view*Mat{{1. - 2.*(yy + zz), 2.*(xy - zw), 2.*(xz + yw), model0(3)},
+                                            {2.*(xy + zw), 1. - 2.*(xx + zz), 2.*(yz - xw), model1(0)},
+                                            {2.*(xz - yw), 2.*(yz + xw), 1. - 2.*(xx + yy), model1(1)},
+                                            {0., 0., 0., 1.}};
+                    for(const auto& m : n.second[i]->lights())
+                    {
+                        const Vec p = mv*Vec{{m[0], m[1], m[2], 1.}};
+                        lightsData.push_back(p(0));
+                        lightsData.push_back(p(1));
+                        lightsData.push_back(p(2));
+                        lightsData.push_back(1.f); //TEMP
+                    }
+                }
             }
-timeSum[1] += timer1.getAndRestart();
             _instances.at(n.first).subAttribute(0, modelMatData[0]);
             _instances.at(n.first).subAttribute(1, modelMatData[1]);
-timeSum[2] += timer1.getAndRestart();
+        }
+        Texture lights(TextureFormat::RGBA32Float, 1, lightsData.size()/4,
+            lightsData.data());
+
+        // Get geometry map.
+        _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
+            LoadAction::Clear);
+        _geometryPass.cull(CullMode::Back);
+        _geometryPass.depth(DepthTestMode::Less);
+        _geometryPass.uniform("projection", projection);
+        _geometryPass.uniform("view", convert_mat(view));
+        for(const auto& n : objectsByModel)
+        {
             if(n.second.back()->model()._tex.width())
             {
                 _geometryPass.read("tex", n.second.back()->model()._tex);
@@ -922,20 +913,8 @@ timeSum[2] += timer1.getAndRestart();
             _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
                 model()._v, _instances.at(n.first), n.second.back()->model().
                 _i);
-timeSum[3] += timer1.get();
         }
         _geometryPass.end();
-#if 0
-const double gTime = timer.getAndRestart();
-static double avgGTimeSq = 0.;
-avgGTimeSq = 0.99*avgGTimeSq + 0.01*gTime*gTime;
-_msgStream << "Avg. G-pass time: " << std::fixed << std::setprecision(5) << std::setw(7) << std::sqrt(avgGTimeSq) << std::endl;
-static decltype(timeSum) avgTimeSumSq;
-for(std::size_t i = 0; i < timeSum.size(); ++i){ avgTimeSumSq[i] = 0.99*avgTimeSumSq[i] + 0.01*timeSum[i]*timeSum[i]; }
-_msgStream << "Breakdown: " << std::fixed << std::setprecision(5);
-for(std::size_t i = 0; i < avgTimeSumSq.size(); ++i){ _msgStream << std::setw(7) << std::sqrt(avgTimeSumSq[i]) << (i + 1 < avgTimeSumSq.size() ? " " : ""); }
-_msgStream << std::endl;
-#endif
 
         // Render in HDR.
         _renderPass.begin();
@@ -1106,13 +1085,4 @@ void paz::App::SetSound(const Object& o, const AudioTrack& sound, bool loop)
 {
     _soundSrc = &o;
     AudioEngine::Play(sound, loop);
-}
-
-void paz::App::AddLight(const Vec& pos)
-{
-    if(pos.size() != 3)
-    {
-        throw std::runtime_error("Light position must be a 3-vector.");
-    }
-    _lightPos.push_back(pos);
 }
