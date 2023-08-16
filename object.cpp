@@ -31,13 +31,9 @@ static std::vector<double> ZAngRate;
 static std::vector<paz::Model> Mod;
 static std::vector<paz::CollisionType> CType;
 static std::vector<paz::GravityType> GType;
-static std::vector<double> LocalNorX;
-static std::vector<double> LocalNorY;
-static std::vector<double> LocalNorZ;
 static std::vector<double> XPrev;
 static std::vector<double> YPrev;
 static std::vector<double> ZPrev;
-static std::vector<double> Altitude;
 static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
@@ -73,7 +69,7 @@ void paz::physics()
     XPrev = X;
     YPrev = Y;
     ZPrev = Z;
-    const std::size_t n = X.size();
+    const auto n = X.size();
     for(std::size_t i = 0; i < n; ++i)
     {
         if(GType[i] == GravityType::Default)
@@ -159,8 +155,6 @@ void paz::physics()
         YAtt[i] *= invSignNorm;
         ZAtt[i] *= invSignNorm;
     }
-    std::fill(Altitude.begin(), Altitude.end(), std::numeric_limits<double>::
-        infinity());
 }
 
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
@@ -182,10 +176,6 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     Mod.emplace_back();
     CType.push_back(CollisionType::Default);
     GType.push_back(GravityType::Default);
-    LocalNorX.push_back(0.);
-    LocalNorY.push_back(0.);
-    LocalNorZ.push_back(1.);
-    Altitude.push_back(std::numeric_limits<double>::infinity());
     CRadius.push_back(0.2);
     XDown.push_back(0.);
     YDown.push_back(0.);
@@ -195,7 +185,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
 paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     this))
 {
-    const std::size_t otherIdx = objects().at(o._id);
+    const auto otherIdx = objects().at(o._id);
     objects()[_id] = X.size();
     Ids.push_back(_id);
     PUSH_COPY(X)
@@ -213,10 +203,6 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(Mod)
     PUSH_COPY(CType)
     PUSH_COPY(GType)
-    PUSH_COPY(LocalNorX)
-    PUSH_COPY(LocalNorY)
-    PUSH_COPY(LocalNorZ)
-    PUSH_COPY(Altitude)
     PUSH_COPY(CRadius)
     PUSH_COPY(XDown)
     PUSH_COPY(YDown)
@@ -232,8 +218,8 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
 
 paz::Object& paz::Object::operator=(const Object& o)
 {
-    const std::size_t idx = objects().at(_id);
-    const std::size_t otherIdx = objects().at(o._id);
+    const auto idx = objects().at(_id);
+    const auto otherIdx = objects().at(o._id);
     COPY(X)
     COPY(Y)
     COPY(Z)
@@ -249,10 +235,6 @@ paz::Object& paz::Object::operator=(const Object& o)
     COPY(Mod)
     COPY(CType)
     COPY(GType)
-    COPY(LocalNorX)
-    COPY(LocalNorY)
-    COPY(LocalNorZ)
-    COPY(Altitude)
     COPY(CRadius)
     COPY(XDown)
     COPY(YDown)
@@ -273,7 +255,7 @@ paz::Object& paz::Object::operator=(const Object& o)
 
 paz::Object::~Object()
 {
-    const std::size_t idx = objects().at(_id);
+    const auto idx = objects().at(_id);
     if(Ids.size() > 1)
     {
         objects().at(Ids.back()) = idx;
@@ -295,10 +277,6 @@ paz::Object::~Object()
     SWAP_AND_POP(Mod)
     SWAP_AND_POP(CType)
     SWAP_AND_POP(GType)
-    SWAP_AND_POP(LocalNorX)
-    SWAP_AND_POP(LocalNorY)
-    SWAP_AND_POP(LocalNorZ)
-    SWAP_AND_POP(Altitude)
     SWAP_AND_POP(CRadius)
     SWAP_AND_POP(XDown)
     SWAP_AND_POP(YDown)
@@ -484,36 +462,6 @@ const paz::GravityType& paz::Object::gravityType() const
     return GType[objects().at(_id)];
 }
 
-void paz::Object::setLocalNorX(double n)
-{
-    LocalNorX[objects().at(_id)] = n;
-}
-
-double paz::Object::localNorX() const
-{
-    return LocalNorX[objects().at(_id)];
-}
-
-void paz::Object::setLocalNorY(double n)
-{
-    LocalNorY[objects().at(_id)] = n;
-}
-
-double paz::Object::localNorY() const
-{
-    return LocalNorY[objects().at(_id)];
-}
-
-void paz::Object::setLocalNorZ(double n)
-{
-    LocalNorZ[objects().at(_id)] = n;
-}
-
-double paz::Object::localNorZ() const
-{
-    return LocalNorZ[objects().at(_id)];
-}
-
 double paz::Object::xPrev() const
 {
     return XPrev[objects().at(_id)];
@@ -527,16 +475,6 @@ double paz::Object::yPrev() const
 double paz::Object::zPrev() const
 {
     return ZPrev[objects().at(_id)];
-}
-
-void paz::Object::setAltitude(double n)
-{
-    Altitude[objects().at(_id)] = n;
-}
-
-double paz::Object::altitude() const
-{
-    return Altitude[objects().at(_id)];
 }
 
 double& paz::Object::collisionRadius()
@@ -572,4 +510,30 @@ void paz::Object::addTag(const std::string& tag)
 bool paz::Object::isTagged(const std::string& tag) const
 {
     return ObjectsByTag.count(tag) && ObjectsByTag.at(tag).count(_id);
+}
+
+void paz::Object::computeAltitude(double& alt, paz::Vec& nor) const
+{
+    nor = paz::Vec{{0., 0., 1.}};
+    const auto idx = objects().at(_id);
+    alt = std::numeric_limits<double>::infinity();
+    for(auto n : objects())
+    {
+        if(n.first == _id || CType[n.second] != CollisionType::World)
+        {
+            continue;
+        }
+        double dist, xNor, yNor, zNor;
+        Mod[n.second].castRay(X[idx] - X[n.second], Y[idx] - Y[n.second], Z[idx]
+            - Z[n.second], XDown[idx], YDown[idx], ZDown[idx], xNor, yNor, zNor,
+            dist);
+        if(dist < alt)
+        {
+            alt = dist;
+            nor(0) = xNor;
+            nor(1) = yNor;
+            nor(2) = zNor;
+        }
+    }
+    alt -= CRadius[idx];
 }

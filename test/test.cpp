@@ -26,9 +26,9 @@ public:
         collisionRadius() = 0.01;
         model() = PaintballModel;
     }
-    void update() override
+    void onCollide(const Object& o) override
     {
-        if(altitude() < 0.01)
+        if(o.collisionType() == paz::CollisionType::World)
         {
             xVel() = 0.;
             yVel() = 0.;
@@ -44,12 +44,13 @@ class Droplet : public Paintball
 public:
     Droplet(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir) :
         Paintball(pos, vel, dir) {}
-    void update() override
+    void onCollide(const Object& o) override
     {
-        if(altitude() < 0.01)
+        if(o.collisionType() == paz::CollisionType::World)
         {
             addTag("done");
         }
+        Paintball::onCollide(o);
     }
 };
 
@@ -67,9 +68,9 @@ public:
     void update() final
     {
         _timer += paz::Window::FrameTime();
-        if(_timer > 0.5/*0.05*/)
+        if(_timer > 0.05)
         {
-            for(int i = 0; i < 1/*3*/; ++i)
+            for(int i = 0; i < 5; ++i)
             {
                 const paz::Vec pos{{x(), y(), z()}};
                 const paz::Vec vel{{xVel(), yVel(), zVel()}};
@@ -129,12 +130,14 @@ public:
         paz::Vec right = gravDir.cross(forward).normalized();
 
         // Check altitude regime.
-        const paz::Vec nor{{localNorX(), localNorY(), localNorZ()}};
         Regime reg = Regime::Floating;
-        if(altitude() < 1.)
+        double alt;
+        paz::Vec nor;
+        computeAltitude(alt, nor);
+        if(alt < 1.)
         {
             reg = Regime::Low;
-            if(altitude() < 0.01 && nor.dot(gravDir) < -0.7)
+            if(alt < 0.1)//TEMP - should be function of maxangle
             {
                 reg = Regime::Grounded;
             }
@@ -149,6 +152,7 @@ case Regime::Grounded: paz::App::MsgStream() << "Grounded" << std::endl; break;
 case Regime::Low: paz::App::MsgStream() << "Low" << std::endl; break;
 case Regime::Floating: paz::App::MsgStream() << "Floating" << std::endl; break;
 }
+paz::App::MsgStream() << alt << " | " << nor.trans() << std::endl;
 
         // Kill all roll.
         yAngRate() = 0.;

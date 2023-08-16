@@ -567,10 +567,6 @@ if(tempDone[j]){ continue; }
                             yVel()/NumSteps*Window::FrameTime();
                         a[j]->z() = zNew + bZ[n][i] + (NumSteps - i - 1)*a[j]->
                             zVel()/NumSteps*Window::FrameTime();
-                        a[j]->setLocalNorX(xNor);
-                        a[j]->setLocalNorY(yNor);
-                        a[j]->setLocalNorZ(zNor);
-                        a[j]->setAltitude(0.);
                         a[j]->onCollide(*b[n]);
                         b[n]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -579,67 +575,11 @@ tempDone[j] = true;
             }
         }
 const double colTime1 = colTimer.getAndRestart();
-
-        // Use raycasting to check altitude regime.
-        //TEMP - doing this for every object is inefficient
-        for(std::size_t i = 0; i < a.size(); ++i)
-        {
-            if(a[i]->altitude() < 0.01)
-            {
-                continue;
-            }
-            const double x = a[i]->x();
-            const double y = a[i]->y();
-            const double z = a[i]->z();
-            const double radius = a[i]->collisionRadius();
-            for(std::size_t j = 0; j < b.size(); ++j)
-            {
-                double dist, xNor, yNor, zNor;
-                b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->
-                    z(), a[i]->xDown(), a[i]->yDown(), a[i]->zDown(), xNor,
-                    yNor, zNor, dist);
-                const double alt = dist - radius;
-                a[i]->setAltitude(std::min(a[i]->altitude(), alt)); //TEMP
-                if(alt < 0.01)
-                {
-                    a[i]->setLocalNorX(xNor);
-                    a[i]->setLocalNorY(yNor);
-                    a[i]->setLocalNorZ(zNor);
-
-                    // Apply friction.
-#ifndef NO_FRICTION
-                    const double norVelA = a[i]->xVel()*xNor + a[i]->yVel()*yNor
-                        + a[i]->zVel()*zNor;
-                    const double norVelB = b[i]->xVel()*xNor + b[i]->yVel()*yNor
-                        + b[i]->zVel()*zNor;
-                    if(norVelA < norVelB)
-                    {
-                        double xVelAPlane = a[i]->xVel() - norVelA*xNor;
-                        double yVelAPlane = a[i]->yVel() - norVelA*yNor;
-                        double zVelAPlane = a[i]->zVel() - norVelA*zNor;
-                        double xVelBPlane = b[j]->xVel() - norVelB*xNor;
-                        double yVelBPlane = b[j]->yVel() - norVelB*yNor;
-                        double zVelBPlane = b[j]->zVel() - norVelB*zNor;
-                        a[i]->xVel() += xVelBPlane - xVelAPlane;
-                        a[i]->yVel() += yVelBPlane - yVelAPlane;
-                        a[i]->zVel() += zVelBPlane - zVelAPlane;
-                    }
-#endif
-
-                    a[i]->onCollide(*b[j]);
-                    b[j]->onCollide(*a[i]);
-                    break;
-                }
-            }
-        }
-const double colTime2 = colTimer.get();
 static double avgColTime0Sq = 0.;
 avgColTime0Sq = 0.95*avgColTime0Sq + 0.05*colTime0*colTime0;
 static double avgColTime1Sq = 0.;
 avgColTime1Sq = 0.95*avgColTime1Sq + 0.05*colTime1*colTime1;
-static double avgColTime2Sq = 0.;
-avgColTime2Sq = 0.95*avgColTime2Sq + 0.05*colTime2*colTime2;
-_msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgColTime0Sq) << " " << std::setw(8) << std::sqrt(avgColTime1Sq) << " " << std::setw(8) << std::sqrt(avgColTime2Sq) << std::endl;
+_msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgColTime0Sq) << " " << std::setw(8) << std::sqrt(avgColTime1Sq) << std::endl;
 static double avgFrameTimeSq = 1./(60.*60.);
 avgFrameTimeSq = 0.95*avgFrameTimeSq + 0.05*Window::FrameTime()*Window::FrameTime();
 _msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;

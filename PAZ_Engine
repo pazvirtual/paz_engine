@@ -23,6 +23,7 @@ namespace paz
     class Model
     {
         friend class App;
+        friend class Object;
 
         std::shared_ptr<std::vector<paz::Triangle>> _t;
         double _radius = 0.;
@@ -50,11 +51,6 @@ namespace paz
         friend class App;
 
         const std::uintptr_t _id;
-
-        void setLocalNorX(double n);
-        void setLocalNorY(double n);
-        void setLocalNorZ(double n);
-        void setAltitude(double n);
 
         double xPrev() const;
         double yPrev() const;
@@ -102,10 +98,6 @@ namespace paz
         const CollisionType& collisionType() const;
         GravityType& gravityType();
         const GravityType& gravityType() const;
-        double localNorX() const;
-        double localNorY() const;
-        double localNorZ() const;
-        double altitude() const;
         double& collisionHeight();
         double collisionHeight() const;
         double& collisionRadius();
@@ -115,6 +107,7 @@ namespace paz
         double zDown() const;
         void addTag(const std::string& tag);
         bool isTagged(const std::string& tag) const;
+        void computeAltitude(double& alt, paz::Vec& nor) const;
     };
 
     class App
