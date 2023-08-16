@@ -23,8 +23,7 @@ endif
 CXXFLAGS += -I..
 LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazaudio.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
 ifeq ($(OSPRETTY), macOS)
-#    LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit
-    LDLIBS += /opt/local/lib/libportaudio.a -framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework CoreServices -framework MetalKit -framework Metal -framework Cocoa -framework IOKit
+    LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit -framework CoreAudio -framework AudioUnit
 else
     LDLIBS += $(LIBPATH)/libglfw3.a $(LIBPATH)/libportaudio.a
     ifeq ($(OSPRETTY), Linux)
