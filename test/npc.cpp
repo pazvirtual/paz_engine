@@ -3,8 +3,8 @@
 
 static constexpr double CosMaxAngle = 0.7;
 
-static const paz::Model Body("persontest.obj", 0, -0.2);
-static const paz::Model Head("persontest.obj", 1, -0.1);
+static const paz::Model Body("persontest_body.pazmodel", 0, -0.2);
+static const paz::Model Head("persontest_head.pazmodel", 0, -0.1);
 
 Npc::Npc() : _destYaw(paz::uniform(0., paz::TwoPi)), _walkTime(0.)
 {

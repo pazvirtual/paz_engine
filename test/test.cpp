@@ -201,10 +201,10 @@ public:
 int main()
 {
     paz::App::Init("PAZ Engine Test Program");
-    Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp", {},
-        {{10., 5., Radius, 0., 0., Radius + 10., -10., -5., Radius}});
-    Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10., "moon.bmp");
-    FancyBox = paz::Model("fancybox.obj");
+    Sphere50 = paz::Model("icosphere5.pazmodel", 0, 0., Radius, "earth-day.bmp",
+        {}, {{10., 5., Radius, 0., 0., Radius + 10., -10., -5., Radius}});
+    Sphere10 = paz::Model("icosphere5.pazmodel", 0, 0., 10., "moon.bmp");
+    FancyBox = paz::Model("fancybox.pazmodel");
     Player player;
     player.y() = 1.;
     player.z() = Radius + 10.;

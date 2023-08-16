@@ -2,6 +2,6 @@
 *.a
 *.exe
 *.zip
-*.paz
+*.pazarchive
 test/test
 test/build

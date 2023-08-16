@@ -72,21 +72,21 @@ analyze: $(OBJCSRC)
 %.o: %.mm
 	$(CC) -c -o $@ $< $(CXXFLAGS)
 
-assets.o: assets.paz
+assets.o: assets.pazarchive
 ifeq ($(OSPRETTY), macOS)
-	@printf ".section assets, \"rd\"\n.global _paz_binary_assets_paz_start\n.global _paz_binary_assets_paz_end\n_paz_binary_assets_paz_start: .incbin \"assets.paz\"\n_paz_binary_assets_paz_end:" > include-assets.s
+	@printf ".section assets, \"rd\"\n.global _paz_binary_assets_pazarchive_start\n.global _paz_binary_assets_pazarchive_end\n_paz_binary_assets_pazarchive_start: .incbin \"assets.pazarchive\"\n_paz_binary_assets_pazarchive_end:" > include-assets.s
 	as -mmacos-version-min=$(MINMACOSVER) include-assets.s -o assets.o
 	$(RM) include-assets.s
 else
-	ld -r -b binary -o assets.o assets.paz
+	ld -r -b binary -o assets.o assets.pazarchive
 	objcopy --prefix-symbols=_paz assets.o
 endif
 
-assets.paz: $(ASSETS)
-	paz-archive assets
+assets.pazarchive: $(ASSETS)
+	paz-archive -c assets
 
 clean:
-	$(RM) $(OBJ) lib$(LIBNAME).a assets.paz
+	$(RM) $(OBJ) lib$(LIBNAME).a assets.pazarchive
 	$(MAKE) -C test clean
 
 zip: $(PROJNAME) lib$(LIBNAME).a

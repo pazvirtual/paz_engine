@@ -9,16 +9,31 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
     scale, const std::string& diffTexPath, const std::array<float, 3>& emiss,
     const std::vector<std::array<double, 9>>& transp) : _emiss(emiss)
 {
-    std::vector<std::string> names;
     std::vector<std::vector<float>> positions;
     std::vector<std::vector<float>> uvs;
     std::vector<std::vector<float>> normals;
-    std::vector<std::vector<unsigned int>> materials;
-    std::vector<std::string> materialNames;
-    std::vector<std::string> materialLibs;
     std::vector<std::vector<unsigned int>> indices;
-    parse_obj(get_asset(path), names, positions, uvs, normals, materials,
-        materialNames, materialLibs, indices);
+    if(path.size() > 4 && path.substr(path.size() - 4) == ".obj")
+    {
+        std::vector<std::string> names;
+        std::vector<std::vector<unsigned int>> materials;
+        std::vector<std::string> materialNames;
+        std::vector<std::string> materialLibs;
+        parse_obj(get_asset(path), names, positions, uvs, normals, materials,
+            materialNames, materialLibs, indices);
+    }
+    else
+    {
+        positions.emplace_back();
+        uvs.emplace_back();
+        normals.emplace_back();
+        std::vector<unsigned int> materials;
+        std::vector<std::string> materialNames;
+        std::vector<std::string> materialLibs;
+        indices.emplace_back();
+        parse_model(get_asset(path), positions.back(), uvs.back(), normals.
+            back(), materials, materialNames, materialLibs, indices.back());
+    }
     _t = std::make_shared<std::vector<Triangle>>();
     _t->reserve(indices[idx].size()/3);
     if(std::abs(zOffset) > 1e-6)

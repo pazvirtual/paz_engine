@@ -41,16 +41,16 @@ OBJ := build/assets.o $(SRC:%.cpp=build/%.o)
 test: build $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDLIBS)
 
-build/assets.o: build/assets.paz
+build/assets.o: build/assets.pazarchive
 ifeq ($(OSPRETTY), macOS)
-	@printf ".section assets, "rd"\n.global _binary_assets_paz_start\n.global _binary_assets_paz_end\n_binary_assets_paz_start: .incbin \"build/assets.paz\"\n_binary_assets_paz_end:" > build/include-assets.s
+	@printf ".section assets, "rd"\n.global _binary_assets_pazarchive_start\n.global _binary_assets_pazarchive_end\n_binary_assets_pazarchive_start: .incbin \"build/assets.pazarchive\"\n_binary_assets_pazarchive_end:" > build/include-assets.s
 	as -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets.o
 else
-	cd build && ld -r -b binary -o assets.o assets.paz
+	cd build && ld -r -b binary -o assets.o assets.pazarchive
 endif
 
-build/assets.paz: $(ASSETS)
-	paz-archive assets build/assets.paz
+build/assets.pazarchive: $(ASSETS)
+	paz-archive -c assets build/assets.pazarchive
 
 build/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

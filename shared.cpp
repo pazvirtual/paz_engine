@@ -1,10 +1,10 @@
 #include "shared.hpp"
 #include <regex>
 
-extern const unsigned char pazAssetsStart[] asm("_paz_binary_assets_paz_start");
-extern const unsigned char pazAssetsEnd[] asm("_paz_binary_assets_paz_end");
-extern const unsigned char assetsStart[] asm("_binary_assets_paz_start");
-extern const unsigned char assetsEnd[] asm("_binary_assets_paz_end");
+extern const unsigned char pazAssetsStart[] asm("_paz_binary_assets_pazarchive_start");
+extern const unsigned char pazAssetsEnd[] asm("_paz_binary_assets_pazarchive_end");
+extern const unsigned char assetsStart[] asm("_binary_assets_pazarchive_start");
+extern const unsigned char assetsEnd[] asm("_binary_assets_pazarchive_end");
 
 static const paz::Archive& builtin_assets()
 {

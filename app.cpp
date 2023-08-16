@@ -277,18 +277,17 @@ void paz::App::Init(const std::string& title)
     QuadVertices.addAttribute(2, QuadPos);
 
     {
-        std::vector<std::string> names;
-        std::vector<std::vector<float>> positions;
-        std::vector<std::vector<float>> uvs;
-        std::vector<std::vector<float>> normals;
-        std::vector<std::vector<unsigned int>> materials;
+        std::vector<float> positions;
+        std::vector<float> uvs;
+        std::vector<float> normals;
+        std::vector<unsigned int> materials;
         std::vector<std::string> materialNames;
         std::vector<std::string> materialLibs;
-        std::vector<std::vector<unsigned int>> indices;
-        parse_obj(get_builtin("icosphere3.obj"), names, positions, uvs, normals,
+        std::vector<unsigned int> indices;
+        parse_model(get_builtin("icosphere3.pazmodel"), positions, uvs, normals,
             materials, materialNames, materialLibs, indices);
-        SphereVertices.addAttribute(4, positions[0]);
-        SphereIndices = IndexBuffer(indices[0]);
+        SphereVertices.addAttribute(4, positions);
+        SphereIndices = IndexBuffer(indices);
     }
 
     FontTex = Texture(get_asset_image("font.pbm")); //TEMP - note that only red channel is used
