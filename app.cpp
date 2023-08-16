@@ -379,8 +379,7 @@ layout(location = 0) out vec4 color;
 void main()
 {
     float t = texture(font, uv).x;
-    float c = 1. - 0.8*h;
-    color = vec4(1., 1., c, t);
+    color = vec4(mix(vec3(0.9), vec3(1., 1., 0.), h), t);
 }
 )===";
 
