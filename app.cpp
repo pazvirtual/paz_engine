@@ -25,6 +25,7 @@ static paz::Framebuffer _lumBuffer;
 
 static paz::RenderTarget _diffuseMap(paz::TextureFormat::RGBA16Float);
 // ...
+static paz::RenderTarget _emissMap(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _normalMap(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _depthMap(paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(paz::TextureFormat::RGBA16Float);
@@ -54,7 +55,7 @@ static paz::ConsoleMode _consoleMode = paz::ConsoleMode::Disable;
 
 static paz::UiDescriptor _startMenu;
 
-static paz::Texture _defaultTex;
+static paz::Texture _defaultDiffTex;
 
 static const paz::Object* _cameraObject; //TEMP - vector realloc breaks ptrs
 static const paz::Object* _micObject; //TEMP - vector realloc breaks ptrs
@@ -144,14 +145,17 @@ static const std::string GeometryFragSrc = 1 + R"====(
 in vec4 posCs;
 in vec4 norCs;
 in vec2 uv;
-uniform sampler2D tex;
-layout(location = 0) out vec4 diffuse;
+uniform sampler2D diffTex;
+uniform float emiss;
+layout(location = 0) out vec4 diffCol;
 // ...
-layout(location = 1) out vec4 normal;
+layout(location = 1) out vec4 emissCol;
+layout(location = 2) out vec4 normal;
 void main()
 {
-    diffuse = texture(tex, uv);
+    diffCol = texture(diffTex, uv);
     // ...
+    emissCol = vec4(emiss, emiss, emiss, 1.);
     normal = vec4(normalize(norCs.xyz), 0.);
 }
 )====";
@@ -390,6 +394,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
     _geometryBuffer.attach(_diffuseMap);
     // ...
+    _geometryBuffer.attach(_emissMap);
     _geometryBuffer.attach(_normalMap);
     _geometryBuffer.attach(_depthMap);
 
@@ -450,9 +455,9 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
             temp[4*(512*i + j) + 3] = 255;
         }
     }
-    _defaultTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.data(),
-        MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::Linear,
-        WrapMode::Repeat, WrapMode::Repeat);
+    _defaultDiffTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.
+        data(), MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::
+        Linear, WrapMode::Repeat, WrapMode::Repeat);
 }
 
 void paz::App::Run()
@@ -638,16 +643,18 @@ void paz::App::Run()
             const Mat micRot = to_mat(micAtt);
             const Vec micX = micRot.row(1).trans();
             const Vec micY = -micRot.row(0).trans();
-            const Vec lEar = std::sin(0.5)*micX + std::cos(0.5)*micY;
-            const Vec rEar = std::sin(0.5)*micX - std::cos(0.5)*micY;
+            const Vec lEar = std::sin(1.)*micX + std::cos(1.)*micY;
+            const Vec rEar = std::sin(1.)*micX - std::cos(1.)*micY;
             const double vlos = dir.dot(relVel);
             const double txPwr = 400.;
             static constexpr double vs = 343.;
             static constexpr double maxRxPwr = 0.3;
             const double t0 = (vs + vlos)/(800.*M_PI*dist); // assuming f = 200
             const double rxPwr = std::min(maxRxPwr, txPwr*t0*t0);
-            const double lPwr = rxPwr*(0.6 + 0.4*(dir.dot(lEar))); //TEMP
-            const double rPwr = rxPwr*(0.6 + 0.4*(dir.dot(rEar))); //TEMP
+            double lPwr = rxPwr*(0.6 + 0.4*(dir.dot(lEar))); //TEMP
+            double rPwr = rxPwr*(0.6 + 0.4*(dir.dot(rEar))); //TEMP
+            lPwr /= M_SQRT2*(0.6 + 0.4*std::cos(0.5*M_PI - 1.));
+            rPwr /= M_SQRT2*(0.6 + 0.4*std::cos(0.5*M_PI - 1.));
             const double lVol = std::sqrt(std::sqrt(std::max(0., lPwr)));
             const double rVol = std::sqrt(std::sqrt(std::max(0., rPwr)));
             const double lFreqScale = 1./(1. + vlos/vs);
@@ -825,10 +832,15 @@ tempDone[j] = true;
 
         // Prepare for rendering.
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
+        std::vector<const Object*> invisibleObjects;
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
-            if(!o->model()._i.empty())
+            if(o->model()._i.empty())
+            {
+                invisibleObjects.push_back(o);
+            }
+            else
             {
                 // Address held to by `paz::Model::_t` identifies all copies of
                 // the same model.
@@ -846,7 +858,7 @@ tempDone[j] = true;
             }
         }
         std::vector<float> lightsData;
-        for(const auto& n : objectsByModel) //TEMP - this means that only objects with models can have lights !
+        for(const auto& n : objectsByModel)
         {
             std::array<std::vector<float>, 2> modelMatData;
             modelMatData[0].resize(4*n.second.size());
@@ -883,12 +895,43 @@ tempDone[j] = true;
                         lightsData.push_back(p(0));
                         lightsData.push_back(p(1));
                         lightsData.push_back(p(2));
-                        lightsData.push_back(1.f); //TEMP
+                        lightsData.push_back(m[3]);
                     }
                 }
             }
             _instances.at(n.first).subAttribute(0, modelMatData[0]);
             _instances.at(n.first).subAttribute(1, modelMatData[1]);
+        }
+        for(const auto& n : invisibleObjects)
+        {
+            if(!n->lights().empty())
+            {
+                const double xAtt = n->xAtt();
+                const double yAtt = n->yAtt();
+                const double zAtt = n->zAtt();
+                const double wAtt = std::sqrt(1. - xAtt*xAtt - yAtt*yAtt - zAtt*zAtt);
+                const double xx = xAtt*xAtt;
+                const double yy = yAtt*yAtt;
+                const double zz = zAtt*zAtt;
+                const double xy = xAtt*yAtt;
+                const double zw = zAtt*wAtt;
+                const double xz = xAtt*zAtt;
+                const double yw = yAtt*wAtt;
+                const double yz = yAtt*zAtt;
+                const double xw = xAtt*wAtt;
+                const Mat mv = view*Mat{{1. - 2.*(yy + zz), 2.*(xy - zw), 2.*(xz + yw), n->x() - cameraPos(0)},
+                                        {2.*(xy + zw), 1. - 2.*(xx + zz), 2.*(yz - xw), n->y() - cameraPos(1)},
+                                        {2.*(xz - yw), 2.*(yz + xw), 1. - 2.*(xx + yy), n->z() - cameraPos(2)},
+                                        {0., 0., 0., 1.}};
+                for(const auto& m : n->lights())
+                {
+                    const Vec p = mv*Vec{{m[0], m[1], m[2], 1.}};
+                    lightsData.push_back(p(0));
+                    lightsData.push_back(p(1));
+                    lightsData.push_back(p(2));
+                    lightsData.push_back(m[3]);
+                }
+            }
         }
         Texture lights(TextureFormat::RGBA32Float, 1, lightsData.size()/4,
             lightsData.data());
@@ -902,14 +945,16 @@ tempDone[j] = true;
         _geometryPass.uniform("view", convert_mat(view));
         for(const auto& n : objectsByModel)
         {
-            if(n.second.back()->model()._tex.width())
+            if(n.second.back()->model()._diffTex.width())
             {
-                _geometryPass.read("tex", n.second.back()->model()._tex);
+                _geometryPass.read("diffTex", n.second.back()->model().
+                    _diffTex);
             }
             else
             {
-                _geometryPass.read("tex", _defaultTex);
+                _geometryPass.read("diffTex", _defaultDiffTex);
             }
+            _geometryPass.uniform("emiss", n.second.back()->model()._emiss);
             _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
                 model()._v, _instances.at(n.first), n.second.back()->model().
                 _i);
@@ -920,6 +965,7 @@ tempDone[j] = true;
         _renderPass.begin();
         _renderPass.read("diffuseMap", _diffuseMap);
         // ...
+        _renderPass.read("emissMap", _emissMap);
         _renderPass.read("normalMap", _normalMap);
         _renderPass.read("depthMap", _depthMap);
         _renderPass.uniform("invProjection", convert_mat(convert_mat(

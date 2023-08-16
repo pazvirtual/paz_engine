@@ -6,7 +6,7 @@
 #include <numeric>
 
 paz::Model::Model(const std::string& path, int idx, double zOffset, double
-    scale, const std::string& texPath)
+    scale, const std::string& diffTexPath, float emiss) : _emiss(emiss)
 {
     std::vector<std::string> names;
     std::vector<std::vector<float>> positions;
@@ -63,14 +63,15 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
     _v.addAttribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
     _v.addAttribute(2, uvs[idx]);
     _i = IndexBuffer(indices[idx]);
-    if(!texPath.empty())
+    if(!diffTexPath.empty())
     {
-        _tex = Texture(get_asset_image(texPath), MinMagFilter::Linear,
+        _diffTex = Texture(get_asset_image(diffTexPath), MinMagFilter::Linear,
             MinMagFilter::Linear, MipmapFilter::Linear);
     }
 }
 
-paz::Model::Model(const std::vector<float>& positions) //TEMP
+paz::Model::Model(const std::vector<float>& positions, const std::vector<float>&
+    uvs, const std::string& diffTexPath, float emiss) : _emiss(emiss)
 {
     const std::size_t numVertices = positions.size()/4;
     const std::size_t numFaces = numVertices/3;
@@ -107,10 +108,15 @@ paz::Model::Model(const std::vector<float>& positions) //TEMP
     _v.addAttribute(4, positions);
     _v.addAttribute(4, normals);
     _v.addAttribute(1, std::vector<unsigned int>(numVertices, 1));
-    _v.addAttribute(2, std::vector<float>(2*numVertices, 0.25f));
+    _v.addAttribute(2, uvs);
     std::vector<unsigned int> indices(numVertices);
     std::iota(indices.begin(), indices.end(), 0);
     _i = IndexBuffer(indices);
+    if(!diffTexPath.empty())
+    {
+        _diffTex = Texture(get_asset_image(diffTexPath), MinMagFilter::Linear,
+            MinMagFilter::Linear, MipmapFilter::Linear);
+    }
 }
 
 double paz::Model::collide(double x, double y, double z, double radius, double&

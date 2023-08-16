@@ -39,7 +39,7 @@ static std::vector<double> XDown;
 static std::vector<double> YDown;
 static std::vector<double> ZDown;
 static std::vector<double> StdGravParam;
-static std::vector<std::vector<std::array<double, 3>>> Lights;
+static std::vector<std::vector<std::array<double, 4>>> Lights;
 static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
     ObjectsByTag;
 
@@ -545,12 +545,12 @@ double paz::Object::stdGravParam() const
     return StdGravParam[objects().at(_id)];
 }
 
-std::vector<std::array<double, 3>>& paz::Object::lights()
+std::vector<std::array<double, 4>>& paz::Object::lights()
 {
     return Lights[objects().at(_id)];
 }
 
-const std::vector<std::array<double, 3>>& paz::Object::lights() const
+const std::vector<std::array<double, 4>>& paz::Object::lights() const
 {
     return Lights[objects().at(_id)];
 }

@@ -30,7 +30,8 @@ namespace paz
         double _radius = 0.;
         VertexBuffer _v;
         IndexBuffer _i;
-        Texture _tex;
+        Texture _diffTex;
+        float _emiss;
 
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
@@ -45,8 +46,9 @@ namespace paz
     public:
         Model() = default;
         Model(const std::string& path, int idx = 0, double zOffset = 0., double
-            scale = 1., const std::string& texPath = "");
-        Model(const std::vector<float>& positions);
+            scale = 1., const std::string& diffTexPath = "", float emiss = 0.f);
+        Model(const std::vector<float>& positions, const std::vector<float>&
+            uvs, const std::string& diffTexPath = "", float emiss = 0.f);
     };
 
     class Object
@@ -110,8 +112,8 @@ namespace paz
         double zDown() const;
         double& stdGravParam();
         double stdGravParam() const;
-        std::vector<std::array<double, 3>>& lights();
-        const std::vector<std::array<double, 3>>& lights() const;
+        std::vector<std::array<double, 4>>& lights(); // x y z lum
+        const std::vector<std::array<double, 4>>& lights() const; // x y z lum
         void addTag(const std::string& tag);
         bool isTagged(const std::string& tag) const;
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
