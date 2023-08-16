@@ -43,13 +43,10 @@ class Droplet : public Paintball
 {
 public:
     Droplet(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir) :
-        Paintball(pos, vel, dir)
-    {
-        collisionType() = paz::CollisionType::None;
-    }
+        Paintball(pos, vel, dir) {}
     void update() override
     {
-        if(x()*x() + y()*y() + z()*z() < Radius*Radius)//altitude() < 0.)
+        if(altitude() < 0.01)
         {
             addTag("done");
         }
@@ -70,9 +67,9 @@ public:
     void update() final
     {
         _timer += paz::Window::FrameTime();
-        if(_timer > 0.05)
+        if(_timer > 0.5/*0.05*/)
         {
-            for(int i = 0; i < 3; ++i)
+            for(int i = 0; i < 1/*3*/; ++i)
             {
                 const paz::Vec pos{{x(), y(), z()}};
                 const paz::Vec vel{{xVel(), yVel(), zVel()}};

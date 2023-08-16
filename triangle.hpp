@@ -1,5 +1,5 @@
-#ifndef TRIANGLE_HPP
-#define TRIANGLE_HPP
+#ifndef PAZ_ENGINE_TRIANGLE_HPP
+#define PAZ_ENGINE_TRIANGLE_HPP
 
 #include <array>
 

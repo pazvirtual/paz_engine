@@ -2,6 +2,7 @@
 #include "shared.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
+#include "timer.hpp"
 #include <limits>
 #include <iomanip>
 #include <deque>
@@ -463,10 +464,13 @@ void paz::App::Run()
     {
         physics();
 
+paz::Timer colTimer;
         // Identify all objects that can collide and precompute as much as
         // possible.
         std::vector<Object*> a;
         std::vector<Object*> b;
+        a.reserve(objects().size());
+        b.reserve(objects().size());
         for(auto& n : objects())
         {
             Object* o = reinterpret_cast<Object*>(n.first);
@@ -479,6 +483,24 @@ void paz::App::Run()
                 b.push_back(o);
             }
         }
+
+        // `a[i]` may collide with any `b[c[i][j]]`.
+        std::vector<std::vector<std::size_t>> c(a.size());
+        for(std::size_t i = 0; i < a.size(); ++i)
+        {
+            c[i].reserve(b.size());
+            for(std::size_t j = 0; j < b.size(); ++j)
+            {
+                if(b[j]->model().sweepVol(a[i]->xPrev(), a[i]->yPrev(), a[i]->
+                    zPrev(), a[i]->x(), a[i]->y(), a[i]->z(), b[j]->xPrev(), b[
+                    j]->yPrev(), b[j]->zPrev(), b[j]->x(), b[j]->y(), b[j]->z(),
+                    a[i]->collisionRadius()))
+                {
+                    c[i].push_back(j);
+                }
+            }
+        }
+const double colTime0 = colTimer.getAndRestart();
 
         std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
             NumSteps));
@@ -508,23 +530,23 @@ std::vector<bool> tempDone(a.size(), false);
             for(std::size_t j = 0; j < a.size(); ++j)
             {
 if(tempDone[j]){ continue; }
-                for(std::size_t k = 0; k < b.size(); ++k)
+                for(auto n : c[j])
                 {
                     const double x = a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->
-                        xPrev())/NumSteps - bX[k][i];
+                        xPrev())/NumSteps - bX[n][i];
                     const double y = a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->
-                        yPrev())/NumSteps - bY[k][i];
+                        yPrev())/NumSteps - bY[n][i];
                     const double z = a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->
-                        zPrev())/NumSteps - bZ[k][i];
+                        zPrev())/NumSteps - bZ[n][i];
 
                     double xNew, yNew, zNew, xNor, yNor, zNor;
-                    const double c = b[k]->model().collide(x, y, z, a[j]->
+                    const double dist = b[n]->model().collide(x, y, z, a[j]->
                         collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
-                    if(c < a[j]->collisionRadius())
+                    if(dist < a[j]->collisionRadius())
                     {
-                        const double xVel = a[j]->xVel() - b[k]->xVel();
-                        const double yVel = a[j]->yVel() - b[k]->yVel();
-                        const double zVel = a[j]->zVel() - b[k]->zVel();
+                        const double xVel = a[j]->xVel() - b[n]->xVel();
+                        const double yVel = a[j]->yVel() - b[n]->yVel();
+                        const double zVel = a[j]->zVel() - b[n]->zVel();
                         const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
                         if(norVel < 0.)
                         {
@@ -534,30 +556,32 @@ if(tempDone[j]){ continue; }
 
                             // Apply friction.
 #ifndef NO_FRICTION
-                            a[j]->xVel() = b[k]->xVel();
-                            a[j]->yVel() = b[k]->yVel();
-                            a[j]->zVel() = b[k]->zVel();
+                            a[j]->xVel() = b[n]->xVel();
+                            a[j]->yVel() = b[n]->yVel();
+                            a[j]->zVel() = b[n]->zVel();
 #endif
                         }
-                        a[j]->x() = xNew + bX[k][i] + (NumSteps - i - 1)*a[j]->
+                        a[j]->x() = xNew + bX[n][i] + (NumSteps - i - 1)*a[j]->
                             xVel()/NumSteps*Window::FrameTime();
-                        a[j]->y() = yNew + bY[k][i] + (NumSteps - i - 1)*a[j]->
+                        a[j]->y() = yNew + bY[n][i] + (NumSteps - i - 1)*a[j]->
                             yVel()/NumSteps*Window::FrameTime();
-                        a[j]->z() = zNew + bZ[k][i] + (NumSteps - i - 1)*a[j]->
+                        a[j]->z() = zNew + bZ[n][i] + (NumSteps - i - 1)*a[j]->
                             zVel()/NumSteps*Window::FrameTime();
                         a[j]->setLocalNorX(xNor);
                         a[j]->setLocalNorY(yNor);
                         a[j]->setLocalNorZ(zNor);
                         a[j]->setAltitude(0.);
-                        a[j]->onCollide(*b[k]);
-                        b[k]->onCollide(*a[j]);
+                        a[j]->onCollide(*b[n]);
+                        b[n]->onCollide(*a[j]);
 tempDone[j] = true;
                     }
                 }
             }
         }
+const double colTime1 = colTimer.getAndRestart();
 
         // Use raycasting to check altitude regime.
+        //TEMP - doing this for every object is inefficient
         for(std::size_t i = 0; i < a.size(); ++i)
         {
             if(a[i]->altitude() < 0.01)
@@ -608,10 +632,17 @@ tempDone[j] = true;
                 }
             }
         }
-
+const double colTime2 = colTimer.get();
+static double avgColTime0Sq = 0.;
+avgColTime0Sq = 0.95*avgColTime0Sq + 0.05*colTime0*colTime0;
+static double avgColTime1Sq = 0.;
+avgColTime1Sq = 0.95*avgColTime1Sq + 0.05*colTime1*colTime1;
+static double avgColTime2Sq = 0.;
+avgColTime2Sq = 0.95*avgColTime2Sq + 0.05*colTime2*colTime2;
+_msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgColTime0Sq) << " " << std::setw(8) << std::sqrt(avgColTime1Sq) << " " << std::setw(8) << std::sqrt(avgColTime2Sq) << std::endl;
 static double avgFrameTimeSq = 1./(60.*60.);
-avgFrameTimeSq = 0.9*avgFrameTimeSq + 0.1*Window::FrameTime()*Window::FrameTime();
-paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
+avgFrameTimeSq = 0.95*avgFrameTimeSq + 0.05*Window::FrameTime()*Window::FrameTime();
+_msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
 static std::deque<double> rHist(60*30, 0.);
 static std::deque<double> latHist(60*30, 0.);
 {

@@ -118,3 +118,24 @@ void paz::Model::castRay(double x, double y, double z, double xDir, double yDir,
         }
     }
 }
+
+bool paz::Model::sweepVol(double xPrev0, double yPrev0, double zPrev0, double
+    x0, double y0, double z0, double xPrev1, double yPrev1, double zPrev1,
+    double x1, double y1, double z1, double radius) const
+{
+    //TEMP - capped cylinders would give a tighter bound
+    const double xMean0 = 0.5*(xPrev0 + x0);
+    const double yMean0 = 0.5*(yPrev0 + y0);
+    const double zMean0 = 0.5*(zPrev0 + z0);
+    const double delta0 = std::sqrt((x0 - xMean0)*(x0 - xMean0) + (y0 - yMean0)*
+        (y0 - yMean0) + (z0 - zMean0)*(z0 - zMean0));
+    const double xMean1 = 0.5*(xPrev1 + x1);
+    const double yMean1 = 0.5*(yPrev1 + y1);
+    const double zMean1 = 0.5*(zPrev1 + z1);
+    const double delta1 = std::sqrt((x1 - xMean1)*(x1 - xMean1) + (y1 - yMean1)*
+        (y1 - yMean1) + (z1 - zMean1)*(z1 - zMean1));
+    const double rTotal = delta0 + delta1 + _radius + radius;
+    const double distSq = (xMean1 - xMean0)*(xMean1 - xMean0) + (yMean1 -
+        yMean0)*(yMean1 - yMean0) + (zMean1 - zMean0)*(zMean1 - zMean0);
+    return distSq < rTotal*rTotal;
+}
