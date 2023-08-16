@@ -26,14 +26,14 @@ static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
 #endif
 
-static paz::RenderTarget _materialMap(1, paz::TextureFormat::R8UInt);
-static paz::RenderTarget _normalMap(1, paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget _coordMap(1, paz::TextureFormat::RG16Float);
-static paz::RenderTarget _depthMap(1, paz::TextureFormat::Depth32Float);
-static paz::RenderTarget _hdrRender(1, paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _materialMap(1./paz::Window::DpiScale(), paz::TextureFormat::R8UInt);
+static paz::RenderTarget _normalMap(1./paz::Window::DpiScale(), paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _coordMap(1./paz::Window::DpiScale(), paz::TextureFormat::RG16Float);
+static paz::RenderTarget _depthMap(1./paz::Window::DpiScale(), paz::TextureFormat::Depth32Float);
+static paz::RenderTarget _hdrRender(1./paz::Window::DpiScale(), paz::TextureFormat::RGBA16Float);
 #ifdef DO_FXAA
-static paz::RenderTarget _finalRender(1, paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
-static paz::RenderTarget _finalLumMap(1, paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _finalRender(1./paz::Window::DpiScale(), paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _finalLumMap(1./paz::Window::DpiScale(), paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 #endif
 
 static paz::RenderPass _geometryPass;
@@ -465,6 +465,8 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
 void paz::App::Run()
 {
+    Window::MakeFullscreen();
+
     while(!Window::Done())
     {
         physics();
