@@ -15,9 +15,13 @@ static std::vector<double> Z;
 static std::vector<double> XVel;
 static std::vector<double> YVel;
 static std::vector<double> ZVel;
-static std::vector<paz::VertexBuffer> V;
-static std::vector<paz::IndexBuffer> I;
-static std::vector<char> Vis;
+static std::vector<paz::Model> Mod;
+static std::vector<paz::CollisionType> CType;
+static std::vector<double> LocalNorX;
+static std::vector<double> LocalNorY;
+static std::vector<double> LocalNorZ;
+static std::vector<char> Grounded;
+static std::vector<double> Height;
 
 void paz::physics()
 {
@@ -45,9 +49,13 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     XVel.emplace_back();
     YVel.emplace_back();
     ZVel.emplace_back();
-    V.emplace_back();
-    I.emplace_back();
-    Vis.push_back(false);
+    Mod.emplace_back();
+    CType.push_back(CollisionType::Default);
+    LocalNorX.push_back(0);
+    LocalNorY.push_back(0);
+    LocalNorZ.push_back(1);
+    Grounded.push_back(false);
+    Height.push_back(0.);
 }
 
 paz::Object::~Object()
@@ -60,12 +68,20 @@ paz::Object::~Object()
     SWAP_AND_POP(XVel);
     SWAP_AND_POP(YVel);
     SWAP_AND_POP(ZVel);
-    SWAP_AND_POP(V);
-    SWAP_AND_POP(I);
-    SWAP_AND_POP(Vis);
+    SWAP_AND_POP(Mod);
+    SWAP_AND_POP(CType);
+    SWAP_AND_POP(LocalNorX);
+    SWAP_AND_POP(LocalNorY);
+    SWAP_AND_POP(LocalNorZ);
+    SWAP_AND_POP(Grounded);
+    SWAP_AND_POP(Height);
 }
 
 void paz::Object::update() {}
+
+void paz::Object::onCollide(const Object& /* o */) {}
+
+void paz::Object::onInteract(const Object& /* o */) {}
 
 double& paz::Object::x()
 {
@@ -127,32 +143,72 @@ double paz::Object::zVel() const
     return ZVel[objects().at(_id)];
 }
 
-paz::VertexBuffer& paz::Object::v()
+paz::Model& paz::Object::model()
 {
-    return V[objects().at(_id)];
+    return Mod[objects().at(_id)];
 }
 
-const paz::VertexBuffer& paz::Object::v() const
+const paz::Model& paz::Object::model() const
 {
-    return V[objects().at(_id)];
+    return Mod[objects().at(_id)];
 }
 
-paz::IndexBuffer& paz::Object::i()
+paz::CollisionType& paz::Object::collisionType()
 {
-    return I[objects().at(_id)];
+    return CType[objects().at(_id)];
 }
 
-const paz::IndexBuffer& paz::Object::i() const
+const paz::CollisionType& paz::Object::collisionType() const
 {
-    return I[objects().at(_id)];
+    return CType[objects().at(_id)];
 }
 
-char& paz::Object::vis()
+double& paz::Object::localNorX()
 {
-    return Vis[objects().at(_id)];
+    return LocalNorX[objects().at(_id)];
 }
 
-bool paz::Object::vis() const
+double paz::Object::localNorX() const
 {
-    return Vis[objects().at(_id)];
+    return LocalNorX[objects().at(_id)];
+}
+
+double& paz::Object::localNorY()
+{
+    return LocalNorY[objects().at(_id)];
+}
+
+double paz::Object::localNorY() const
+{
+    return LocalNorY[objects().at(_id)];
+}
+
+double& paz::Object::localNorZ()
+{
+    return LocalNorZ[objects().at(_id)];
+}
+
+double paz::Object::localNorZ() const
+{
+    return LocalNorZ[objects().at(_id)];
+}
+
+char& paz::Object::grounded()
+{
+    return Grounded[objects().at(_id)];
+}
+
+bool paz::Object::grounded() const
+{
+    return Grounded[objects().at(_id)];
+}
+
+double& paz::Object::height()
+{
+    return Height[objects().at(_id)];
+}
+
+double paz::Object::height() const
+{
+    return Height[objects().at(_id)];
 }

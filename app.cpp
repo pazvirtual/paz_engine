@@ -2,12 +2,16 @@
 #include "PAZ_Engine"
 #include <cmath>
 
+#define _cameraGrounded _cameraObject->grounded()
 #define _cameraX _cameraObject->x()
 #define _cameraY _cameraObject->y()
-#define _cameraZ (_cameraObject->z() + 1.5)
-#define xVel _cameraObject->xVel()
-#define yVel _cameraObject->yVel()
-#define zVel _cameraObject->zVel()
+#define _cameraZ (_cameraObject->z() + _cameraObject->height())
+#define _cameraXVel _cameraObject->xVel()
+#define _cameraYVel _cameraObject->yVel()
+//#define _cameraZVel _cameraObject->zVel()
+
+static constexpr double Radius = 0.2;
+static constexpr double CosMaxAngle = 0.6; // 53.13 deg
 
 ////
 static paz::Framebuffer _geometryBuffer;
@@ -24,8 +28,6 @@ static paz::RenderPass _renderPass;
 static paz::RenderPass _postPass;
 
 static paz::VertexBuffer _quadVertices;
-static std::vector<paz::VertexBuffer> _modelVertices;
-static std::vector<paz::IndexBuffer> _modelIndices;
 
 static double _cameraPitch = 0.5*3.14159;
 static double _cameraYaw = 0.;
@@ -130,7 +132,7 @@ void main()
 
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
-void paz::App::Init(const std::string& sceneShaderPath, const std::unordered_set<std::string>& objPaths)
+void paz::App::Init(const std::string& sceneShaderPath)
 {
 //    _geometryBuffer.attach(_materialMap);
     _geometryBuffer.attach(_normalMap);
@@ -139,39 +141,17 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::unordered_set
 
     _renderBuffer.attach(_hdrRender);
 
-    const paz::VertexFunction geometryVert(GeometryVertSrc);
-    const paz::VertexFunction quadVert(QuadVertSrc);
-    const paz::FragmentFunction geometryFrag(GeometryFragSrc);
-    const paz::FragmentFunction sceneFrag(load_file(sceneShaderPath).str());
-    const paz::FragmentFunction postFrag(PostFragSrc);
+    const VertexFunction geometryVert(GeometryVertSrc);
+    const VertexFunction quadVert(QuadVertSrc);
+    const FragmentFunction geometryFrag(GeometryFragSrc);
+    const FragmentFunction sceneFrag(load_file(sceneShaderPath).str());
+    const FragmentFunction postFrag(PostFragSrc);
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass = RenderPass(_renderBuffer, quadVert, sceneFrag);
     _postPass = RenderPass(quadVert, postFrag);
 
     _quadVertices.attribute(2, QuadPos);
-
-    for(const auto& n : objPaths)
-    {
-        std::vector<std::string> names;
-        std::vector<std::vector<float>> positions;
-        std::vector<std::vector<float>> uvs;
-        std::vector<std::vector<float>> normals;
-        std::vector<std::vector<unsigned int>> materials;
-        std::vector<std::string> materialNames;
-        std::vector<std::string> materialLibs;
-        std::vector<std::vector<unsigned int>> indices;
-        parse_obj(load_file(n), names, positions, uvs, normals, materials,
-            materialNames, materialLibs, indices);
-        for(std::size_t i = 0; i < names.size(); ++i)
-        {
-            _modelVertices.emplace_back();
-            _modelVertices.back().attribute(4, positions[i]);
-            _modelVertices.back().attribute(4, normals[i]);
-            // ...
-            _modelIndices.emplace_back(indices[i]);
-        }
-    }
 
     Window::SetCursorMode(CursorMode::Disable);
 }
@@ -192,27 +172,38 @@ void paz::App::Run()
         const double cosYaw = std::cos(_cameraYaw);
         const double sinYaw = std::sin(_cameraYaw);
 
-        xVel = 0.;
-        yVel = 0.;
-        if(paz::Window::KeyDown(paz::Key::A))
+        if(_cameraGrounded)
         {
-            xVel += 3.*-cosYaw;
-            yVel += 3.*-sinYaw;
+            _cameraXVel = 0.;
+            _cameraYVel = 0.;
+            if(Window::KeyDown(Key::A))
+            {
+                _cameraXVel += 3.*-cosYaw;
+                _cameraYVel += 3.*-sinYaw;
+            }
+            if(Window::KeyDown(Key::D))
+            {
+                _cameraXVel -= 3.*-cosYaw;
+                _cameraYVel -= 3.*-sinYaw;
+            }
+            if(Window::KeyDown(Key::W))
+            {
+                _cameraXVel += 3.*-sinYaw;
+                _cameraYVel += 3.*cosYaw;
+            }
+            if(Window::KeyDown(Key::S))
+            {
+                _cameraXVel -= 3.*-sinYaw;
+                _cameraYVel -= 3.*cosYaw;
+            }
         }
-        if(paz::Window::KeyDown(paz::Key::D))
+
+        if(Window::KeyPressed(Key::E)) //TEMP
         {
-            xVel -= 3.*-cosYaw;
-            yVel -= 3.*-sinYaw;
-        }
-        if(paz::Window::KeyDown(paz::Key::W))
-        {
-            xVel += 3.*-sinYaw;
-            yVel += 3.*cosYaw;
-        }
-        if(paz::Window::KeyDown(paz::Key::S))
-        {
-            xVel -= 3.*-sinYaw;
-            yVel -= 3.*cosYaw;
+            for(const auto& n : objects())
+            {
+                reinterpret_cast<Object*>(n.first)->onInteract(*_cameraObject);
+            }
         }
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
@@ -244,8 +235,104 @@ void paz::App::Run()
 
         for(const auto& n : objects())
         {
+            Object* o = reinterpret_cast<Object*>(n.first);
+            if(o->collisionType() == CollisionType::Default)
+            {
+                o->zVel() -= 9.81*Window::FrameTime();
+            }
+        }
+
+        for(const auto& n : objects())
+        {
             reinterpret_cast<Object*>(n.first)->update();
         }
+
+////////
+for(auto& a0 : objects())
+{
+    Object* a = reinterpret_cast<Object*>(a0.first);
+    if(a->collisionType() != CollisionType::Default)
+    {
+        continue;
+    }
+
+    bool collided = false;
+
+    double minDist = std::numeric_limits<double>::infinity();
+    double gx = 0.;
+    double gy = 0.;
+    double gz = 1.;
+
+    Object* collidedWith = nullptr;
+    for(auto& b0 : objects())
+    {
+        Object* b = reinterpret_cast<Object*>(b0.first);
+        if(b->collisionType() != CollisionType::World)
+        {
+            continue;
+        }
+
+        double x = a->x() - b->x();
+        double y = a->y() - b->y();
+        double z = a->z() - b->z() + Radius;
+
+        double hx, hy, hz;
+        const double c = b->model().collide(x, y, z, hx, hy, hz, Radius);
+        if(c < minDist)
+        {
+            collided = true;
+            minDist = c;
+            gx = hx;
+            gy = hy;
+            gz = hz;
+            collidedWith = b;
+        }
+    }
+
+    if(collided)
+    {
+        a->onCollide(*collidedWith);
+        collidedWith->onCollide(*a);
+
+        const double normNormal = std::sqrt(gx*gx + gy*gy + gz*gz);
+        a->localNorX() = gx/normNormal;
+        a->localNorY() = gy/normNormal;
+        a->localNorZ() = gz/normNormal;
+#if 1
+        a->x() += gx;
+        a->y() += gy;
+        a->z() += gz;
+#else
+        const double gDotV = gx*a->xVel() + gy*a->yVel() + gz*a->zVel();
+        if(gDotV < 0.)
+        {
+            const double normVel = std::sqrt(a->xVel()*a->xVel() + a->yVel()*a->
+                yVel() + a->zVel()*a->zVel());
+            x -= gDotV*a->xVel()/normVel/normVel;
+            y -= gDotV*a->yVel()/normVel/normVel;
+            z -= gDotV*a->zVel()/normVel/normVel;
+        }
+#endif
+        const double norVel = a->xVel()*a->localNorX() + a->yVel()*a->
+            localNorY() + a->zVel()*a->localNorZ();
+        if(norVel < 0.)
+        {
+#if 1
+            a->xVel() -= norVel*a->localNorX();
+            a->yVel() -= norVel*a->localNorY();
+            a->zVel() -= norVel*a->localNorZ();
+            // friction here ...
+#else
+            a->xVel() = 0.;
+            a->yVel() = 0.;
+            a->zVel() = 0.;
+#endif
+        }
+    }
+
+    a->grounded() = collided && a->localNorZ() > CosMaxAngle;
+}
+////////
 
         _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
             LoadAction::Clear);
@@ -254,22 +341,17 @@ void paz::App::Run()
         _geometryPass.uniform("projection", projection);
         _geometryPass.uniform("view", view);
         _geometryPass.uniform("model", std::array<float, 16>{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1});
-        for(std::size_t i = 0; i < _modelVertices.size(); ++i)
-        {
-            _geometryPass.indexed(PrimitiveType::Triangles, _modelVertices[i],
-                _modelIndices[i]);
-        }
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
-            if(o->vis())
+            if(o->model()._vc)
             {
                 _geometryPass.uniform("model", std::array<float, 16>{
 1, 0, 0, 0,
 0, 1, 0, 0,
 0, 0, 1, 0,
-static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z()), 1});
-                _geometryPass.indexed(PrimitiveType::Triangles, o->v(), o->i());
+static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z() + o->height()), 1});
+                _geometryPass.indexed(PrimitiveType::Triangles, o->model()._vg, o->model()._ig);
             }
         }
         _geometryPass.end();
@@ -292,7 +374,7 @@ static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z(
     }
 }
 
-void paz::App::AttachCamera(/*const*/ paz::Object& o)
+void paz::App::AttachCamera(/*const*/ Object& o)
 {
     _cameraObject = &o;
 }

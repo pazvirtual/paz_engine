@@ -7,14 +7,45 @@
 
 namespace paz
 {
+    enum class CollisionType
+    {
+        Default, None, World
+    };
+
+    class Model
+    {
+        friend class App;
+
+        std::shared_ptr<std::vector<double>> _vc;
+        std::shared_ptr<std::vector<std::size_t>> _ic;
+        VertexBuffer _vg;
+        IndexBuffer _ig;
+
+        double collide(double x, double y, double z, double& gx, double& gy,
+            double& gz, double radius) const;
+
+    public:
+        Model();
+        Model(const std::string& path);
+    };
+
     class Object
     {
+        friend class App;
+
         const std::uintptr_t _id;
+
+        double& localNorX();
+        double& localNorY();
+        double& localNorZ();
+        char& grounded();
 
     public:
         Object();
         virtual ~Object();
         virtual void update();
+        virtual void onCollide(const Object& o);
+        virtual void onInteract(const Object& o);
         double& x();
         double x() const;
         double& y();
@@ -27,19 +58,23 @@ namespace paz
         double yVel() const;
         double& zVel();
         double zVel() const;
-        VertexBuffer& v();
-        const VertexBuffer& v() const;
-        IndexBuffer& i();
-        const IndexBuffer& i() const;
-        char& vis();
-        bool vis() const;
+        Model& model();
+        const Model& model() const;
+        CollisionType& collisionType();
+        const CollisionType& collisionType() const;
+        double localNorX() const;
+        double localNorY() const;
+        double localNorZ() const;
+        bool grounded() const;
+        double& height();
+        double height() const;
     };
 
     class App
     {
     public:
         App() = delete;
-        static void Init(const std::string& sceneShaderPath, const std::unordered_set<std::string>& objPaths);
+        static void Init(const std::string& sceneShaderPath);
         static void Run();
         static void AttachCamera(/*const*/ Object& o);
         static double CameraYaw();
