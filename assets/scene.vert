@@ -5,7 +5,7 @@ uniform mat4 projection;
 out vec3 lightPos;
 out vec3 intens;
 out float falloff;
-const float minIll = 1e-3;
+const float minIll = 1e-4;
 void main()
 {
     lightPos = light0.xyz;
