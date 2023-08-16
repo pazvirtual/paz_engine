@@ -471,7 +471,8 @@ void paz::App::Run()
 
         const Vec gravDir = -_cameraBasePos.normalized();
 
-        // Identify all objects that can collide and precompute as much as possible.
+        // Identify all objects that can collide and precompute as much as
+        // possible.
         std::vector<Object*> a;
         std::vector<Object*> b;
         for(auto& n : objects())
@@ -512,20 +513,28 @@ void paz::App::Run()
             offsetZ[i] = h*(1. - 2.*(xx + yy));
         }
 
-        std::vector<std::vector<double>> bX(b.size(), std::vector<double>(NumSteps));
-        std::vector<std::vector<double>> bY(b.size(), std::vector<double>(NumSteps));
-        std::vector<std::vector<double>> bZ(b.size(), std::vector<double>(NumSteps));
+        std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
+            NumSteps));
+        std::vector<std::vector<double>> bY(b.size(), std::vector<double>(
+            NumSteps));
+        std::vector<std::vector<double>> bZ(b.size(), std::vector<double>(
+            NumSteps));
         for(std::size_t i = 0; i < b.size(); ++i)
         {
             for(std::size_t j = 0; j < NumSteps; ++j)
             {
-                bX[i][j] = b[i]->xPrev() + (j + 1)*(b[i]->x() - b[i]->xPrev())/NumSteps;
-                bY[i][j] = b[i]->yPrev() + (j + 1)*(b[i]->y() - b[i]->yPrev())/NumSteps;
-                bZ[i][j] = b[i]->zPrev() + (j + 1)*(b[i]->z() - b[i]->zPrev())/NumSteps;
+                static constexpr double t0 = 1./NumSteps;
+                bX[i][j] = b[i]->xPrev() + (j + 1)*(b[i]->x() - b[i]->xPrev())*
+                    t0;
+                bY[i][j] = b[i]->yPrev() + (j + 1)*(b[i]->y() - b[i]->yPrev())*
+                    t0;
+                bZ[i][j] = b[i]->zPrev() + (j + 1)*(b[i]->z() - b[i]->zPrev())*
+                    t0;
             }
         }
 
-        // Find and handle collisions. (Time is the outer loop to ensure collision repsonses occur in the correct order.)
+        // Find and handle collisions. (Time is the outer loop to ensure
+        // collision repsonses occur in the correct order.)
 std::vector<bool> tempDone(a.size(), false);
         for(std::size_t i = 0; i < NumSteps; ++i)
         {
@@ -534,12 +543,16 @@ std::vector<bool> tempDone(a.size(), false);
 if(tempDone[j]){ continue; }
                 for(std::size_t k = 0; k < b.size(); ++k)
                 {
-                    const double x = offsetX[j] + a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->xPrev())/NumSteps - bX[k][i];
-                    const double y = offsetY[j] + a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->yPrev())/NumSteps - bY[k][i];
-                    const double z = offsetZ[j] + a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->zPrev())/NumSteps - bZ[k][i];
+                    const double x = offsetX[j] + a[j]->xPrev() + (i + 1)*(a[
+                        j]->x() - a[j]->xPrev())/NumSteps - bX[k][i];
+                    const double y = offsetY[j] + a[j]->yPrev() + (i + 1)*(a[
+                        j]->y() - a[j]->yPrev())/NumSteps - bY[k][i];
+                    const double z = offsetZ[j] + a[j]->zPrev() + (i + 1)*(a[
+                        j]->z() - a[j]->zPrev())/NumSteps - bZ[k][i];
 
                     double xNew, yNew, zNew, xNor, yNor, zNor;
-                    const double c = b[k]->model().collide(x, y, z, a[j]->collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
+                    const double c = b[k]->model().collide(x, y, z, a[j]->
+                        collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
                     if(c < a[j]->collisionRadius())
                     {
                         const double xVel = a[j]->xVel() - b[k]->xVel();
@@ -559,13 +572,17 @@ if(tempDone[j]){ continue; }
                             a[j]->zVel() = b[k]->zVel();
 #endif
                         }
-                        a[j]->x() = xNew - offsetX[j] + bX[k][i] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
-                        a[j]->y() = yNew - offsetY[j] + bY[k][i] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
-                        a[j]->z() = zNew - offsetZ[j] + bZ[k][i] + (NumSteps - i - 1)*a[j]->zVel()/NumSteps*Window::FrameTime();
+                        a[j]->x() = xNew - offsetX[j] + bX[k][i] + (NumSteps - i
+                            - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
+                        a[j]->y() = yNew - offsetY[j] + bY[k][i] + (NumSteps - i
+                            - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
+                        a[j]->z() = zNew - offsetZ[j] + bZ[k][i] + (NumSteps - i
+                            - 1)*a[j]->zVel()/NumSteps*Window::FrameTime();
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-                        a[j]->grounded() = -xNor*gravDir(0) - yNor*gravDir(1) - zNor*gravDir(2) > CosMaxAngle;
+                        a[j]->grounded() = -xNor*gravDir(0) - yNor*gravDir(1) -
+                            zNor*gravDir(2) > CosMaxAngle;
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -591,7 +608,7 @@ tempDone[j] = true;
                 b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->
                     z(), gravDir(0), gravDir(1), gravDir(2), xNor, yNor, zNor,
                     dist);
-                if(dist - radius < 0.05)
+                if(dist - radius < 0.01)
                 {
                     a[i]->localNorX() = xNor;
                     a[i]->localNorY() = yNor;
@@ -786,15 +803,21 @@ _msg = ss.str();
             }
             if(Window::KeyDown(Key::W))
             {
-                _cameraObject->xVel() += 12.*cameraForward(0)*Window::FrameTime();
-                _cameraObject->yVel() += 12.*cameraForward(1)*Window::FrameTime();
-                _cameraObject->zVel() += 12.*cameraForward(2)*Window::FrameTime();
+                _cameraObject->xVel() += 12.*cameraForward(0)*Window::
+                    FrameTime();
+                _cameraObject->yVel() += 12.*cameraForward(1)*Window::
+                    FrameTime();
+                _cameraObject->zVel() += 12.*cameraForward(2)*Window::
+                    FrameTime();
             }
             if(Window::KeyDown(Key::S))
             {
-                _cameraObject->xVel() -= 12.*cameraForward(0)*Window::FrameTime();
-                _cameraObject->yVel() -= 12.*cameraForward(1)*Window::FrameTime();
-                _cameraObject->zVel() -= 12.*cameraForward(2)*Window::FrameTime();
+                _cameraObject->xVel() -= 12.*cameraForward(0)*Window::
+                    FrameTime();
+                _cameraObject->yVel() -= 12.*cameraForward(1)*Window::
+                    FrameTime();
+                _cameraObject->zVel() -= 12.*cameraForward(2)*Window::
+                    FrameTime();
             }
         }
         if(Window::KeyDown(Key::LeftShift))
@@ -862,9 +885,12 @@ _msg = ss.str();
                 const auto upY = 2.*(yz - xw);
                 const auto upZ = 1. - 2.*(xx + yy);
                 Mat model = Mat::Identity(4);
-                model(0, 3) = o->x() + o->height()*upX - _cameraObject->x() - _cameraObject->height()*cameraUp(0);
-                model(1, 3) = o->y() + o->height()*upY - _cameraObject->y() - _cameraObject->height()*cameraUp(1);
-                model(2, 3) = o->z() + o->height()*upZ - _cameraObject->z() - _cameraObject->height()*cameraUp(2);
+                model(0, 3) = o->x() + o->height()*upX - _cameraObject->x() -
+                    _cameraObject->height()*cameraUp(0);
+                model(1, 3) = o->y() + o->height()*upY - _cameraObject->y() -
+                    _cameraObject->height()*cameraUp(1);
+                model(2, 3) = o->z() + o->height()*upZ - _cameraObject->z() -
+                    _cameraObject->height()*cameraUp(2);
                 model.setBlock(0, 0, 3, 3, to_mat(Vec{{q0, q1, q2, q3}}));
                 _geometryPass.uniform("model", convert_mat(model));
                 _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
@@ -879,7 +905,8 @@ _msg = ss.str();
         _renderPass.read("normalMap", _normalMap);
         _renderPass.read("coordMap", _coordMap);
         _renderPass.read("depthMap", _depthMap);
-        _renderPass.uniform("invProjection", convert_mat(convert_mat(projection).inv()));
+        _renderPass.uniform("invProjection", convert_mat(convert_mat(
+            projection).inv()));
         _renderPass.uniform("sun", convert_vec(view*SunVec));
         _renderPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();

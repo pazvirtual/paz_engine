@@ -34,7 +34,8 @@ static std::vector<char> Grounded;
 static std::vector<double> Height;
 static std::vector<double> CRadius;
 
-static void grav_ode(double x, double y, double z, double u, double v, double w, double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
+static void grav_ode(double x, double y, double z, double u, double v, double w,
+    double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
 {
     static constexpr double StdGravParam = 9.81*50.*50.;
     const double radius = std::sqrt(x*x + y*y + z*z);
