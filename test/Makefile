@@ -11,8 +11,9 @@ else
 endif
 CXXVER := 14
 CXXFLAGS := -std=c++$(CXXVER) -O3 -Wall -Wextra -Wno-missing-braces -Wold-style-cast
+MINMACOSVER := 10.11
 ifeq ($(OSPRETTY), macOS)
-    CXXFLAGS += -mmacosx-version-min=10.11 -Wunguarded-availability
+    CXXFLAGS += -mmacosx-version-min=$(MINMACOSVER) -Wunguarded-availability
 else
     ifeq ($(OSPRETTY), Windows)
         CXXFLAGS += -Wno-deprecated-copy -static -mwindows
@@ -43,8 +44,8 @@ test: build $(OBJ)
 
 build/assets.o: build/assets.paz
 ifeq ($(OSPRETTY), macOS)
-	@printf "section .rodata\nglobal _binary_assets_paz_start\nglobal _binary_assets_paz_end\n_binary_assets_paz_start: incbin 'build/assets.paz'\n_binary_assets_paz_end:" > build/include-assets.s
-	nasm -f macho64 build/include-assets.s -o build/assets.o
+	@printf ".section assets, "rd"\n.global _binary_assets_paz_start\n.global _binary_assets_paz_end\n_binary_assets_paz_start: .incbin \"build/assets.paz\"\n_binary_assets_paz_end:" > build/include-assets.s
+	as -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets.o
 else
 	cd build && ld -r -b binary -o assets.o assets.paz
 endif

@@ -17,8 +17,9 @@ CXXVER := 17
 OPTIM := 3
 ZIPNAME := $(PROJNAME)-$(OSPRETTY)
 CFLAGS := -O$(OPTIM) -Wall -Wextra -Wno-missing-braces
+MINMACOSVER := 10.11
 ifeq ($(OSPRETTY), macOS)
-    CFLAGS += -mmacosx-version-min=10.11 -Wunguarded-availability
+    CFLAGS += -mmacosx-version-min=$(MINMACOSVER) -Wunguarded-availability
 else
     ifeq ($(OSPRETTY), Windows)
         CFLAGS += -Wno-cast-function-type
@@ -80,8 +81,8 @@ analyze: $(OBJCSRC)
 
 assets.o: assets.paz
 ifeq ($(OSPRETTY), macOS)
-	@printf "section .rodata\nglobal _paz_binary_assets_paz_start\nglobal _paz_binary_assets_paz_end\n_paz_binary_assets_paz_start: incbin 'assets.paz'\n_paz_binary_assets_paz_end:" > include-assets.s
-	nasm -f macho64 include-assets.s -o assets.o
+	@printf ".section assets, \"rd\"\n.global _paz_binary_assets_paz_start\n.global _paz_binary_assets_paz_end\n_paz_binary_assets_paz_start: .incbin \"assets.paz\"\n_paz_binary_assets_paz_end:" > include-assets.s
+	as -mmacos-version-min=$(MINMACOSVER) include-assets.s -o assets.o
 	$(RM) include-assets.s
 else
 	ld -r -b binary -o assets.o assets.paz

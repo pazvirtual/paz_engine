@@ -34,7 +34,7 @@ static std::string get_home()
         return [NSHomeDirectory() UTF8String];
     }
     std::string path = [NSHomeDirectory() UTF8String];
-    path += "/" + CompanyName;
+    path += "/Documents/" + CompanyName;
     ensure_dir(path);
     path += "/" + AppName;
     ensure_dir(path);
