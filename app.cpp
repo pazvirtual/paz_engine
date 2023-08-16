@@ -156,7 +156,6 @@ void main()
 )===";
 
 static const std::string FxaaFragSrc = 1 + R"===(
-// Linear LDR -> Antialiased gamma-corrected LDR
 const int numEdgeSteps = 10;
 const float edgeSteps[] = {1., 1.5, 2., 2., 2., 2., 2., 2., 2., 4.};
 const float edgeGuess = 8.;
@@ -286,9 +285,9 @@ void main()
     vec2 deltaUv = mix(vec2(e.pixelStep*fac, 0.), vec2(0., e.pixelStep*fac),
         float(e.isHorizontal));
     color = texture(img, uv + deltaUv);
-    color.rgb = pow(color.rgb, vec3(0.4545));
 }
 )===";
+#endif
 
 static const std::string PostFragSrc = 1 + R"===(
 const float eps = 1e-6;
@@ -312,31 +311,6 @@ void main()
     color = vec4(reinhard(hdrCol, whitePoint), 1.);
 }
 )===";
-#else
-static const std::string PostFragSrc = 1 + R"===(
-const float eps = 1e-6;
-uniform sampler2D hdrRender;
-uniform float whitePoint;
-in vec2 uv;
-layout(location = 0) out vec4 color;
-float luminance(in vec3 v)
-{
-    return dot(v, vec3(0.2126, 0.7152, 0.0722));
-}
-vec3 reinhard(in vec3 col, in float w)
-{
-    float lOld = max(eps, luminance(col));
-    float lNew = lOld*(1. + lOld/max(eps, w*w))/(1. + lOld);
-    return col*lNew/lOld;
-}
-void main()
-{
-    vec3 hdrCol = texture(hdrRender, uv).rgb;
-    color = vec4(reinhard(hdrCol, whitePoint), 1.);
-    color.rgb = pow(color.rgb, vec3(0.4545));
-}
-)===";
-#endif
 
 static const std::string TextVertSrc = 1 + R"===(
 const int charWidth = 5;
@@ -752,7 +726,7 @@ _msgStream << std::endl;
         _lumPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _lumPass.end();
 
-        // Anti-alias and correct gamma.
+        // Anti-alias.
         _fxaaPass.begin();
         _fxaaPass.read("img", _finalRender);
         _fxaaPass.read("lum", _finalLumMap);
