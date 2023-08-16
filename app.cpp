@@ -3,7 +3,6 @@
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
-#include <sstream>
 #include <iomanip>
 #include <deque>
 #include <regex>
@@ -50,7 +49,7 @@ static paz::RenderPass _plotPass;
 static paz::VertexBuffer _quadVertices;
 
 static paz::Texture _font;
-std::string _msg;
+std::stringstream _msgStream;
 
 static double _cameraPitch = 0.;
 
@@ -491,7 +490,7 @@ void paz::App::Run()
         std::vector<double> offsetZ(a.size(), 0.);
         for(std::size_t i = 0; i < a.size(); ++i)
         {
-            const double h = a[i]->collisionRadius() - a[i]->height();
+            const double h = a[i]->collisionRadius() - a[i]->collisionHeight();
             if(h > -1e-6)
             {
                 continue;
@@ -657,11 +656,9 @@ rHist.pop_front();
 rHist.push_back(r);
 latHist.pop_front();
 latHist.push_back(lat);
-std::stringstream ss;
-ss << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel());
-ss << "\n" << 1./maxFrameTime;
-ss << "\n" << (_cameraObject->grounded() ? "Grounded" : "Floating");
-_msg = ss.str();
+_msgStream << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
+_msgStream << 1./maxFrameTime << std::endl;
+_msgStream << (_cameraObject->grounded() ? "Grounded" : "Floating") << std::endl;
 }
 
         update();
@@ -876,22 +873,10 @@ _msg = ss.str();
                 const double q1 = o->yAtt();
                 const double q2 = o->zAtt();
                 const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
-                const auto xx = q0*q0;
-                const auto yy = q1*q1;
-                const auto xz = q0*q2;
-                const auto yw = q1*q3;
-                const auto yz = q1*q2;
-                const auto xw = q0*q3;
-                const auto upX = 2.*(xz + yw);
-                const auto upY = 2.*(yz - xw);
-                const auto upZ = 1. - 2.*(xx + yy);
                 Mat model = Mat::Identity(4);
-                model(0, 3) = o->x() + o->height()*upX - _cameraObject->x() -
-                    _cameraObject->height()*cameraUp(0);
-                model(1, 3) = o->y() + o->height()*upY - _cameraObject->y() -
-                    _cameraObject->height()*cameraUp(1);
-                model(2, 3) = o->z() + o->height()*upZ - _cameraObject->z() -
-                    _cameraObject->height()*cameraUp(2);
+                model(0, 3) = o->x() - _cameraObject->x();
+                model(1, 3) = o->y() - _cameraObject->y();
+                model(2, 3) = o->z() - _cameraObject->z();
                 model.setBlock(0, 0, 3, 3, to_mat(Vec{{q0, q1, q2, q3}}));
                 _geometryPass.uniform("model", convert_mat(model));
                 _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
@@ -934,8 +919,11 @@ _msg = ss.str();
         _fxaaPass.end();
 #endif
 
-        if(!_msg.empty())
+        const std::string msg = _msgStream.str();
+        if(!msg.empty())
         {
+            std::stringstream{}.swap(_msgStream);
+
             _textPass.begin();
             _textPass.read("font", _font);
             _textPass.uniform("width", Window::ViewportWidth());
@@ -946,7 +934,7 @@ _msg = ss.str();
             _textPass.uniform("scale", std::round(2.f*Window::UiScale()));
             int row = 0;
             int col = 0;
-            for(const auto& n : _msg)
+            for(auto n : msg)
             {
                 if(n == '`')
                 {
@@ -1009,4 +997,9 @@ _msg = ss.str();
 void paz::App::AttachCamera(/*const*/ Object& o)
 {
     _cameraObject = &o;
+}
+
+std::stringstream& paz::App::MsgStream()
+{
+    return _msgStream;
 }

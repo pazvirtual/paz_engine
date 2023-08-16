@@ -31,7 +31,7 @@ static std::vector<double> XPrev;
 static std::vector<double> YPrev;
 static std::vector<double> ZPrev;
 static std::vector<char> Grounded;
-static std::vector<double> Height;
+static std::vector<double> CHeight;
 static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
@@ -123,8 +123,8 @@ void paz::physics()
     }
     for(std::size_t i = 0; i < n; ++i)
     {
-        double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[i]
-            *ZAtt[i]);
+        double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[
+            i]*ZAtt[i]);
         const double deltaX = normalize_angle(0.5*Window::FrameTime()*XAngRate[
             i] + M_PI) - M_PI;
         const double deltaY = normalize_angle(0.5*Window::FrameTime()*YAngRate[
@@ -135,11 +135,11 @@ void paz::physics()
         YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
         ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;
         WAtt    += -XAtt[i]*deltaX - YAtt[i]*deltaY - ZAtt[i]*deltaZ;
-        const double signNorm = (WAtt < 0. ? -1. : 1.)*std::sqrt(XAtt[i]*XAtt[i]
-            + YAtt[i]*YAtt[i] + ZAtt[i]*ZAtt[i] + WAtt*WAtt);
-        XAtt[i] /= signNorm;
-        YAtt[i] /= signNorm;
-        ZAtt[i] /= signNorm;
+        const double invSignNorm = (WAtt < 0. ? -1. : 1.)/std::sqrt(XAtt[i]*
+            XAtt[i] + YAtt[i]*YAtt[i] + ZAtt[i]*ZAtt[i] + WAtt*WAtt);
+        XAtt[i] *= invSignNorm;
+        YAtt[i] *= invSignNorm;
+        ZAtt[i] *= invSignNorm;
     }
     std::fill(Grounded.begin(), Grounded.end(), false);
 }
@@ -173,7 +173,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     LocalNorY.push_back(0.);
     LocalNorZ.push_back(1.);
     Grounded.push_back(false);
-    Height.push_back(0.);
+    CHeight.push_back(0.);
     CRadius.push_back(0.2);
     XDown.push_back(0.);
     YDown.push_back(0.);
@@ -202,7 +202,7 @@ paz::Object::~Object()
     SWAP_AND_POP(LocalNorY);
     SWAP_AND_POP(LocalNorZ);
     SWAP_AND_POP(Grounded);
-    SWAP_AND_POP(Height);
+    SWAP_AND_POP(CHeight);
     SWAP_AND_POP(CRadius);
     SWAP_AND_POP(XDown);
     SWAP_AND_POP(YDown);
@@ -410,14 +410,14 @@ bool paz::Object::grounded() const
     return Grounded[objects().at(_id)];
 }
 
-double& paz::Object::height()
+double& paz::Object::collisionHeight()
 {
-    return Height[objects().at(_id)];
+    return CHeight[objects().at(_id)];
 }
 
-double paz::Object::height() const
+double paz::Object::collisionHeight() const
 {
-    return Height[objects().at(_id)];
+    return CHeight[objects().at(_id)];
 }
 
 double& paz::Object::collisionRadius()

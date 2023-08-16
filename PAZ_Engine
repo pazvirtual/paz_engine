@@ -4,6 +4,7 @@
 #include <PAZ_Graphics>
 #include <PAZ_IO>
 #include <unordered_set>
+#include <sstream>
 
 namespace paz
 {
@@ -30,7 +31,7 @@ namespace paz
 
     public:
         Model() = default;
-        Model(const std::string& path, int idx = 0);
+        Model(const std::string& path, int idx = 0, double zOffset = 0.);
     };
 
     class Object
@@ -86,8 +87,8 @@ namespace paz
         double localNorY() const;
         double localNorZ() const;
         bool grounded() const;
-        double& height();
-        double height() const;
+        double& collisionHeight();
+        double collisionHeight() const;
         double& collisionRadius();
         double collisionRadius() const;
         double xDown() const;
@@ -104,6 +105,7 @@ namespace paz
         static void Run();
         static void AttachCamera(/*const*/ Object& o);
         static double CameraYaw();
+        static std::stringstream& MsgStream();
     };
 }
 

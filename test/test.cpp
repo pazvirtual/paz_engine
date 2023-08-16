@@ -1,5 +1,6 @@
 #include "PAZ_Engine"
 #include "PAZ_Math"
+#include <iomanip>
 
 static paz::Model Sphere50;
 static paz::Model Sphere;
@@ -16,7 +17,7 @@ class Player : public paz::Object
 public:
     Player()
     {
-        /*height*/collisionRadius() = 1.5;
+        /*collisionHeight()*/collisionRadius() = 1.5;
     }
 };
 
@@ -31,7 +32,6 @@ public:
     {
         _head.collisionType() = paz::CollisionType::None;
         _head.model() = Head;
-        height() = 0.;
         model() = Body;
     }
     void update() override
@@ -46,9 +46,10 @@ public:
         rot.setCol(0, right);
         rot.setCol(1, forward);
         rot.setCol(2, up);
-        _head.x() = x() + 1.5*up(0);
-        _head.y() = y() + 1.5*up(1);
-        _head.z() = z() + 1.5*up(2);
+        const double h = 1.5 - collisionRadius();
+        _head.x() = x() + h*up(0);
+        _head.y() = y() + h*up(1);
+        _head.z() = z() + h*up(2);
         paz::Vec att = to_quat(rot);
         if(att(3) < 0.)
         {
@@ -90,7 +91,7 @@ public:
     Ball()
     {
         model() = Sphere;
-        height() = 1.;
+        collisionHeight() = 1.;
         collisionRadius() = 1.;
     }
     void onInteract(const Object& o) override
@@ -189,10 +190,13 @@ int main()
     PlatformModel = paz::Model("platform.obj");
     Sphere50 = paz::Model("sphere50.obj");
     Sphere = paz::Model("unitsphere.obj");
-    Body = paz::Model("persontest.obj");
-    Head = paz::Model("persontest.obj", 1);
+    Body = paz::Model("persontest.obj", 0, -0.2);
+    Head = paz::Model("persontest.obj", 1, -0.1);
     Player player;
-//    Ball b;
+    player.z() = Radius + 10.;
+    Ball b;
+    b.z() = Radius;
+    b.x() = 5.;
     World w;
     std::vector<World1> w1(10);
     for(std::size_t i = 0; i < w1.size(); ++i)
@@ -201,10 +205,12 @@ int main()
         w1[i].z() = Radius - 2.;
     }
     Platform p;
-    player.z() = Radius + 10.;
-//    Npc npc;
-//    npc.x() = 0.5;
-//    npc.z() = Radius;
+    Npc npc0;
+    npc0.x() = 10.;
+    npc0.z() = Radius;
+    Npc npc1;
+    npc1.x() = Radius;
+    npc1.z() = 10.;
     paz::App::AttachCamera(player);
     paz::App::Run();
 }

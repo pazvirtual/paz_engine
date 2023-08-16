@@ -4,7 +4,7 @@
 #include <limits>
 #include <cmath>
 
-paz::Model::Model(const std::string& path, int idx)
+paz::Model::Model(const std::string& path, int idx, double zOffset)
 {
     std::vector<std::string> names;
     std::vector<std::vector<float>> positions;
@@ -18,6 +18,13 @@ paz::Model::Model(const std::string& path, int idx)
         materialNames, materialLibs, indices);
     _t = std::make_shared<std::vector<Triangle>>();
     _t->reserve(indices[idx].size()/3);
+    if(std::abs(zOffset) > 1e-6)
+    {
+        for(std::size_t i = 0; i < positions[idx].size(); i += 4)
+        {
+            positions[idx][i + 2] += zOffset;
+        }
+    }
     for(std::size_t i = 0; i < indices[idx].size(); i += 3)
     {
         const std::size_t i0 = 4*indices[idx][i];
