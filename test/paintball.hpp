@@ -15,7 +15,8 @@ public:
     Paintball();
     void update() override;
     void launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir);
-    void onCollide(const Object&, double, double, double) override;
+    void onCollide(const Object&, double, double, double, double, double,
+        double) override;
 };
 
 #endif

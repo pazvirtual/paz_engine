@@ -59,7 +59,8 @@ void Paintball::launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
     zVel() = vel(2) + LaunchSpeed*dir(2);
 }
 
-void Paintball::onCollide(const Object& o, double, double, double)
+void Paintball::onCollide(const Object& o, double, double, double, double,
+    double, double)
 {
     _parent.reset(o);
     _relX = x() - o.x();

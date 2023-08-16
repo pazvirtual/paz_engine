@@ -2,10 +2,10 @@
 #include "ui.hpp"
 #include "shared.hpp"
 #include "io.hpp"
+#include "threads.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
-#include <iomanip>
 #include <deque>
 
 static constexpr double InteractRangeBehindSq = 4.;
@@ -69,6 +69,7 @@ static paz::ObjectPtr SoundSrc;
 static bool Paused;
 
 static double GravAcc;
+static paz::Threadpool Threads;
 
 static bool FxaaEnabled = true;
 
@@ -427,7 +428,7 @@ void paz::App::Run()
         {
             do_physics(GravAcc);
 
-            do_collisions();
+            do_collisions(Threads);
 
             const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
             for(const auto& n : tempObjects)

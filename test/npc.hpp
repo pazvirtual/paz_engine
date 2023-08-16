@@ -12,7 +12,8 @@ class Npc : public paz::Object
 public:
     Npc();
     void update() override;
-    void onCollide(const Object&, double, double, double) override;
+    void onCollide(const Object&, double, double, double, double, double,
+        double) override;
 };
 
 #endif
