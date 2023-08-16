@@ -140,7 +140,7 @@ void main()
 static const std::string FxaaFragSrc = 1 + R"===(
 // Linear LDR -> Antialiased gamma-corrected LDR
 const int numSteps = 10;
-const float[] edgeSteps = {1., 1.5, 2., 2., 2., 2., 2., 2., 4.};
+const float[] edgeSteps = float[](1., 1.5, 2., 2., 2., 2., 2., 2., 4.);
 const float edgeGuess = 8.;
 uniform sampler2D img;
 uniform sampler2D lum;
@@ -161,9 +161,9 @@ struct LumData
     float maxLum;
     float contrast;
 };
-LumData lum_neighborhood(in sampler2D img, in vec2 uv)
+LumData lum_neighborhood(in sampler2D lum, in vec2 uv)
 {
-    vec2 texOffset = 1./textureSize(img, 0);
+    vec2 texOffset = 1./textureSize(lum, 0);
 
     LumData l;
     l.m = texture(lum, uv).r;
@@ -182,9 +182,7 @@ LumData lum_neighborhood(in sampler2D img, in vec2 uv)
 }
 float blend_fac(in LumData l)
 {
-    float fac = 2.*(l.n + l.e + l.s + l.w);
-    fac += l.ne + l.nw + l.se + l.sw;
-    fac /= 12.;
+    float fac = (2.*(l.n + l.e + l.s + l.w) + l.ne + l.nw + l.se + l.sw)/12.;
     fac = abs(fac - l.m);
     fac = clamp(fac/l.contrast, 0., 1.);
     fac = smoothstep(0., 1., fac);
@@ -197,9 +195,9 @@ struct EdgeData
     float oppositeLum;
     float grad;
 };
-EdgeData determine_edge(in LumData l)
+EdgeData determine_edge(in sampler2D lum, in LumData l)
 {
-    vec2 texOffset = 1./textureSize(img, 0);
+    vec2 texOffset = 1./textureSize(lum, 0);
 
     EdgeData e;
 
@@ -215,36 +213,20 @@ EdgeData determine_edge(in LumData l)
     float nGrad = abs(nLum - l.m);
     e.pixelStep = mix(texOffset.x, texOffset.y, float(e.isHorizontal));
 
-    if(pGrad < nGrad)
-    {
-        e.pixelStep = -e.pixelStep;
-        e.oppositeLum = nLum;
-        e.grad = nGrad;
-    }
-    else
-    {
-        e.oppositeLum = pLum;
-        e.grad = pGrad;
-    }
+    e.pixelStep *= sign(pGrad - nGrad);
+    e.oppositeLum = mix(pLum, nLum, float(pGrad < nGrad));
+    e.grad = mix(pGrad, nGrad, float(pGrad < nGrad));
 
     return e;
 }
-float edge_blend_fac(in sampler2D img, in LumData l, in EdgeData e, in vec2 uv)
+float edge_blend_fac(in sampler2D lum, in LumData l, in EdgeData e, in vec2 uv)
 {
-    vec2 texOffset = 1./textureSize(img, 0);
+    vec2 texOffset = 1./textureSize(lum, 0);
 
-    vec2 uvEdge = uv;
-    vec2 edgeStep;
-    if(e.isHorizontal)
-    {
-        uvEdge.y += 0.5*e.pixelStep;
-        edgeStep = vec2(texOffset.x, 0);
-    }
-    else
-    {
-        uvEdge.x += 0.5*e.pixelStep;
-        edgeStep = vec2(0, texOffset.y);
-    }
+    vec2 uvEdge = uv + mix(vec2(0.5*e.pixelStep, 0), vec2(0, 0.5*e.pixelStep),
+        float(e.isHorizontal));
+    vec2 edgeStep = mix(vec2(0, texOffset.y), vec2(texOffset.x, 0), float(e.
+        isHorizontal));
 
     float edgeLum = 0.5*(l.m + e.oppositeLum);
     float gradThresh = 0.25*e.grad;
@@ -273,32 +255,18 @@ float edge_blend_fac(in sampler2D img, in LumData l, in EdgeData e, in vec2 uv)
     nuv -= (1. - float(nAtEnd))*edgeStep*edgeGuess;
     float nDist = mix(uv.y - nuv.y, uv.x - nuv.x, float(e.isHorizontal));
 
-    float shortestDist;
-    bool deltaSign;
-    if(pDist < nDist)
-    {
-        shortestDist = pDist;
-        deltaSign = pLumDelta >= 0.;
-    }
-    else
-    {
-        shortestDist = nDist;
-        deltaSign = nLumDelta >= 0.;
-    }
+    float shortestDist = mix(nDist, pDist, float(pDist < nDist));
+    bool deltaSign = (pDist < nDist && pLumDelta >= 0.) || (pDist >= nDist &&
+        nLumDelta >= 0.);
 
-    if(deltaSign == (l.m - edgeLum >= 0.))
-    {
-        return 0.;
-    }
-
-    return numSteps*shortestDist;
+    return float(deltaSign == (l.m - edgeLum >= 0.))*numSteps*shortestDist;
 }
 void main()
 {
-    LumData l = lum_neighborhood(img, uv);
+    LumData l = lum_neighborhood(lum, uv);
     float pixelFac = blend_fac(l);
-    EdgeData e = determine_edge(l);
-    float edgeFac = edge_blend_fac(img, l, e, uv);
+    EdgeData e = determine_edge(lum, l);
+    float edgeFac = edge_blend_fac(lum, l, e, uv);
     float fac = max(pixelFac, edgeFac);
     vec2 deltaUv = mix(vec2(e.pixelStep*fac, 0.), vec2(0., e.pixelStep*fac),
         float(e.isHorizontal));
