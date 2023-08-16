@@ -218,6 +218,7 @@ void paz::App::Init(const std::string& title)
     Window::EnableDithering();
 
     Title = title;
+    Window::SetTitle(Title);
 
     GeometryBuffer.attach(DiffuseMap);
     // ...
