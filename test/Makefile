@@ -62,12 +62,14 @@ test: build $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LDLIBS)
 endif
 
-build/assets.o: build/assets.pazarchive
 ifeq ($(OSPRETTY), macOS)
+build/assets_arm64.o build/assets_x86_64.o: build/assets.pazarchive
 	@printf ".section assets, \"rd\"\n.global _binary_assets_pazarchive_start\n.global _binary_assets_pazarchive_end\n_binary_assets_pazarchive_start: .incbin \"build/assets.pazarchive\"\n_binary_assets_pazarchive_end:" > build/include-assets.s
 	as -arch arm64 -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets_arm64.o
 	as -arch x86_64 -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets_x86_64.o
+build/assets_x86_64.o: build/assets_arm64.o
 else
+build/assets.o: build/assets.pazarchive
 	cd build && ld -r -b binary -o assets.o assets.pazarchive
 endif
 

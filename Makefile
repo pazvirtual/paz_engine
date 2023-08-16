@@ -112,11 +112,12 @@ analyze: $(OBJCSRC)
 	$(CC) -c -o $@ $< $(CXXFLAGS)
 
 ifeq ($(OSPRETTY), macOS)
-assets_arm64.o assets_x86_64: assets.pazarchive
+assets_arm64.o assets_x86_64.o: assets.pazarchive
 	@printf ".section assets, \"rd\"\n.global _paz_binary_assets_pazarchive_start\n.global _paz_binary_assets_pazarchive_end\n_paz_binary_assets_pazarchive_start: .incbin \"assets.pazarchive\"\n_paz_binary_assets_pazarchive_end:" > include-assets.s
 	as -arch arm64 -mmacosx-version-min=$(MINMACOSVER) include-assets.s -o assets_arm64.o
 	as -arch x86_64 -mmacosx-version-min=$(MINMACOSVER) include-assets.s -o assets_x86_64.o
 	$(RM) include-assets.s
+assets_x86_64.o: assets_arm64.o
 else
 assets.o: assets.pazarchive
 	ld -r -b binary -o assets.o assets.pazarchive
