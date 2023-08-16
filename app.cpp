@@ -760,6 +760,7 @@ tempDone[j] = true;
                 }
             }
         }
+#if 0
 const double colTime1 = timer.getAndRestart();
 static double avgColTime0Sq = 0.;
 avgColTime0Sq = 0.99*avgColTime0Sq + 0.01*colTime0*colTime0;
@@ -769,6 +770,7 @@ _msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << 
 static double avgFrameTimeSq = 1./(60.*60.);
 avgFrameTimeSq = 0.99*avgFrameTimeSq + 0.01*PhysTime()*PhysTime();
 _msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
+#endif
 
         const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
         for(const auto& n : tempObjects)
@@ -868,6 +870,7 @@ timeSum[2] += timer1.getAndRestart();
 timeSum[3] += timer1.get();
         }
         _geometryPass.end();
+#if 0
 const double gTime = timer.getAndRestart();
 static double avgGTimeSq = 0.;
 avgGTimeSq = 0.99*avgGTimeSq + 0.01*gTime*gTime;
@@ -877,6 +880,7 @@ for(std::size_t i = 0; i < timeSum.size(); ++i){ avgTimeSumSq[i] = 0.99*avgTimeS
 _msgStream << "Breakdown: " << std::fixed << std::setprecision(5);
 for(std::size_t i = 0; i < avgTimeSumSq.size(); ++i){ _msgStream << std::setw(7) << std::sqrt(avgTimeSumSq[i]) << (i + 1 < avgTimeSumSq.size() ? " " : ""); }
 _msgStream << std::endl;
+#endif
 
         // Render in HDR.
         _renderPass.begin();
