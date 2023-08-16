@@ -409,9 +409,9 @@ double paz::Object::zPrev() const
     return ZPrev[objects().at(_id)];
 }
 
-char& paz::Object::grounded()
+void paz::Object::setGrounded(bool status)
 {
-    return Grounded[objects().at(_id)];
+    Grounded[objects().at(_id)] = status;
 }
 
 bool paz::Object::grounded() const

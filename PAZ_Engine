@@ -44,7 +44,7 @@ namespace paz
         double& localNorX();
         double& localNorY();
         double& localNorZ();
-        char& grounded();
+        void setGrounded(bool status);
 
         double xPrev() const;
         double yPrev() const;
@@ -104,7 +104,7 @@ namespace paz
         static void Init(const std::string& sceneShaderPath, const std::
             string& fontPath);
         static void Run();
-        static void AttachCamera(/*const*/ Object& o);
+        static void AttachCamera(const Object& o);
         static double CameraYaw();
         static std::stringstream& MsgStream();
     };

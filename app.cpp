@@ -10,9 +10,6 @@
 //#define DO_FXAA
 #define NO_FRICTION
 
-#define _cameraBasePos Vec{{_cameraObject->x(), _cameraObject->y(), _cameraObject->z()}}
-#define _cameraAtt Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(), _cameraObject->zAtt(), std::sqrt(1. - _cameraObject->xAtt()*_cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() - _cameraObject->zAtt()*_cameraObject->zAtt())}}
-
 static constexpr double CosMaxAngle = 0.7; // 45.57 deg
 static constexpr std::size_t NumSteps = 100;
 static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
@@ -51,12 +48,7 @@ static paz::VertexBuffer _quadVertices;
 static paz::Texture _font;
 std::stringstream _msgStream;
 
-static double _cameraPitch = 0.;
-static double _cameraPrevGravPitch = 0.;
-
-static /*const*/ paz::Object* _cameraObject = nullptr;
-
-static paz::Vec _mousePos = paz::Vec::Zero(2);
+static const paz::Object* _cameraObject = nullptr;
 
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
@@ -581,8 +573,8 @@ if(tempDone[j]){ continue; }
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-                        a[j]->grounded() = -xNor*a[j]->xDown() - yNor*a[j]->
-                            yDown() - zNor*a[j]->zDown() > CosMaxAngle;
+                        a[j]->setGrounded(-xNor*a[j]->xDown() - yNor*a[j]->
+                            yDown() - zNor*a[j]->zDown() > CosMaxAngle);
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -613,8 +605,8 @@ tempDone[j] = true;
                     a[i]->localNorX() = xNor;
                     a[i]->localNorY() = yNor;
                     a[i]->localNorZ() = zNor;
-                    a[i]->grounded() = -xNor*a[i]->xDown() - yNor*a[i]->yDown()
-                        - zNor*a[i]->zDown() > CosMaxAngle;
+                    a[i]->setGrounded(-xNor*a[i]->xDown() - yNor*a[i]->yDown() -
+                        zNor*a[i]->zDown() > CosMaxAngle);
 
                     // Apply friction.
 #ifndef NO_FRICTION
@@ -643,7 +635,6 @@ tempDone[j] = true;
             }
         }
 
-//std::cout << static_cast<bool>(_cameraObject->grounded()) << " " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() +_cameraObject->yVel()*_cameraObject->yVel() +_cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
 static std::deque<double> rHist(60*30, 0.);
 static std::deque<double> latHist(60*30, 0.);
 static double avgFrameTimeSq = 1./(60.*60.);
@@ -658,212 +649,15 @@ latHist.pop_front();
 latHist.push_back(lat);
 _msgStream << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
 _msgStream << 1./std::sqrt(avgFrameTimeSq) << std::endl;
-_msgStream << (_cameraObject->grounded() ? "Grounded" : "Floating") << std::endl;
 }
 
         update();
 
-////BEGIN PLAYER UPDATE
-        Vec cameraAtt = _cameraAtt;
-
-        // Get basis vectors (rows of rotation matrix).
-        Mat cameraRot = to_mat(cameraAtt);
-        Vec cameraForward = cameraRot.row(1).trans();
-        const Vec gravDir{{_cameraObject->xDown(), _cameraObject->yDown(),
-            _cameraObject->zDown()}};
-        Vec cameraRight = gravDir.cross(cameraForward).normalized();
-
-        _cameraObject->yAngRate() = 0.;
-
-        // Want to keep `gravPitch + _cameraPitch` (head pitch wrt gravity)
-        // constant as much as possible when grounded.
-        const Vec baseForward = cameraRight.cross(gravDir).normalized();
-        const double gravPitch = std::acos(std::max(0., std::min(1.,
-            baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) > 0. ?
-            -1. : 1.);
-_msgStream << std::setw(8) << (gravPitch + _cameraPitch)*180./M_PI << std::endl;
-        if(_cameraObject->grounded())
-        {
-            _mousePos = Vec::Zero(2);
-            _cameraObject->xAngRate() = 0.;
-            _cameraObject->zAngRate() = -0.1*Window::MousePos().first;
-            cameraRot.setRow(0, cameraRight.trans());
-            cameraRot.setRow(1, baseForward.trans());
-            cameraRot.setRow(2, -gravDir.trans());
-            Vec cameraBaseAtt = to_quat(cameraRot);
-            if(cameraAtt.dot(cameraBaseAtt) < 0.)
-            {
-                cameraBaseAtt = -cameraBaseAtt;
-            }
-            if((cameraBaseAtt - cameraAtt).normSq() > 1e-6)
-            {
-                cameraBaseAtt = (0.9*cameraAtt + 0.1*cameraBaseAtt).
-                    normalized();
-                if(cameraBaseAtt(3) < 0.)
-                {
-                    cameraBaseAtt = -cameraBaseAtt;
-                }
-                _cameraObject->xAtt() = cameraBaseAtt(0);
-                _cameraObject->yAtt() = cameraBaseAtt(1);
-                _cameraObject->zAtt() = cameraBaseAtt(2);
-            }
-
-            const double deltaGravPitch = gravPitch - _cameraPrevGravPitch;
-            const double deltaPitch = -deltaGravPitch + 0.1*Window::MousePos().
-                second*Window::FrameTime();
-            _cameraPitch = std::max(-0.45*M_PI, std::min(0.45*M_PI, _cameraPitch
-                + deltaPitch));
-        }
-        else
-        {
-            if(std::abs(_cameraPitch) > 1e-6)
-            {
-                cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, 0.1*_cameraPitch),
-                    cameraAtt);
-                _cameraObject->xAtt() = cameraAtt(0);
-                _cameraObject->yAtt() = cameraAtt(1);
-                _cameraObject->zAtt() = cameraAtt(2);
-                cameraRot = to_mat(_cameraAtt);
-                _cameraPitch *= 0.9;
-            }
-
-            _mousePos(0) += Window::MousePos().first;
-            _mousePos(1) += Window::MousePos().second;
-            const double norm = _mousePos.norm();
-            if(norm > 100.)
-            {
-                _mousePos *= 100./norm;
-            }
-            else if(norm > 0.1)
-            {
-                _mousePos -= 50.0/norm*Window::FrameTime()*_mousePos;
-            }
-            else
-            {
-                _mousePos = Vec::Zero(2);
-            }
-            _cameraObject->xAngRate() = 0.006*_mousePos(1);
-            _cameraObject->zAngRate() = -0.006*_mousePos(0);
-        }
-        _cameraPrevGravPitch = gravPitch;
-        cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch + 0.5*M_PI),
-            cameraAtt);
-
-        cameraRight = cameraRot.row(0).trans();
-        cameraForward = cameraRot.row(1).trans();
-        const Vec cameraUp = cameraRot.row(2).trans();
-
-        if(_cameraObject->grounded())
-        {
-            double xVel = 0.;
-            double yVel = 0.;
-            double zVel = 0.;
-            if(Window::KeyDown(Key::A))
-            {
-                xVel -= cameraRight(0);
-                yVel -= cameraRight(1);
-                zVel -= cameraRight(2);
-            }
-            if(Window::KeyDown(Key::D))
-            {
-                xVel += cameraRight(0);
-                yVel += cameraRight(1);
-                zVel += cameraRight(2);
-            }
-            if(Window::KeyDown(Key::S))
-            {
-                xVel -= cameraForward(0);
-                yVel -= cameraForward(1);
-                zVel -= cameraForward(2);
-            }
-            if(Window::KeyDown(Key::W))
-            {
-                xVel += cameraForward(0);
-                yVel += cameraForward(1);
-                zVel += cameraForward(2);
-            }
-            const double norm = std::sqrt(xVel*xVel + yVel*yVel + zVel*zVel);
-            if(norm)
-            {
-                xVel *= 3./norm;
-                yVel *= 3./norm;
-                zVel *= 3./norm;
-            }
-#ifdef NO_FRICTION
-            _cameraObject->xVel() = xVel;
-            _cameraObject->yVel() = yVel;
-            _cameraObject->zVel() = zVel;
-#else
-            _cameraObject->xVel() += xVel;
-            _cameraObject->yVel() += yVel;
-            _cameraObject->zVel() += zVel;
-#endif
-        }
-        else
-        {
-            if(Window::KeyDown(Key::A))
-            {
-                _cameraObject->xVel() -= 12.*cameraRight(0)*Window::FrameTime();
-                _cameraObject->yVel() -= 12.*cameraRight(1)*Window::FrameTime();
-                _cameraObject->zVel() -= 12.*cameraRight(2)*Window::FrameTime();
-            }
-            if(Window::KeyDown(Key::D))
-            {
-                _cameraObject->xVel() += 12.*cameraRight(0)*Window::FrameTime();
-                _cameraObject->yVel() += 12.*cameraRight(1)*Window::FrameTime();
-                _cameraObject->zVel() += 12.*cameraRight(2)*Window::FrameTime();
-            }
-            if(Window::KeyDown(Key::W))
-            {
-                _cameraObject->xVel() += 12.*cameraForward(0)*Window::
-                    FrameTime();
-                _cameraObject->yVel() += 12.*cameraForward(1)*Window::
-                    FrameTime();
-                _cameraObject->zVel() += 12.*cameraForward(2)*Window::
-                    FrameTime();
-            }
-            if(Window::KeyDown(Key::S))
-            {
-                _cameraObject->xVel() -= 12.*cameraForward(0)*Window::
-                    FrameTime();
-                _cameraObject->yVel() -= 12.*cameraForward(1)*Window::
-                    FrameTime();
-                _cameraObject->zVel() -= 12.*cameraForward(2)*Window::
-                    FrameTime();
-            }
-        }
-        if(Window::KeyDown(Key::LeftShift))
-        {
-            _cameraObject->xVel() += 12.*cameraUp(0)*Window::FrameTime();
-            _cameraObject->yVel() += 12.*cameraUp(1)*Window::FrameTime();
-            _cameraObject->zVel() += 12.*cameraUp(2)*Window::FrameTime();
-        }
-        if(Window::KeyDown(Key::LeftControl))
-        {
-            _cameraObject->xVel() -= 12.*cameraUp(0)*Window::FrameTime();
-            _cameraObject->yVel() -= 12.*cameraUp(1)*Window::FrameTime();
-            _cameraObject->zVel() -= 12.*cameraUp(2)*Window::FrameTime();
-        }
-
-        /*if(Window::KeyPressed(Key::E))
-        {
-            for(const auto& n : objects())
-            {
-                Object* o = reinterpret_cast<Object*>(n.first);
-                const double relX = o->x() - _cameraX;
-                const double relY = o->y() - _cameraY;
-                const double relZ = o->z() - _cameraZ;
-                const double distSq = relX*relX + relY*relY + relZ*relZ;
-                const double dotProd = -sinYaw*relX + cosYaw*relY;
-                if((distSq < InteractRangeBehindSq || (distSq <
-                    InteractRangeInFrontSq && dotProd > 0.)))
-                {
-
-                    o->onInteract(*_cameraObject);
-                }
-            }
-        }*/
-////END PLAYER UPDATE
+        const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
+            _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt()
+            - _cameraObject->zAtt()*_cameraObject->zAtt());
+        const paz::Vec cameraAtt{{_cameraObject->xAtt(), _cameraObject->yAtt(),
+            _cameraObject->zAtt(), cameraWAtt}};
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             1e3);
@@ -1009,7 +803,7 @@ _msgStream << std::setw(8) << (gravPitch + _cameraPitch)*180./M_PI << std::endl;
     }
 }
 
-void paz::App::AttachCamera(/*const*/ Object& o)
+void paz::App::AttachCamera(const Object& o)
 {
     _cameraObject = &o;
 }

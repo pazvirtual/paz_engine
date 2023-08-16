@@ -2,6 +2,8 @@
 #include "PAZ_Math"
 #include <iomanip>
 
+#define NO_FRICTION
+
 static paz::Model Sphere50;
 static paz::Model Sphere;
 static paz::Model Ground;
@@ -14,10 +16,209 @@ static constexpr double Radius = 50.;
 
 class Player : public paz::Object
 {
+    double _pitch = 0.;
+    double _prevGravPitch = 0.;
+    paz::Vec _mousePos = paz::Vec::Zero(2);
+    paz::Object _head; // camera
+
 public:
     Player()
     {
+        _head.collisionType() = paz::CollisionType::None;
         /*collisionHeight()*/collisionRadius() = 1.5;
+    }
+    void update()
+    {
+        _head.x() = x();
+        _head.y() = y();
+        _head.z() = z();
+
+        const double wAtt = std::sqrt(1. - xAtt()*xAtt() - yAtt()*yAtt() -
+            zAtt()*zAtt());
+        paz::Vec cameraAtt{{xAtt(), yAtt(), zAtt(), wAtt}};
+
+        // Get basis vectors (rows of rotation matrix).
+        paz::Mat cameraRot = paz::to_mat(cameraAtt);
+        paz::Vec cameraForward = cameraRot.row(1).trans();
+        const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
+        paz::Vec cameraRight = gravDir.cross(cameraForward).normalized();
+
+        yAngRate() = 0.;
+
+        // Want to keep `gravPitch + _pitch` (head pitch wrt gravity)
+        // constant as much as possible when grounded.
+        const paz::Vec baseForward = cameraRight.cross(gravDir).normalized();
+        const double gravPitch = std::acos(std::max(0., std::min(1.,
+            baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) > 0. ?
+            -1. : 1.);
+paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (gravPitch + _pitch)*180./M_PI << std::endl;
+        if(grounded())
+        {
+            _mousePos = paz::Vec::Zero(2);
+            xAngRate() = 0.;
+            zAngRate() = -0.1*paz::Window::MousePos().first;
+            cameraRot.setRow(0, cameraRight.trans());
+            cameraRot.setRow(1, baseForward.trans());
+            cameraRot.setRow(2, -gravDir.trans());
+            paz::Vec cameraBaseAtt = paz::to_quat(cameraRot);
+            if(cameraAtt.dot(cameraBaseAtt) < 0.)
+            {
+                cameraBaseAtt = -cameraBaseAtt;
+            }
+            if((cameraBaseAtt - cameraAtt).normSq() > 1e-6)
+            {
+                cameraBaseAtt = (0.9*cameraAtt + 0.1*cameraBaseAtt).
+                    normalized();
+                if(cameraBaseAtt(3) < 0.)
+                {
+                    cameraBaseAtt = -cameraBaseAtt;
+                }
+                xAtt() = cameraBaseAtt(0);
+                yAtt() = cameraBaseAtt(1);
+                zAtt() = cameraBaseAtt(2);
+            }
+
+            const double deltaGravPitch = gravPitch - _prevGravPitch;
+            const double deltaPitch = -deltaGravPitch + 0.1*paz::Window::
+                MousePos().second*paz::Window::FrameTime();
+            _pitch = std::max(-0.45*M_PI, std::min(0.45*M_PI, _pitch +
+                deltaPitch));
+        }
+        else
+        {
+            if(std::abs(_pitch) > 1e-6)
+            {
+                cameraAtt = paz::qmult(axis_angle(paz::Vec{{1, 0, 0}}, 0.1*
+                    _pitch), cameraAtt);
+                xAtt() = cameraAtt(0);
+                yAtt() = cameraAtt(1);
+                zAtt() = cameraAtt(2);
+                cameraRot = paz::to_mat(cameraAtt);
+                _pitch *= 0.9;
+            }
+
+            _mousePos(0) += paz::Window::MousePos().first;
+            _mousePos(1) += paz::Window::MousePos().second;
+            const double norm = _mousePos.norm();
+            if(norm > 100.)
+            {
+                _mousePos *= 100./norm;
+            }
+            else if(norm > 0.1)
+            {
+                _mousePos -= 50.0/norm*paz::Window::FrameTime()*_mousePos;
+            }
+            else
+            {
+                _mousePos = paz::Vec::Zero(2);
+            }
+            xAngRate() = 0.006*_mousePos(1);
+            zAngRate() = -0.006*_mousePos(0);
+        }
+        _prevGravPitch = gravPitch;
+        cameraAtt = paz::qmult(axis_angle(paz::Vec{{1, 0, 0}}, _pitch + 0.5*
+            M_PI), cameraAtt);
+        if(cameraAtt(3) < 0.)
+        {
+            cameraAtt = -cameraAtt;
+        }
+        _head.xAtt() = cameraAtt(0);
+        _head.yAtt() = cameraAtt(1);
+        _head.zAtt() = cameraAtt(2);
+
+        cameraRight = cameraRot.row(0).trans();
+        cameraForward = cameraRot.row(1).trans();
+        const paz::Vec cameraUp = cameraRot.row(2).trans();
+
+        if(grounded())
+        {
+            double u = 0.;
+            double v = 0.;
+            double w = 0.;
+            if(paz::Window::KeyDown(paz::Key::A))
+            {
+                u -= cameraRight(0);
+                v -= cameraRight(1);
+                w -= cameraRight(2);
+            }
+            if(paz::Window::KeyDown(paz::Key::D))
+            {
+                u += cameraRight(0);
+                v += cameraRight(1);
+                w += cameraRight(2);
+            }
+            if(paz::Window::KeyDown(paz::Key::S))
+            {
+                u -= cameraForward(0);
+                v -= cameraForward(1);
+                w -= cameraForward(2);
+            }
+            if(paz::Window::KeyDown(paz::Key::W))
+            {
+                u += cameraForward(0);
+                v += cameraForward(1);
+                w += cameraForward(2);
+            }
+            const double norm = std::sqrt(u*u + v*v + w*w);
+            if(norm)
+            {
+                u *= 3./norm;
+                v *= 3./norm;
+                w *= 3./norm;
+            }
+#ifdef NO_FRICTION
+            xVel() = u;
+            yVel() = v;
+            zVel() = w;
+#else
+            xVel() += u;
+            yVel() += v;
+            zVel() += w;
+#endif
+        }
+        else
+        {
+            if(paz::Window::KeyDown(paz::Key::A))
+            {
+                xVel() -= 12.*cameraRight(0)*paz::Window::FrameTime();
+                yVel() -= 12.*cameraRight(1)*paz::Window::FrameTime();
+                zVel() -= 12.*cameraRight(2)*paz::Window::FrameTime();
+            }
+            if(paz::Window::KeyDown(paz::Key::D))
+            {
+                xVel() += 12.*cameraRight(0)*paz::Window::FrameTime();
+                yVel() += 12.*cameraRight(1)*paz::Window::FrameTime();
+                zVel() += 12.*cameraRight(2)*paz::Window::FrameTime();
+            }
+            if(paz::Window::KeyDown(paz::Key::W))
+            {
+                xVel() += 12.*cameraForward(0)*paz::Window::FrameTime();
+                yVel() += 12.*cameraForward(1)*paz::Window::FrameTime();
+                zVel() += 12.*cameraForward(2)*paz::Window::FrameTime();
+            }
+            if(paz::Window::KeyDown(paz::Key::S))
+            {
+                xVel() -= 12.*cameraForward(0)*paz::Window::FrameTime();
+                yVel() -= 12.*cameraForward(1)*paz::Window::FrameTime();
+                zVel() -= 12.*cameraForward(2)*paz::Window::FrameTime();
+            }
+        }
+        if(paz::Window::KeyDown(paz::Key::LeftShift))
+        {
+            xVel() += 12.*cameraUp(0)*paz::Window::FrameTime();
+            yVel() += 12.*cameraUp(1)*paz::Window::FrameTime();
+            zVel() += 12.*cameraUp(2)*paz::Window::FrameTime();
+        }
+        if(paz::Window::KeyDown(paz::Key::LeftControl))
+        {
+            xVel() -= 12.*cameraUp(0)*paz::Window::FrameTime();
+            yVel() -= 12.*cameraUp(1)*paz::Window::FrameTime();
+            zVel() -= 12.*cameraUp(2)*paz::Window::FrameTime();
+        }
+    }
+    const paz::Object& head() const
+    {
+        return _head;
     }
 };
 
@@ -50,7 +251,7 @@ public:
         _head.x() = x() + h*up(0);
         _head.y() = y() + h*up(1);
         _head.z() = z() + h*up(2);
-        paz::Vec att = to_quat(rot);
+        paz::Vec att = paz::to_quat(rot);
         if(att(3) < 0.)
         {
             att = -att;
@@ -218,6 +419,6 @@ int main()
     Npc npc1;
     npc1.x() = 2.*Radius;
     npc1.z() = 10.;
-    paz::App::AttachCamera(player);
+    paz::App::AttachCamera(player.head());
     paz::App::Run();
 }
