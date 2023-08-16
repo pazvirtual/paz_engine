@@ -78,8 +78,8 @@ void paz::Menu::update()
         {
             _curButton = std::min(static_cast<std::size_t>(_curButton) + 1,
                 _buttons[_curPage].size() - 1);
-            if(_curButton == _buttons[_curPage].size() - 1 || _buttons[
-                _curPage][_curButton].enabled())
+            if(static_cast<std::size_t>(_curButton) == _buttons[_curPage].size()
+                - 1 || _buttons[_curPage][_curButton].enabled())
             {
                 break;
             }
