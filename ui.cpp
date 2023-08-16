@@ -165,3 +165,8 @@ int paz::Menu::curPage() const
 {
     return _curPage;
 }
+
+int paz::Menu::curButton() const
+{
+    return _curButton;
+}

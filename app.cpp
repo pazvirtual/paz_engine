@@ -47,6 +47,7 @@ static paz::RenderPass _fxaaPass;
 static paz::RenderPass _postPass1;
 static paz::RenderPass _consolePass;
 static paz::RenderPass _textPass;
+static paz::RenderPass _cursorPass;
 
 static paz::VertexBuffer _quadVertices;
 static paz::VertexBuffer _sphereVertices;
@@ -60,6 +61,8 @@ static paz::ConsoleMode _consoleMode = paz::ConsoleMode::Disable;
 static std::string _title;
 
 static paz::Texture _defaultDiffTex;
+
+static paz::Texture _cursor;
 
 static const paz::Object* _cameraObject; //TEMP - vector realloc breaks ptrs
 static const paz::Object* _micObject; //TEMP - vector realloc breaks ptrs
@@ -205,6 +208,7 @@ void paz::App::Init(const std::string& title)
     const VertexFunction sceneVert0(get_builtin("scene0.vert").str());
     const VertexFunction sceneVert1(get_builtin("scene1.vert").str());
     const VertexFunction textVert(get_builtin("text.vert").str());
+    const VertexFunction cursorVert(get_builtin("cursor.vert").str());
     const VertexFunction oitVert(get_builtin("oit.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
     const FragmentFunction sceneFrag0(get_asset("scene0.frag").str());
@@ -214,6 +218,7 @@ void paz::App::Init(const std::string& title)
     const FragmentFunction postFrag(get_builtin("post.frag").str());
     const FragmentFunction consoleFrag(get_builtin("console.frag").str());
     const FragmentFunction textFrag(get_builtin("text.frag").str());
+    const FragmentFunction cursorFrag(get_builtin("cursor.frag").str());
     const FragmentFunction oitFrag(get_asset("oit.frag").str());
     const FragmentFunction compositeFrag(get_builtin("composite.frag").str());
 
@@ -221,8 +226,10 @@ void paz::App::Init(const std::string& title)
     _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
     _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1,
         {BlendMode::One_One});
-    _oitAccumPass = RenderPass(_oitAccumBuffer, oitVert, oitFrag, {BlendMode::One_One, BlendMode::Zero_InvSrcAlpha});
-    _oitCompositePass = RenderPass(_renderBuffer, quadVert, compositeFrag, {BlendMode::InvSrcAlpha_SrcAlpha});
+    _oitAccumPass = RenderPass(_oitAccumBuffer, oitVert, oitFrag, {BlendMode::
+        One_One, BlendMode::Zero_InvSrcAlpha});
+    _oitCompositePass = RenderPass(_renderBuffer, quadVert, compositeFrag,
+        {BlendMode::InvSrcAlpha_SrcAlpha});
     _postPass0 = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
     _fxaaPass = RenderPass(quadVert, fxaaFrag);
@@ -230,6 +237,8 @@ void paz::App::Init(const std::string& title)
     _consolePass = RenderPass(quadVert, consoleFrag, {BlendMode::
         SrcAlpha_InvSrcAlpha});
     _textPass = RenderPass(textVert, textFrag, {BlendMode::
+        SrcAlpha_InvSrcAlpha});
+    _cursorPass = RenderPass(cursorVert, cursorFrag, {BlendMode::
         SrcAlpha_InvSrcAlpha});
 
     _quadVertices.addAttribute(2, QuadPos);
@@ -274,6 +283,8 @@ void paz::App::Init(const std::string& title)
     _defaultDiffTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.
         data(), MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::
         Linear, WrapMode::Repeat, WrapMode::Repeat);
+
+    _cursor = Texture(get_asset_image("cursor.pbm")); //TEMP - note that only red channel is used
 }
 
 void paz::App::Run()
@@ -294,6 +305,8 @@ void paz::App::Run()
         );
         while(!Window::Done() && !done)
         {
+            Window::SetCursorMode(CursorMode::Hidden);
+
             if(startMenu.curPage() == 1 && (Window::KeyPressed(Key::Escape) ||
                 Window::GamepadPressed(GamepadButton::Start)))
             {
@@ -313,6 +326,23 @@ void paz::App::Run()
             _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
                 startMenu.chars());
             _textPass.end();
+
+            if(Window::MouseActive())
+            {
+                _cursorPass.begin({LoadAction::Load});
+                _cursorPass.uniform("x", static_cast<float>(Window::MousePos().
+                    first)/(Window::Width() - 1));
+                _cursorPass.uniform("y", static_cast<float>(Window::MousePos().
+                    second)/(Window::Height() - 1));
+                _cursorPass.uniform("h", startMenu.curButton() < 0 ? 0.f : 1.f);
+                _cursorPass.uniform("scale", static_cast<int>(std::round(20.*
+                    Window::UiScale()))); //TEMP
+                _cursorPass.uniform("width", Window::ViewportWidth());
+                _cursorPass.uniform("height", Window::ViewportHeight());
+                _cursorPass.read("tex", _cursor);
+                _cursorPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+                _cursorPass.end();
+            }
 
             Window::EndFrame();
         }
@@ -349,6 +379,11 @@ void paz::App::Run()
             justPaused = true;
             _paused = true;
             pauseMenu.setState(0, 0);
+        }
+
+        if(_paused)
+        {
+            Window::SetCursorMode(CursorMode::Hidden);
         }
 
         if(_micObject && !_paused && objects().count(reinterpret_cast<std::
@@ -747,14 +782,15 @@ tempDone[j] = true;
         {
             throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 16).");
         }
-        _oitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::Load);
+        _oitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::
+            Load);
         _oitAccumPass.depth(DepthTestMode::LessNoMask);
         _oitAccumPass.uniform("numLights", numLights);
         _oitAccumPass.uniform("light0", lightsData0);
         _oitAccumPass.uniform("light1", lightsData1);
         _oitAccumPass.uniform("projection", projection);
         _oitAccumPass.uniform("invProjection", convert_mat(convert_mat(
-                    projection).inv())); //TEMP - precompute - used elsewhere
+            projection).inv())); //TEMP - precompute - used elsewhere
         _oitAccumPass.uniform("sunDir", convert_vec(view*_sunDir)); //TEMP - precompute
         _oitAccumPass.uniform("sunIll", _sunIll);
         _oitAccumPass.uniform("view", convert_mat(view));
@@ -935,6 +971,23 @@ tempDone[j] = true;
             _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
                 pauseMenu.chars());
             _textPass.end();
+
+            if(Window::MouseActive())
+            {
+                _cursorPass.begin({LoadAction::Load});
+                _cursorPass.uniform("x", static_cast<float>(Window::MousePos().
+                    first)/(Window::Width() - 1));
+                _cursorPass.uniform("y", static_cast<float>(Window::MousePos().
+                    second)/(Window::Height() - 1));
+                _cursorPass.uniform("h", pauseMenu.curButton() < 0 ? 0.f : 1.f);
+                _cursorPass.uniform("scale", static_cast<int>(std::round(20.*
+                    Window::UiScale()))); //TEMP
+                _cursorPass.uniform("width", Window::ViewportWidth());
+                _cursorPass.uniform("height", Window::ViewportHeight());
+                _cursorPass.read("tex", _cursor);
+                _cursorPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+                _cursorPass.end();
+            }
         }
 
         Window::EndFrame();

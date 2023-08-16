@@ -52,6 +52,7 @@ namespace paz
         const Font& font() const;
         InstanceBuffer chars() const;
         int curPage() const;
+        int curButton() const;
     };
 }
 
