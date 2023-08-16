@@ -457,6 +457,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 void paz::App::Run()
 {
     Window::MakeFullscreen();
+    Window::DisableHidpi();
 
     while(!Window::Done())
     {
