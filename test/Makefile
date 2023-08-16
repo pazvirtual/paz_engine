@@ -39,8 +39,8 @@ test: test.cpp build/assets.o
 
 build/assets.o: build/assets.paz
 ifeq ($(OSPRETTY), macOS)
-	@printf "section .rodata\nglobal binary_assets_paz_start\nglobal binary_assets_paz_end\n_assets_start: incbin 'build/assets.paz'\n_assets_end:" > build/include-assets.s
-	nasm -f $(ASMARCH) build/include-assets.s -o build/assets.o
+	@printf "section .rodata\nglobal _binary_assets_paz_start\nglobal _binary_assets_paz_end\n_binary_assets_paz_start: incbin 'build/assets.paz'\n_binary_assets_paz_end:" > build/include-assets.s
+	nasm -f macho64 build/include-assets.s -o build/assets.o
 else
 	cd build && ld -r -b binary -o assets.o assets.paz
 endif
