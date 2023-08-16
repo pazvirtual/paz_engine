@@ -1,6 +1,5 @@
 #include "player.hpp"
 #include "npc.hpp"
-#include "paintball.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <iomanip>

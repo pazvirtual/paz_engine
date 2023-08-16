@@ -28,6 +28,8 @@ Paintball::Paintball() : paz::Object(), _parent(nullptr)
     collisionRadius() = 0.05;
     model() = Model;
     lights().push_back({0., 0., 0., 0.5, 2., 2., 0.1});
+    collisionType() = paz::CollisionType::None;
+    gravityType() = paz::GravityType::None;
 }
 
 void Paintball::update()
