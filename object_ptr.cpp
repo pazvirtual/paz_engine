@@ -104,15 +104,6 @@ void paz::ObjectPtr::reset(const Object& o) noexcept
 
 std::ostream& paz::operator<<(std::ostream& stream, const paz::ObjectPtr& p)
 {
-    if(p._set)
-    {
-        std::ostringstream oss;
-        oss << "0x" << std::hex << p._id;
-        stream << oss.str();
-    }
-    else
-    {
-        stream << 0;
-    }
+    stream << (p._set ? reinterpret_cast<Object*>(p._id) : nullptr);
     return stream;
 }
