@@ -1,5 +1,8 @@
-#include "io.hpp"
 #include "detect_os.hpp"
+
+#ifndef PAZ_MACOS
+
+#include "io.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -146,3 +149,5 @@ std::string paz::load_setting(const std::string& name)
     }
     return "";
 }
+
+#endif
