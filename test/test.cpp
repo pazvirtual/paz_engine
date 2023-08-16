@@ -115,6 +115,6 @@ int main()
     paz::App::SetSun(paz::Vec{{1., 0., 0.}}, paz::Vec{{1., 1., 0.9}});
     paz::App::AttachCamera(player.head());
     paz::App::AttachMic(player.head());
-    paz::App::SetConsole(paz::ConsoleMode::CurrentFrame);
+    paz::App::SetConsole(paz::ConsoleMode::LatestStep);
     paz::App::Run();
 }

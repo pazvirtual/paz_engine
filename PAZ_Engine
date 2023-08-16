@@ -207,7 +207,7 @@ namespace paz
 
     enum class ConsoleMode
     {
-        Disable, ShowAll, CurrentFrame
+        Disable, ShowAll, CurrentFrame, LatestStep
     };
 
     class App

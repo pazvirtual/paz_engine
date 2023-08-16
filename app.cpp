@@ -469,6 +469,10 @@ void paz::App::Run()
                 {
                     break;
                 }
+                if(CurConsoleMode == ConsoleMode::LatestStep)
+                {
+                    std::stringstream{}.swap(::MsgStream);
+                }
             }
         }
 
@@ -750,7 +754,8 @@ void paz::App::Run()
                 height()));
             maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
                 Console.size());
-            if(CurConsoleMode == ConsoleMode::CurrentFrame)
+            if(CurConsoleMode == ConsoleMode::CurrentFrame || CurConsoleMode ==
+                ConsoleMode::LatestStep)
             {
                 maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
                     numNewRows);
