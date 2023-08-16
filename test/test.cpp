@@ -11,6 +11,8 @@ static paz::Model Head;
 static paz::Model PaintballModel;
 static paz::Model FancyBox;
 
+static paz::AudioTrack SoundEffect;
+
 static constexpr double Radius = 50.;
 
 class Paintball : public paz::Object
@@ -32,6 +34,7 @@ public:
     }
     void onCollide(const Object&) override
     {
+        paz::AudioEngine::Play(SoundEffect, false);
         xVel() = 0.;
         yVel() = 0.;
         zVel() = 0.;
@@ -604,7 +607,36 @@ public:
 
 int main()
 {
-    paz::App::Init("scene.frag", "font.pbm");
+    {
+        std::vector<float> samples(44'100/200);
+        for(std::size_t i = 0; i < samples.size(); ++i)
+        {
+            samples[i] = (i*2./(samples.size() - 1) - 1.)*4e-3;
+        }
+        std::vector<float> moreSamples(20*samples.size());
+        for(int i = 0; i < 20; ++i)
+        {
+            std::copy(samples.begin(), samples.end(), moreSamples.begin() + i*
+                samples.size());
+        }
+        for(std::size_t i = 0; i < 100; ++ i)
+        {
+            const double fac = static_cast<double>(i)/(100 - 1);
+            moreSamples[i] *= fac;
+            moreSamples[moreSamples.size() - 1 - i] *= fac;
+        }
+        SoundEffect = paz::AudioTrack(moreSamples);
+    }
+
+    paz::UiDescriptor startMenu;
+    startMenu.setTitle("PAZ Engine Test Program");
+    startMenu.alignText(paz::UiAlignment::Center);
+    startMenu.setLayout(paz::UiLayout::Horizontal);
+    startMenu.addButton(paz::UiAction::Start, "Start");
+    startMenu.addButton(paz::UiAction::ToggleFullscreen, "Toggle Fullscreen");
+    startMenu.addButton(paz::UiAction::Quit, "Quit");
+
+    paz::App::Init("scene.frag", "font.pbm", startMenu);
     Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp");
     Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10., "moon.bmp");
     Body = paz::Model("persontest.obj", 0, -0.2);

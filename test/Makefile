@@ -20,15 +20,15 @@ else
     CXXFLAGS += -pthread
 endif
 CXXFLAGS += -I..
-LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
+LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazaudio.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
 ifeq ($(OSPRETTY), macOS)
     LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit
 else
-    LDLIBS += $(LIBPATH)/libglfw3.a
+    LDLIBS += $(LIBPATH)/libglfw3.a $(LIBPATH)/libportaudio.a
     ifeq ($(OSPRETTY), Linux)
-        LDLIBS += -lGL -lX11 -ldl
+        LDLIBS += -lGL -lX11 -ldl -lasound
     else
-        LDLIBS += -lgdi32 -lopengl32
+        LDLIBS += -lgdi32 -lopengl32 -lwinmm -lole32 -lsetupapi
     endif
 endif
 

@@ -57,10 +57,10 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
         radiusSq = std::max(radiusSq, t2x*t2x + t2y*t2y + t2z*t2z);
     }
     _radius = std::sqrt(radiusSq);
-    _v.attribute(4, positions[idx]);
-    _v.attribute(4, normals[idx]);
-    _v.attribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
-    _v.attribute(2, uvs[idx]);
+    _v.addAttribute(4, positions[idx]);
+    _v.addAttribute(4, normals[idx]);
+    _v.addAttribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
+    _v.addAttribute(2, uvs[idx]);
     _i = IndexBuffer(indices[idx]);
     if(!texPath.empty())
     {

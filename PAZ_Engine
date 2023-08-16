@@ -2,6 +2,7 @@
 #define PAZ_ENGINE
 
 #include <PAZ_Graphics>
+#include <PAZ_Audio>
 #include <PAZ_IO>
 #include <PAZ_Math>
 #include <unordered_set>
@@ -113,6 +114,38 @@ namespace paz
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
     };
 
+    enum class UiAction
+    {
+        None, Start, Quit, ToggleFullscreen, ToggleHidpi
+    };
+
+    enum class UiLayout
+    {
+        Horizontal, Vertical
+    };
+
+    // `Begin` and `End` depend on language's writing direction.
+    enum class UiAlignment
+    {
+        Left, Center, Right, Begin, End
+    };
+
+    class UiDescriptor
+    {
+        friend class App;
+
+        std::string _title;
+        std::vector<std::pair<UiAction, std::string>> _buttons;
+        UiLayout _layout = UiLayout::Vertical;
+        UiAlignment _alignment = UiAlignment::Begin;
+
+    public:
+        void setTitle(const std::string& title);
+        void setLayout(UiLayout layout);
+        void alignText(UiAlignment alignment);
+        void addButton(UiAction action, const std::string& str);
+    };
+
     enum class ConsoleMode
     {
         Disable, ShowAll, CurrentFrame
@@ -123,7 +156,7 @@ namespace paz
     public:
         App() = delete;
         static void Init(const std::string& sceneShaderPath, const std::
-            string& fontPath);
+            string& fontPath, const UiDescriptor& startMenu);
         static void Run();
         static void AttachCamera(const Object& o);
         static double CameraYaw();

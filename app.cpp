@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <deque>
 
-#define DO_FXAA
+//#define DO_FXAA
 #define NO_FRICTION
 
 static constexpr std::size_t NumSteps = 100;
@@ -15,7 +15,7 @@ static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 static constexpr std::size_t MaxConsoleLines = 1000;
-static constexpr float FontScale = 1.5f;
+static constexpr float FontScale = 1.f;
 static constexpr int CharWidth = 5;
 
 static paz::Framebuffer _geometryBuffer;
@@ -54,9 +54,13 @@ static std::stringstream _msgStream;
 static std::deque<std::string> _console;
 static paz::ConsoleMode _consoleMode = paz::ConsoleMode::Disable;
 
+static paz::UiDescriptor _startMenu;
+
 static paz::Texture _defaultTex;
 
-static const paz::Object* _cameraObject = nullptr;
+static const paz::Object* _cameraObject;
+
+static bool _paused;
 
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
@@ -378,8 +382,10 @@ void main()
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
 void paz::App::Init(const std::string& sceneShaderPath, const std::string&
-    fontPath)
+    fontPath, const UiDescriptor& startMenu)
 {
+    _startMenu = startMenu;
+
     _geometryBuffer.attach(_diffuseMap);
     // ...
     _geometryBuffer.attach(_normalMap);
@@ -418,7 +424,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     _consolePass = RenderPass(quadVert, consoleFrag, BlendMode::Blend);
     _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
 
-    _quadVertices.attribute(2, QuadPos);
+    _quadVertices.addAttribute(2, QuadPos);
 
     _font = Texture(get_asset_image(fontPath)); //TEMP - note that only red channel is used
 
@@ -445,17 +451,141 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     _defaultTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.data(),
         MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::Linear,
         WrapMode::Repeat, WrapMode::Repeat);
-
-    Window::SetCursorMode(CursorMode::Disable);
 }
 
 void paz::App::Run()
 {
-    Window::MakeFullscreen();
-    Window::DisableHidpi();
+    if(true) // Has start menu
+    {
+        bool done = false;
+        int curButton = 0;
+        std::size_t maxCols = _startMenu._title.size();
+        if(_startMenu._layout == UiLayout::Vertical)
+        {
+            for(const auto& n : _startMenu._buttons)
+            {
+                maxCols = std::max(maxCols, n.second.size());
+            }
+        }
+        else
+        {
+            std::size_t buttonCols = _startMenu._buttons.size() > 1 ?
+                _startMenu._buttons.size() - 1 : 0;
+            for(const auto& n : _startMenu._buttons)
+            {
+                buttonCols += n.second.size();
+            }
+            maxCols = std::max(maxCols, buttonCols);
+        }
+        while(!Window::Done() && !done)
+        {
+            if(Window::KeyPressed(Key::Space) || Window::KeyPressed(Key::Enter)
+                || Window::KeyPressed(Key::KeypadEnter) || Window::
+                GamepadPressed(GamepadButton::A))
+            {
+                switch(_startMenu._buttons[curButton].first)
+                {
+                    case UiAction::Start: done = true; break;
+                    case UiAction::Quit: Window::Quit(); break;
+                    case UiAction::ToggleFullscreen: Window::IsFullscreen() ?
+                        Window::MakeWindowed() : Window::MakeFullscreen();
+                        break;
+                    //case UiAction::ToggleHidpi: Window::HidpiEnabled() ?
+                    //    Window::DisableHidpi() : Window::EnableHidpi(); break;
+                    case UiAction::None: break;
+                    default: throw std::logic_error("Unrecognized UI action.");
+                }
+            }
+            if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
+                Window::GamepadPressed(GamepadButton::Down))
+            {
+                curButton = std::min(static_cast<std::size_t>(curButton) + 1,
+                    _startMenu._buttons.size() - 1);
+            }
+            if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
+                Window::GamepadPressed(GamepadButton::Up))
+            {
+                curButton = std::max(curButton - 1, 0);
+            }
+
+            const float scale = std::round(2.f*FontScale*Window::UiScale());
+            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
+                height()));
+
+            _textPass.begin({paz::LoadAction::Clear});
+            _textPass.read("font", _font);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", CharWidth);
+            _textPass.uniform("baseWidth", _font.width());
+            _textPass.uniform("baseHeight", _font.height());
+            _textPass.uniform("scale", scale);
+            const int startRow = (maxVisRows + _startMenu._buttons.size())/2 -
+                1;
+            const int startCol = _startMenu._alignment == UiAlignment::Center ?
+                std::round(0.5*(Window::ViewportWidth()/(scale*(CharWidth + 1))
+                - maxCols)) : 0;
+            int row = 0;
+            int col = startCol;
+            for(std::size_t i = 0; i < _startMenu._buttons.size() + 1; ++i)
+            {
+                const bool highlight = i == static_cast<std::size_t>(curButton)
+                    + 1;
+                for(auto n : (i ? _startMenu._buttons[i - 1].second :
+                    _startMenu._title))
+                {
+                    if(n == ' ')
+                    {
+                        ++col;
+                    }
+                    else if(n == '\t')
+                    {
+                        col = (col/4 + 1)*4;
+                    }
+                    else if(n >= '!' && n <= '~')
+                    {
+                        _textPass.uniform("highlight", static_cast<float>(
+                            highlight));
+                        _textPass.uniform("row", startRow - row);
+                        _textPass.uniform("col", col);
+                        _textPass.uniform("character", static_cast<int>(n -
+                            '!'));
+                        _textPass.draw(PrimitiveType::TriangleStrip,
+                            _quadVertices);
+                        ++col;
+                    }
+                }
+                if(!i || _startMenu._layout == UiLayout::Vertical)
+                {
+                    ++row;
+                    col = startCol;
+                }
+                else
+                {
+                    ++col;
+                }
+            }
+            _textPass.end();
+
+            Window::EndFrame();
+        }
+        if(Window::Done())
+        {
+            return;
+        }
+    }
+
+    Window::SetCursorMode(CursorMode::Disable);
 
     while(!Window::Done())
     {
+        if(Window::KeyPressed(Key::Escape) || Window::GamepadPressed(GamepadButton::Start))
+        {
+            _paused = !_paused;
+        }
+
+if(!_paused)
+{
         physics();
 
 Timer timer;
@@ -608,6 +738,7 @@ _msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6)
                 reinterpret_cast<Object*>(n.first)->update();
             }
         }
+}
 
         const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
             _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt()
@@ -634,7 +765,7 @@ latHist.push_back(cameraPos(2)/rHist.back());
             0.}}*to_mat(cameraAtt));
 
         // Get geometry map.
-timer.start();
+Timer timer;
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
         for(const auto& n : objects())
         {
@@ -789,8 +920,8 @@ _msgStream << std::endl;
             _textPass.uniform("charWidth", CharWidth);
             _textPass.uniform("baseWidth", _font.width());
             _textPass.uniform("baseHeight", _font.height());
-            bool highlight = false;
             _textPass.uniform("scale", scale);
+            bool highlight = false;
             for(int row = 0; row < maxVisRows; ++row)
             {
                 int col = 0;
