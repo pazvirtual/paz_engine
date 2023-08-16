@@ -111,6 +111,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     _geometryBuffer.attach(_depthMap);
 
     _renderBuffer.attach(_hdrRender);
+    _renderBuffer.attach(_depthMap);
 
 #ifdef DO_FXAA
     _postBuffer.attach(_finalRender);
@@ -701,8 +702,9 @@ tempDone[j] = true;
         _geometryPass.end();
 
         // Render in HDR.
-        _renderPass.begin({LoadAction::Clear});
+        _renderPass.begin({LoadAction::Clear}, LoadAction::Load);
         _renderPass.cull(CullMode::Front);
+        _renderPass.depth(DepthTestMode::GreaterNoMask);
         _renderPass.read("diffuseMap", _diffuseMap);
         // ...
         _renderPass.read("emissMap", _emissMap);
