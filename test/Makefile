@@ -24,7 +24,7 @@ LIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazio.a $(LI
 ifeq ($(OSPRETTY), macOS)
     LIBS += -framework MetalKit -framework Metal -framework Cocoa
 else
-    LIBS += $(LIBPATH)/libglfw3.a -lstdc++fs
+    LIBS += $(LIBPATH)/libglfw3.a
     ifeq ($(OSPRETTY), Linux)
         LIBS += -lGL -lX11 -ldl
     else
