@@ -90,6 +90,9 @@ namespace paz
         double height() const;
         double& collisionRadius();
         double collisionRadius() const;
+        double xDown() const;
+        double yDown() const;
+        double zDown() const;
     };
 
     class App

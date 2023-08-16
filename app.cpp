@@ -469,8 +469,6 @@ void paz::App::Run()
     {
         physics();
 
-        const Vec gravDir = -_cameraBasePos.normalized();
-
         // Identify all objects that can collide and precompute as much as
         // possible.
         std::vector<Object*> a;
@@ -581,8 +579,8 @@ if(tempDone[j]){ continue; }
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-                        a[j]->grounded() = -xNor*gravDir(0) - yNor*gravDir(1) -
-                            zNor*gravDir(2) > CosMaxAngle;
+                        a[j]->grounded() = -xNor*a[j]->xDown() - yNor*a[j]->
+                            yDown() - zNor*a[j]->zDown() > CosMaxAngle;
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -606,15 +604,15 @@ tempDone[j] = true;
             {
                 double dist, xNor, yNor, zNor;
                 b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->
-                    z(), gravDir(0), gravDir(1), gravDir(2), xNor, yNor, zNor,
-                    dist);
+                    z(), a[i]->xDown(), a[i]->yDown(), a[i]->zDown(), xNor,
+                    yNor, zNor, dist);
                 if(dist - radius < 0.01)
                 {
                     a[i]->localNorX() = xNor;
                     a[i]->localNorY() = yNor;
                     a[i]->localNorZ() = zNor;
-                    a[i]->grounded() = -xNor*gravDir(0) - yNor*gravDir(1) -
-                        zNor*gravDir(2) > CosMaxAngle;
+                    a[i]->grounded() = -xNor*a[i]->xDown() - yNor*a[i]->yDown()
+                        - zNor*a[i]->zDown() > CosMaxAngle;
 
                     // Apply friction.
 #ifndef NO_FRICTION
@@ -668,11 +666,13 @@ _msg = ss.str();
 
         update();
 
+////BEGIN PLAYER UPDATE
         Vec cameraAtt = _cameraAtt;
 
         // Get basis vectors (rows of rotation matrix).
         Mat cameraRot = to_mat(cameraAtt);
         Vec cameraForward = cameraRot.row(1).trans();
+        const Vec gravDir{{_cameraObject->xDown(), _cameraObject->yDown(), _cameraObject->zDown()}};
         Vec cameraRight = gravDir.cross(cameraForward).normalized();
 
         _cameraObject->yAngRate() = 0.;
@@ -851,6 +851,7 @@ _msg = ss.str();
                 }
             }
         }*/
+////END PLAYER UPDATE
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             1e3);

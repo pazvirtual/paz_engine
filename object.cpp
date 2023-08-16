@@ -33,6 +33,9 @@ static std::vector<double> ZPrev;
 static std::vector<char> Grounded;
 static std::vector<double> Height;
 static std::vector<double> CRadius;
+static std::vector<double> XDown;
+static std::vector<double> YDown;
+static std::vector<double> ZDown;
 
 static void grav_ode(double x, double y, double z, double u, double v, double w,
     double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
@@ -97,9 +100,19 @@ void paz::physics()
             X[i] += c*(k1_1 + 2.*(k2_1 + k3_1) + k4_1);
             Y[i] += c*(k1_2 + 2.*(k2_2 + k3_2) + k4_2);
             Z[i] += c*(k1_3 + 2.*(k2_3 + k3_3) + k4_3);
-            XVel[i] += c*(k1_4 + 2.*(k2_4 + k3_4) + k4_4);
-            YVel[i] += c*(k1_5 + 2.*(k2_5 + k3_5) + k4_5);
-            ZVel[i] += c*(k1_6 + 2.*(k2_6 + k3_6) + k4_6);
+            XDown[i] = c*(k1_4 + 2.*(k2_4 + k3_4) + k4_4);
+            YDown[i] = c*(k1_5 + 2.*(k2_5 + k3_5) + k4_5);
+            ZDown[i] = c*(k1_6 + 2.*(k2_6 + k3_6) + k4_6);
+            XVel[i] += XDown[i];
+            YVel[i] += YDown[i];
+            ZVel[i] += ZDown[i];
+            const double invNorm = 1./std::sqrt(XDown[i]*XDown[i] + YDown[i]*YDown[i] + ZDown[i]*ZDown[i]);
+            if(std::isfinite(invNorm))
+            {
+                XDown[i] *= invNorm;
+                YDown[i] *= invNorm;
+                ZDown[i] *= invNorm;
+            }
         }
         else
         {
@@ -162,6 +175,9 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     Grounded.push_back(false);
     Height.push_back(0.);
     CRadius.push_back(0.2);
+    XDown.push_back(0.);
+    YDown.push_back(0.);
+    ZDown.push_back(0.);
 }
 
 paz::Object::~Object()
@@ -188,6 +204,9 @@ paz::Object::~Object()
     SWAP_AND_POP(Grounded);
     SWAP_AND_POP(Height);
     SWAP_AND_POP(CRadius);
+    SWAP_AND_POP(XDown);
+    SWAP_AND_POP(YDown);
+    SWAP_AND_POP(ZDown);
 }
 
 void paz::Object::update() {}
@@ -409,4 +428,19 @@ double& paz::Object::collisionRadius()
 double paz::Object::collisionRadius() const
 {
     return CRadius[objects().at(_id)];
+}
+
+double paz::Object::xDown() const
+{
+    return XDown[objects().at(_id)];
+}
+
+double paz::Object::yDown() const
+{
+    return YDown[objects().at(_id)];
+}
+
+double paz::Object::zDown() const
+{
+    return ZDown[objects().at(_id)];
 }
