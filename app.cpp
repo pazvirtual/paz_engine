@@ -1,15 +1,18 @@
 #include "object.hpp"
 #include "PAZ_Engine"
-#include <cmath>
+#include "math.hpp"
 #include <limits>
 
 #define _cameraGrounded _cameraObject->grounded()
-#define _cameraX _cameraObject->x()
-#define _cameraY _cameraObject->y()
-#define _cameraZ (_cameraObject->z() + _cameraObject->height())
+#define _cameraX (_cameraObject->x() + _cameraObject->height()*_cameraUpX)
+#define _cameraY (_cameraObject->y() + _cameraObject->height()*_cameraUpY)
+#define _cameraZ (_cameraObject->z() + _cameraObject->height()*_cameraUpZ)
 #define _cameraXVel _cameraObject->xVel()
 #define _cameraYVel _cameraObject->yVel()
-//#define _cameraZVel _cameraObject->zVel()
+#define _cameraZVel _cameraObject->zVel()
+#define _cameraXAngRate _cameraObject->xAngRate()
+#define _cameraYAngRate _cameraObject->yAngRate()
+#define _cameraZAngRate _cameraObject->zAngRate()
 
 static constexpr double CosMaxAngle = 0.6; // 53.13 deg
 static constexpr std::array<float, 4> SunVec = {0.57735, 0.57735, 0.57735, 0.};
@@ -37,8 +40,17 @@ static paz::RenderPass _fxaaPass;
 
 static paz::VertexBuffer _quadVertices;
 
-static double _cameraPitch = 0.5*3.14159;
-static double _cameraYaw = 0.;
+static double _cameraPitch = 0.5*M_PI;
+
+static double _cameraRightX;
+static double _cameraRightY;
+static double _cameraRightZ;
+static double _cameraForwardX;
+static double _cameraForwardY;
+static double _cameraForwardZ;
+static double _cameraUpX;
+static double _cameraUpY;
+static double _cameraUpZ;
 
 static /*const*/ paz::Object* _cameraObject = nullptr;
 ////
@@ -104,16 +116,6 @@ static std::array<float, 16> mat_inv(const std::array<float, 16>& m)
     std::array<float, 16> b;
     std::copy(a.begin() + 16, a.end(), b.begin());
     return b;
-}
-
-inline double fract(const double n)
-{
-    return n - std::floor(n);
-}
-
-inline double normalize_angle(const double n)
-{
-    return fract(n/(2.*3.14159))*2.*3.14159;
 }
 
 static const std::string QuadVertSrc = 1 + R"===(
@@ -366,43 +368,77 @@ void paz::App::Run()
     {
         physics();
 
-        _cameraYaw = normalize_angle(_cameraYaw - 0.1*Window::MousePos().first*
-            Window::FrameTime());
-        _cameraPitch = normalize_angle(_cameraPitch + 0.1*Window::MousePos().
-            second*Window::FrameTime());
-        _cameraPitch = std::max(0.05*3.14159, std::min(0.95*3.14159,
-            _cameraPitch));
+        // Invert attitude quaternion to get basis vectors.
+        {
+            const double q0 = _cameraObject->xAtt();
+            const double q1 = _cameraObject->yAtt();
+            const double q2 = _cameraObject->zAtt();
+            const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
+            const auto xx = q0*q0;
+            const auto yy = q1*q1;
+            const auto zz = q2*q2;
+            const auto xy = q0*q1;
+            const auto zw = q2*q3;
+            const auto xz = q0*q2;
+            const auto yw = q1*q3;
+            const auto yz = q1*q2;
+            const auto xw = q0*q3;
+            _cameraRightX = 1. - 2.*(yy + zz);
+            _cameraRightY = 2.*(xy - zw);
+            _cameraRightZ = 2.*(xz + yw);
+            _cameraForwardX = 2.*(xy + zw);
+            _cameraForwardY = 1. - 2.*(xx + zz);
+            _cameraForwardZ = 2.*(yz - xw);
+            _cameraUpX = 2.*(xz - yw);
+            _cameraUpY = 2.*(yz + xw);
+            _cameraUpZ = 1. - 2.*(xx + yy);
+        }
 
-        const double cosYaw = std::cos(_cameraYaw);
-        const double sinYaw = std::sin(_cameraYaw);
+        _cameraZAngRate = -0.1*Window::MousePos().first;
+        if(_cameraGrounded)
+        {
+            _cameraPitch = normalize_angle(std::max(0.05*M_PI, std::min(0.95*
+                M_PI, _cameraPitch + 0.1*Window::MousePos().second*Window::
+                FrameTime())));
+        }
+        else
+        {
+            // NEED TO TRADE OFF PITCH AND ATT ROTATION
+//            _cameraXAngRate += 0.1*Window::MousePos().first;
+        }
 
         if(_cameraGrounded)
         {
             _cameraXVel = 0.;
             _cameraYVel = 0.;
+            _cameraZVel = 0.;
             if(Window::KeyDown(Key::A))
             {
-                _cameraXVel += 3.*-cosYaw;
-                _cameraYVel += 3.*-sinYaw;
+                _cameraXVel -= 3.*_cameraRightX;
+                _cameraYVel -= 3.*_cameraRightY;
+                _cameraZVel -= 3.*_cameraRightZ;
             }
             if(Window::KeyDown(Key::D))
             {
-                _cameraXVel -= 3.*-cosYaw;
-                _cameraYVel -= 3.*-sinYaw;
+                _cameraXVel += 3.*_cameraRightX;
+                _cameraYVel += 3.*_cameraRightY;
+                _cameraZVel += 3.*_cameraRightZ;
             }
             if(Window::KeyDown(Key::W))
             {
-                _cameraXVel += 3.*-sinYaw;
-                _cameraYVel += 3.*cosYaw;
+                _cameraXVel += 3.*_cameraForwardX;
+                _cameraYVel += 3.*_cameraForwardY;
+                _cameraZVel += 3.*_cameraForwardZ;
             }
             if(Window::KeyDown(Key::S))
             {
-                _cameraXVel -= 3.*-sinYaw;
-                _cameraYVel -= 3.*cosYaw;
+                _cameraXVel -= 3.*_cameraForwardX;
+                _cameraYVel -= 3.*_cameraForwardY;
+                _cameraZVel -= 3.*_cameraForwardZ;
             }
         }
 
-        if(Window::KeyPressed(Key::E))
+        /*if(Window::KeyPressed(Key::E))
         {
             for(const auto& n : objects())
             {
@@ -419,16 +455,16 @@ void paz::App::Run()
                     o->onInteract(*_cameraObject);
                 }
             }
-        }
+        }*/
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             100.);
-        const std::array<float, 16> transMat =
+        const std::array<float, 16> baseMat =
         {
-                    1,         0,         0, 0,
-                    0,         1,         0, 0,
-                    0,         0,         1, 0,
-            static_cast<float>(-_cameraX), static_cast<float>(-_cameraY), static_cast<float>(-_cameraZ), 1
+            static_cast<float>(_cameraRightX), static_cast<float>(_cameraForwardX), static_cast<float>(_cameraUpX), 0,
+            static_cast<float>(_cameraRightY), static_cast<float>(_cameraForwardY), static_cast<float>(_cameraUpY), 0,
+            static_cast<float>(_cameraRightZ), static_cast<float>(_cameraForwardZ), static_cast<float>(_cameraUpZ), 0,
+            0, 0, 0, 1
         };
         const double cosPitch = std::cos(_cameraPitch);
         const double sinPitch = std::sin(_cameraPitch);
@@ -439,14 +475,7 @@ void paz::App::Run()
             0, static_cast<float>(sinPitch),  static_cast<float>(cosPitch), 0,
             0,               0,                0, 1
         };
-        const std::array<float, 16> yawMat =
-        {
-            static_cast<float>(cosYaw), -static_cast<float>(sinYaw), 0, 0,
-            static_cast<float>(sinYaw),  static_cast<float>(cosYaw), 0, 0,
-                        0,              0, 1, 0,
-                        0,              0, 0, 1
-        };
-        const auto view = mat_mult(pitchMat, mat_mult(yawMat, transMat));
+        const auto view = mat_mult(pitchMat, baseMat);
 
         for(const auto& n : objects())
         {
@@ -490,13 +519,32 @@ for(auto& a0 : objects())
             continue;
         }
 
-        const double x = a->x() - b->x();
-        const double y = a->y() - b->y();
-        const double z = a->z() - b->z() + a->collisionRadius();
+        double offsetX;
+        double offsetY;
+        double offsetZ;
+        {
+            const double q0 = a->xAtt();
+            const double q1 = a->yAtt();
+            const double q2 = a->zAtt();
+            const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
+            const auto xx = q0*q0;
+            const auto yy = q1*q1;
+            const auto xz = q0*q2;
+            const auto yw = q1*q3;
+            const auto yz = q1*q2;
+            const auto xw = q0*q3;
+            offsetX = a->collisionRadius()*2.*(xz + yw);
+            offsetY = a->collisionRadius()*2.*(yz - xw);
+            offsetZ = a->collisionRadius()*(1. - 2.*(xx + yy));
+        }
 
-        const double xPrev = a->xPrev() - b->xPrev();
-        const double yPrev = a->yPrev() - b->yPrev();
-        const double zPrev = a->zPrev() - b->zPrev() + a->collisionRadius();
+        const double x = a->x() + offsetX - b->x();
+        const double y = a->y() + offsetY - b->y();
+        const double z = a->z() + offsetZ - b->z();
+
+        const double xPrev = a->xPrev() + offsetX - b->xPrev();
+        const double yPrev = a->yPrev() + offsetY - b->yPrev();
+        const double zPrev = a->zPrev() + offsetZ - b->zPrev();
 
         double hx, hy, hz;
         double nxTemp, nyTemp, nzTemp;
@@ -561,10 +609,24 @@ for(auto& a0 : objects())
             const Object* o = reinterpret_cast<const Object*>(n.first);
             if(!o->model()._i.empty())
             {
+                const double q0 = o->xAtt();
+                const double q1 = o->yAtt();
+                const double q2 = o->zAtt();
+                const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
+                const auto xx = q0*q0;
+                const auto yy = q1*q1;
+                const auto xz = q0*q2;
+                const auto yw = q1*q3;
+                const auto yz = q1*q2;
+                const auto xw = q0*q3;
+                const auto upX = 2.*(xz + yw);
+                const auto upY = 2.*(yz - xw);
+                const auto upZ = 1. - 2.*(xx + yy);
                 _geometryPass.uniform("model", std::array<float, 16>{1, 0, 0, 0,
-                    0, 1, 0, 0, 0, 0, 1, 0, static_cast<float>(o->x()),
-                    static_cast<float>(o->y()), static_cast<float>(o->z() + o->
-                    height()), 1});
+                    0, 1, 0, 0, 0, 0, 1, 0, static_cast<float>(o->x() + o->
+                    height()*upX - _cameraX), static_cast<float>(o->y() + o->
+                    height()*upY - _cameraY), static_cast<float>(o->z() + o->
+                    height()*upZ - _cameraZ), 1});
                 _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
                     model()._i);
             }
@@ -608,9 +670,4 @@ for(auto& a0 : objects())
 void paz::App::AttachCamera(/*const*/ Object& o)
 {
     _cameraObject = &o;
-}
-
-double paz::App::CameraYaw()
-{
-    return _cameraYaw;
 }

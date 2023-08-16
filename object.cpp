@@ -1,5 +1,6 @@
 #include "object.hpp"
 #include "PAZ_Engine"
+#include "math.hpp"
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
 
@@ -15,6 +16,12 @@ static std::vector<double> Z;
 static std::vector<double> XVel;
 static std::vector<double> YVel;
 static std::vector<double> ZVel;
+static std::vector<double> XAtt;
+static std::vector<double> YAtt;
+static std::vector<double> ZAtt;
+static std::vector<double> XAngRate;
+static std::vector<double> YAngRate;
+static std::vector<double> ZAngRate;
 static std::vector<paz::Model> Mod;
 static std::vector<paz::CollisionType> CType;
 static std::vector<double> LocalNorX;
@@ -36,34 +43,57 @@ void paz::physics()
     for(std::size_t i = 0; i < n; ++i)
     {
         XPrev[i] = X[i];
-        X[i] += paz::Window::FrameTime()*XVel[i];
+        X[i] += Window::FrameTime()*XVel[i];
     }
     for(std::size_t i = 0; i < n; ++i)
     {
         YPrev[i] = Y[i];
-        Y[i] += paz::Window::FrameTime()*YVel[i];
+        Y[i] += Window::FrameTime()*YVel[i];
     }
     for(std::size_t i = 0; i < n; ++i)
     {
         ZPrev[i] = Z[i];
-        Z[i] += paz::Window::FrameTime()*ZVel[i];
+        Z[i] += Window::FrameTime()*ZVel[i];
+    }
+    for(std::size_t i = 0; i < n; ++i)
+    {
+        double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[i]
+            *ZAtt[i]);
+        const double deltaX = normalize_angle(0.5*Window::FrameTime()*XAngRate[i] + M_PI) - M_PI;
+        const double deltaY = normalize_angle(0.5*Window::FrameTime()*YAngRate[i] + M_PI) - M_PI;
+        const double deltaZ = normalize_angle(0.5*Window::FrameTime()*ZAngRate[i] + M_PI) - M_PI;
+        XAtt[i] +=  WAtt   *deltaX - ZAtt[i]*deltaY + YAtt[i]*deltaZ;
+        YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
+        ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;
+        WAtt    += -XAtt[i]*deltaX - YAtt[i]*deltaY - ZAtt[i]*deltaZ;
+        const double signNorm = (WAtt < 0. ? -1. : 1.)*std::sqrt(XAtt[i]*XAtt[i]
+            + YAtt[i]*YAtt[i] + ZAtt[i]*ZAtt[i] + WAtt*WAtt);
+        XAtt[i] /= signNorm;
+        YAtt[i] /= signNorm;
+        ZAtt[i] /= signNorm;
     }
 }
 
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
 {
     objects()[_id] = X.size();
-    X.emplace_back();
-    Y.emplace_back();
-    Z.emplace_back();
-    XVel.emplace_back();
-    YVel.emplace_back();
-    ZVel.emplace_back();
+    X.push_back(0.);
+    Y.push_back(0.);
+    Z.push_back(0.);
+    XVel.push_back(0.);
+    YVel.push_back(0.);
+    ZVel.push_back(0.);
+    XAtt.push_back(0.);
+    YAtt.push_back(0.);
+    ZAtt.push_back(0.);
+    XAngRate.push_back(0.);
+    YAngRate.push_back(0.);
+    ZAngRate.push_back(0.);
     Mod.emplace_back();
     CType.push_back(CollisionType::Default);
-    LocalNorX.push_back(0);
-    LocalNorY.push_back(0);
-    LocalNorZ.push_back(1);
+    LocalNorX.push_back(0.);
+    LocalNorY.push_back(0.);
+    LocalNorZ.push_back(1.);
     Grounded.push_back(false);
     Height.push_back(0.);
     CRadius.push_back(0.2);
@@ -79,6 +109,12 @@ paz::Object::~Object()
     SWAP_AND_POP(XVel);
     SWAP_AND_POP(YVel);
     SWAP_AND_POP(ZVel);
+    SWAP_AND_POP(XAtt);
+    SWAP_AND_POP(YAtt);
+    SWAP_AND_POP(ZAtt);
+    SWAP_AND_POP(XAngRate);
+    SWAP_AND_POP(YAngRate);
+    SWAP_AND_POP(ZAngRate);
     SWAP_AND_POP(Mod);
     SWAP_AND_POP(CType);
     SWAP_AND_POP(LocalNorX);
@@ -153,6 +189,66 @@ double& paz::Object::zVel()
 double paz::Object::zVel() const
 {
     return ZVel[objects().at(_id)];
+}
+
+double& paz::Object::xAtt()
+{
+    return XAtt[objects().at(_id)];
+}
+
+double paz::Object::xAtt() const
+{
+    return XAtt[objects().at(_id)];
+}
+
+double& paz::Object::yAtt()
+{
+    return YAtt[objects().at(_id)];
+}
+
+double paz::Object::yAtt() const
+{
+    return YAtt[objects().at(_id)];
+}
+
+double& paz::Object::zAtt()
+{
+    return ZAtt[objects().at(_id)];
+}
+
+double paz::Object::zAtt() const
+{
+    return ZAtt[objects().at(_id)];
+}
+
+double& paz::Object::xAngRate()
+{
+    return XAngRate[objects().at(_id)];
+}
+
+double paz::Object::xAngRate() const
+{
+    return XAngRate[objects().at(_id)];
+}
+
+double& paz::Object::yAngRate()
+{
+    return YAngRate[objects().at(_id)];
+}
+
+double paz::Object::yAngRate() const
+{
+    return YAngRate[objects().at(_id)];
+}
+
+double& paz::Object::zAngRate()
+{
+    return ZAngRate[objects().at(_id)];
+}
+
+double paz::Object::zAngRate() const
+{
+    return ZAngRate[objects().at(_id)];
 }
 
 paz::Model& paz::Object::model()

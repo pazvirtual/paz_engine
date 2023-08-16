@@ -63,6 +63,18 @@ namespace paz
         double yVel() const;
         double& zVel();
         double zVel() const;
+        double& xAtt();
+        double xAtt() const;
+        double& yAtt();
+        double yAtt() const;
+        double& zAtt();
+        double zAtt() const;
+        double& xAngRate();
+        double xAngRate() const;
+        double& yAngRate();
+        double yAngRate() const;
+        double& zAngRate();
+        double zAngRate() const;
         Model& model();
         const Model& model() const;
         CollisionType& collisionType();
