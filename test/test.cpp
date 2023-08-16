@@ -69,7 +69,7 @@ int main()
     Player player;
     player.z() = Radius + 10.;
     World w;
-    w.transp().push_back({10., 0., Radius, 0., 0., Radius + 10., -10., 0.,
+    w.transp().push_back({10., 5., Radius, 0., 0., Radius + 10., -10., -5.,
         Radius});
     std::array<World1, 4> w1;
     w1[0].x() = 0.9*Radius;

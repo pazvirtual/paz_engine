@@ -4,14 +4,10 @@ uniform vec4 model0;
 uniform vec2 model1;
 uniform mat4 projection;
 uniform mat4 view;
-uniform vec4 light0;
-uniform vec4 light1;
+uniform uint numLights;
 out vec3 _pos;
 out vec3 _nor;
 out vec3 _loc;
-out vec3 _lightPos;
-out vec3 _intens;
-out float _falloff;
 void main()
 {
     vec4 att = vec4(model0.xyz, sqrt(1. - dot(model0.xyz, model0.xyz)));
@@ -33,7 +29,4 @@ void main()
     gl_Position = mul(projection, vec4(_pos, 1.));
     _nor = mul(mv, normal).xyz;
     _loc = gl_Position.xyw;
-    _lightPos = light0.xyz;
-    _intens = vec3(light0.w, light1.xy);
-    _falloff = light1.z;
 }

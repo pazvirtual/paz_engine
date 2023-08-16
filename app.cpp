@@ -781,11 +781,14 @@ tempDone[j] = true;
                     cleared = true;
                 }
                 _oitAccumPass.depth(DepthTestMode::LessNoMask);
-                _oitAccumPass.uniform("light0", lightsData0[0], lightsData0[1], lightsData0[2], lightsData0[3]); //TEMP
-                _oitAccumPass.uniform("light1", lightsData1[0], lightsData1[1], lightsData1[2], lightsData1[3]); //TEMP
+                _oitAccumPass.uniform("numLights", static_cast<unsigned int>(lightsData0.size()/4));
+                _oitAccumPass.uniform("light0", lightsData0);
+                _oitAccumPass.uniform("light1", lightsData1);
                 _oitAccumPass.uniform("projection", projection);
                 _oitAccumPass.uniform("invProjection", convert_mat(convert_mat(
                     projection).inv())); //TEMP - precompute - used elsewhere
+                _oitAccumPass.uniform("sunDir", convert_vec(view*_sunDir)); //TEMP - precompute
+                _oitAccumPass.uniform("sunIll", _sunIll);
                 _oitAccumPass.uniform("view", convert_mat(view));
                 _oitAccumPass.uniform("model0", static_cast<float>(m->xAtt()), static_cast<float>(m->yAtt()), static_cast<float>(m->zAtt()), static_cast<float>(m->x() - cameraPos(0)));
                 _oitAccumPass.uniform("model1", static_cast<float>(m->y() - cameraPos(1)), static_cast<float>(m->z() - cameraPos(2)));
