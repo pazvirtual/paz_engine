@@ -502,9 +502,9 @@ std::vector<bool> tempDone(a.size(), false);
 if(tempDone[j]){ continue; }
                 for(std::size_t k = 0; k < b.size(); ++k)
                 {
-                    const double x = offsetX[i] + a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->xPrev())/NumSteps - bX[k][i];
-                    const double y = offsetY[i] + a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->yPrev())/NumSteps - bY[k][i];
-                    const double z = offsetZ[i] + a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->zPrev())/NumSteps - bZ[k][i];
+                    const double x = offsetX[j] + a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->xPrev())/NumSteps - bX[k][i];
+                    const double y = offsetY[j] + a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->yPrev())/NumSteps - bY[k][i];
+                    const double z = offsetZ[j] + a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->zPrev())/NumSteps - bZ[k][i];
 
                     double xNew, yNew, zNew, xNor, yNor, zNor;
                     const double c = b[k]->model().collide(x, y, z, a[j]->collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
