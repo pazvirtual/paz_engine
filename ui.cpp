@@ -13,7 +13,7 @@ paz::Texture paz::Font::tex() const
 
 int paz::Font::curScale() const
 {
-    return std::round(_scale*Window::UiScale());
+    return std::max(1.f, std::round(_scale*Window::UiScale()));
 }
 
 int paz::Font::charWidth() const

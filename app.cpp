@@ -372,8 +372,8 @@ void paz::App::Run()
                     height())/Cursor.width());
                 CursorPass.uniform("h", static_cast<float>(startMenu.
                     curButtonEnabled()));
-                CursorPass.uniform("scale", static_cast<int>(std::round(20.*
-                    Window::UiScale()))); //TEMP
+                CursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::
+                    round(20.f*Window::UiScale())))); //TEMP
                 CursorPass.uniform("width", Window::ViewportWidth());
                 CursorPass.uniform("height", Window::ViewportHeight());
                 CursorPass.read("tex", Cursor);
@@ -758,7 +758,8 @@ void paz::App::Run()
         {
             if(!DialogSkipFrame)
             {
-                const float scale = std::round(2.*FontScale*Window::UiScale());
+                const float scale = std::max(1.f, std::round(2.f*FontScale*
+                    Window::UiScale()));
 
                 int maxCols = 0;
                 std::vector<float> highlightAttr;
@@ -861,8 +862,8 @@ void paz::App::Run()
         CursorPass.uniform("aspect", static_cast<float>(Reticule.height())/
             Reticule.width());
         CursorPass.uniform("h", ReticuleHighlight ? 1.f : -1.f);
-        CursorPass.uniform("scale", static_cast<int>(std::round(20.*Window::
-            UiScale()))); //TEMP
+        CursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::round(
+            20.f*Window::UiScale())))); //TEMP
         CursorPass.uniform("width", Window::ViewportWidth());
         CursorPass.uniform("height", Window::ViewportHeight());
         CursorPass.read("tex", Reticule);
@@ -892,7 +893,9 @@ void paz::App::Run()
         InstanceBuffer consoleChars; //TEMP - needs wider scope because of MTLBuffer purge issue
         if(CurConsoleMode != ConsoleMode::Disable && !Console.empty())
         {
-            const float scale = std::round(FontScale*Window::UiScale());
+            const float scale = std::max(1.f, std::round(FontScale*Window::
+                UiScale()));
+
             int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*FontTex.
                 height()));
             maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
@@ -1028,8 +1031,8 @@ void paz::App::Run()
                     height())/Cursor.width());
                 CursorPass.uniform("h", static_cast<float>(pauseMenu.
                     curButtonEnabled()));
-                CursorPass.uniform("scale", static_cast<int>(std::round(20.*
-                    Window::UiScale()))); //TEMP
+                CursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::
+                    round(20.f*Window::UiScale())))); //TEMP
                 CursorPass.uniform("width", Window::ViewportWidth());
                 CursorPass.uniform("height", Window::ViewportHeight());
                 CursorPass.read("tex", Cursor);
