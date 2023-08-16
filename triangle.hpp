@@ -25,6 +25,7 @@ namespace paz
             double& ny, double& nz, double& d) const;
         double castRay(double x, double y, double z, double xDir, double yDir,
             double zDir) const;
+        void getNormal(double& x, double& y, double& z) const;
     };
 }
 

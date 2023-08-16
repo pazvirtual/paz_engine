@@ -253,3 +253,10 @@ double paz::Triangle::castRay(double x, double y, double z, double xDir, double
 
     return dist;
 }
+
+void paz::Triangle::getNormal(double& xNor, double& yNor, double& zNor) const
+{
+    xNor = -basisX[0];
+    yNor = -basisX[1];
+    zNor = -basisX[2];
+}

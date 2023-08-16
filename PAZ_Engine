@@ -24,8 +24,9 @@ namespace paz
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
             double& zNor) const;
-        double castRay(double x, double y, double z, double xDir, double yDir,
-            double zDir) const;
+        void castRay(double x, double y, double z, double xDir, double yDir,
+            double zDir, double& xNor, double& yNor, double& zNor, double& dist)
+            const;
 
     public:
         Model() = default;

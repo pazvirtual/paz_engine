@@ -77,13 +77,17 @@ double paz::Model::collide(double x, double y, double z, double radius, double&
     return minDist;
 }
 
-double paz::Model::castRay(double x, double y, double z, double xDir, double
-    yDir, double zDir) const
+void paz::Model::castRay(double x, double y, double z, double xDir, double yDir,
+    double zDir, double& xNor, double& yNor, double& zNor, double& dist) const
 {
-    double minDist = std::numeric_limits<double>::infinity();
+    dist = std::numeric_limits<double>::infinity();
     for(const auto& n : *_t)
     {
-        minDist = std::min(minDist, n.castRay(x, y, z, xDir, yDir, zDir));
+        const double d = n.castRay(x, y, z, xDir, yDir, zDir);
+        if(d < dist)
+        {
+            dist = d;
+            n.getNormal(xNor, yNor, zNor);
+        }
     }
-    return minDist;
 }

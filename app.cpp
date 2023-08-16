@@ -8,6 +8,7 @@
 #include <deque>
 
 //#define DO_FXAA
+#define NO_FRICTION
 
 #define _cameraBasePos Vec{{_cameraObject->x(), _cameraObject->y(), _cameraObject->z()}}
 #define _cameraAtt Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(), _cameraObject->zAtt(), std::sqrt(1. - _cameraObject->xAtt()*_cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() - _cameraObject->zAtt()*_cameraObject->zAtt())}}
@@ -521,9 +522,11 @@ if(tempDone[j]){ continue; }
                             a[j]->zVel() -= norVel*zNor;
 
                             // Apply friction.
-                            a[j]->xVel() = 0.5*a[j]->xVel() + 0.5*b[k]->xVel();
-                            a[j]->yVel() = 0.5*a[j]->yVel() + 0.5*b[k]->yVel();
-                            a[j]->zVel() = 0.5*a[j]->zVel() + 0.5*b[k]->zVel();
+#ifndef NO_FRICTION
+                            a[j]->xVel() = b[k]->xVel();
+                            a[j]->yVel() = b[k]->yVel();
+                            a[j]->zVel() = b[k]->zVel();
+#endif
                         }
                         a[j]->x() = xNew - offsetX[j] + bX[k][i] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
                         a[j]->y() = yNew - offsetY[j] + bY[k][i] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
@@ -531,7 +534,7 @@ if(tempDone[j]){ continue; }
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-                        a[j]->grounded() = true; //TEMP - see below
+                        a[j]->grounded() = -xNor*gravDir(0) - yNor*gravDir(1) - zNor*gravDir(2) > CosMaxAngle;
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -553,15 +556,37 @@ tempDone[j] = true;
             const double radius = a[i]->collisionRadius();
             for(std::size_t j = 0; j < b.size(); ++j)
             {
-                const double dist = b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->z(), gravDir(0), gravDir(1), gravDir(2));
-                if(dist - radius < 0.01) //TEMP - how set thresh & what about CosMaxAngle ?
+                double dist, xNor, yNor, zNor;
+                b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->
+                    z(), gravDir(0), gravDir(1), gravDir(2), xNor, yNor, zNor,
+                    dist);
+                if(dist - radius < 0.05)
                 {
-                    a[i]->grounded() = true;
+                    a[i]->localNorX() = xNor;
+                    a[i]->localNorY() = yNor;
+                    a[i]->localNorZ() = zNor;
+                    a[i]->grounded() = -xNor*gravDir(0) - yNor*gravDir(1) -
+                        zNor*gravDir(2) > CosMaxAngle;
 
                     // Apply friction.
-                    a[i]->xVel() = 0.5*a[i]->xVel() + 0.5*b[j]->xVel();
-                    a[i]->yVel() = 0.5*a[i]->yVel() + 0.5*b[j]->yVel();
-                    a[i]->zVel() = 0.5*a[i]->zVel() + 0.5*b[j]->zVel();
+#ifndef NO_FRICTION
+                    const double norVelA = a[i]->xVel()*xNor + a[i]->yVel()*yNor
+                        + a[i]->zVel()*zNor;
+                    const double norVelB = b[i]->xVel()*xNor + b[i]->yVel()*yNor
+                        + b[i]->zVel()*zNor;
+                    if(norVelA < norVelB)
+                    {
+                        double xVelAPlane = a[i]->xVel() - norVelA*xNor;
+                        double yVelAPlane = a[i]->yVel() - norVelA*yNor;
+                        double zVelAPlane = a[i]->zVel() - norVelA*zNor;
+                        double xVelBPlane = b[j]->xVel() - norVelB*xNor;
+                        double yVelBPlane = b[j]->yVel() - norVelB*yNor;
+                        double zVelBPlane = b[j]->zVel() - norVelB*zNor;
+                        a[i]->xVel() += xVelBPlane - xVelAPlane;
+                        a[i]->yVel() += yVelBPlane - yVelAPlane;
+                        a[i]->zVel() += zVelBPlane - zVelAPlane;
+                    }
+#endif
                     break;
                 }
             }
@@ -667,30 +692,49 @@ _msg = ss.str();
 
         if(_cameraObject->grounded())
         {
+            double xVel = 0.;
+            double yVel = 0.;
+            double zVel = 0.;
             if(Window::KeyDown(Key::A))
             {
-                _cameraObject->xVel() -= 3.*cameraRight(0);
-                _cameraObject->yVel() -= 3.*cameraRight(1);
-                _cameraObject->zVel() -= 3.*cameraRight(2);
+                xVel -= cameraRight(0);
+                yVel -= cameraRight(1);
+                zVel -= cameraRight(2);
             }
             if(Window::KeyDown(Key::D))
             {
-                _cameraObject->xVel() += 3.*cameraRight(0);
-                _cameraObject->yVel() += 3.*cameraRight(1);
-                _cameraObject->zVel() += 3.*cameraRight(2);
-            }
-            if(Window::KeyDown(Key::W))
-            {
-                _cameraObject->xVel() += 3.*cameraForward(0);
-                _cameraObject->yVel() += 3.*cameraForward(1);
-                _cameraObject->zVel() += 3.*cameraForward(2);
+                xVel += cameraRight(0);
+                yVel += cameraRight(1);
+                zVel += cameraRight(2);
             }
             if(Window::KeyDown(Key::S))
             {
-                _cameraObject->xVel() -= 3.*cameraForward(0);
-                _cameraObject->yVel() -= 3.*cameraForward(1);
-                _cameraObject->zVel() -= 3.*cameraForward(2);
+                xVel -= cameraForward(0);
+                yVel -= cameraForward(1);
+                zVel -= cameraForward(2);
             }
+            if(Window::KeyDown(Key::W))
+            {
+                xVel += cameraForward(0);
+                yVel += cameraForward(1);
+                zVel += cameraForward(2);
+            }
+            const double norm = std::sqrt(xVel*xVel + yVel*yVel + zVel*zVel);
+            if(norm)
+            {
+                xVel *= 3./norm;
+                yVel *= 3./norm;
+                zVel *= 3./norm;
+            }
+#ifdef NO_FRICTION
+            _cameraObject->xVel() = xVel;
+            _cameraObject->yVel() = yVel;
+            _cameraObject->zVel() = zVel;
+#else
+            _cameraObject->xVel() += xVel;
+            _cameraObject->yVel() += yVel;
+            _cameraObject->zVel() += zVel;
+#endif
         }
         else
         {
