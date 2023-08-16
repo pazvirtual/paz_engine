@@ -166,6 +166,19 @@ class World2 : public paz::Object
         _f.xVel() = xVel();
         _f.yVel() = yVel();
         _f.zVel() = zVel();
+        auto att = paz::axis_angle(paz::Vec{{0., 0., 1.}}, _angle);
+        if(att(3) < 0.)
+        {
+            att = -att;
+        }
+        xAtt() = att(0);
+        yAtt() = att(1);
+        zAtt() = att(2);
+        zAngRate() = AngRate;
+        _f.xAtt() = xAtt();
+        _f.yAtt() = yAtt();
+        _f.zAtt() = zAtt();
+        _f.zAngRate() = zAngRate();
     }
 
 public:

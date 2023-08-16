@@ -15,7 +15,7 @@ class Player : public paz::Object
     static constexpr double LowAltitude = 10.;
 
     paz::ObjectPtr _parent;
-    double _relX, _relY, _relZ;
+    paz::Vec _relPosPs;
     bool _moving = false;
 
     double _pitch = 0.;

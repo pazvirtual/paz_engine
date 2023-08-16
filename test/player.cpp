@@ -43,12 +43,20 @@ void Player::update(const paz::InputData& input)
     }
     if(reg == Regime::Grounded && !_moving)
     {
-        x() = _relX + _parent->x();
-        y() = _relY + _parent->y();
-        z() = _relZ + _parent->z();
-        xVel() = _parent->xVel();
-        yVel() = _parent->yVel();
-        zVel() = _parent->zVel();
+        const paz::Vec invParentAtt{{_parent->xAtt(), _parent->yAtt(), _parent->
+            zAtt(), -std::sqrt(1. - _parent->xAtt()*_parent->xAtt() - _parent->
+            yAtt()*_parent->yAtt() - _parent->zAtt()*_parent->zAtt())}};
+        const auto rot = paz::to_mat(invParentAtt);
+        const paz::Vec relPos = rot*_relPosPs;
+        x() = relPos(0) + _parent->x();
+        y() = relPos(1) + _parent->y();
+        z() = relPos(2) + _parent->z();
+        const paz::Vec parentAngRate{{_parent->xAngRate(), _parent->yAngRate(),
+            _parent->zAngRate()}};
+        const paz::Vec relVel = rot*parentAngRate.cross(_relPosPs);
+        xVel() = relVel(0) + _parent->xVel();
+        yVel() = relVel(1) + _parent->yVel();
+        zVel() = relVel(2) + _parent->zVel();
     }
 paz::App::SetReticule(reg == Regime::Grounded ? 3 : 0, reg == Regime::Grounded);
 const double r = std::sqrt(x()*x() + y()*y() + z()*z());
@@ -343,14 +351,20 @@ void Player::onCollide(const paz::Object& o, double xNor, double yNor, double
     {
         _collided = true;
         _parent.reset(o);
-        _relX = x() - xB;
-        _relY = y() - yB;
-        _relZ = z() - zB;
+        const paz::Vec parentAtt{{_parent->xAtt(), _parent->yAtt(), _parent->
+            zAtt(), std::sqrt(1. - _parent->xAtt()*_parent->xAtt() - _parent->
+            yAtt()*_parent->yAtt() - _parent->zAtt()*_parent->zAtt())}};
+        const paz::Vec relPos{{x() - xB, y() - yB, z() - zB}};
+        const auto rot = paz::to_mat(parentAtt);
+        _relPosPs = rot*relPos;
         if(!_moving)
         {
-            xVel() = _parent->xVel();
-            yVel() = _parent->yVel();
-            zVel() = _parent->zVel();
+            const paz::Vec parentAngRate{{_parent->xAngRate(), _parent->
+                yAngRate(), _parent->zAngRate()}};
+            const paz::Vec relVel = rot.trans()*parentAngRate.cross(_relPosPs);
+            xVel() = relVel(0) + _parent->xVel();
+            yVel() = relVel(1) + _parent->yVel();
+            zVel() = relVel(2) + _parent->zVel();
         }
     }
 }

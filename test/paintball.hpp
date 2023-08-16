@@ -7,7 +7,7 @@
 class Paintball : public paz::Object
 {
     paz::ObjectPtr _parent;
-    double _relX, _relY, _relZ;
+    paz::Vec _relPosPs;
 
 public:
     static constexpr double LaunchSpeed = 15.;
