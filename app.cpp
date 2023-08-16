@@ -63,6 +63,7 @@ static std::string Title;
 static paz::Texture DefaultDiffTex;
 
 static paz::Texture Cursor;
+static paz::Texture Reticule;
 
 static paz::ObjectPtr CameraObject;
 static paz::ObjectPtr MicObject;
@@ -314,6 +315,7 @@ void paz::App::Init(const std::string& title)
         Linear, WrapMode::Repeat, WrapMode::Repeat);
 
     Cursor = Texture(get_asset_image("cursor.pbm")); //TEMP - note that only red channel is used
+    Reticule = Texture(get_asset_image("reticule.pbm")); //TEMP - note that only red channel is used
 }
 
 void paz::App::Run()
@@ -846,6 +848,18 @@ void paz::App::Run()
                 }
             }
         }
+
+        CursorPass.begin({LoadAction::Load});
+        CursorPass.uniform("x", 0.5f);
+        CursorPass.uniform("y", 0.5f);
+        CursorPass.uniform("h", -1.f);
+        CursorPass.uniform("scale", static_cast<int>(std::round(20.*Window::
+            UiScale()))); //TEMP
+        CursorPass.uniform("width", Window::ViewportWidth());
+        CursorPass.uniform("height", Window::ViewportHeight());
+        CursorPass.read("tex", Reticule);
+        CursorPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
+        CursorPass.end();
 
         std::string line;
         std::size_t numNewRows = 0;
