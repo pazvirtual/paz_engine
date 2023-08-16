@@ -16,6 +16,7 @@ static constexpr int CharWidth = 5;
 
 static paz::Framebuffer GeometryBuffer;
 static paz::Framebuffer OitAccumBuffer;
+static paz::Framebuffer OitDepthBuffer;
 static paz::Framebuffer RenderBuffer;
 static paz::Framebuffer DofBuffer;
 static paz::Framebuffer PostBuffer;
@@ -41,6 +42,7 @@ static paz::RenderPass RenderPass1;
 static paz::RenderPass DofPass;
 static paz::RenderPass OitAccumPass;
 static paz::RenderPass OitCompositePass;
+static paz::RenderPass OitDepthPass;
 static paz::RenderPass PostPass0;
 static paz::RenderPass LumPass;
 static paz::RenderPass FxaaPass;
@@ -241,6 +243,8 @@ void paz::App::Init(const std::string& title)
     OitAccumBuffer.attach(OitRevealTex);
     OitAccumBuffer.attach(DepthMap);
 
+    OitDepthBuffer.attach(DepthMap);
+
     PostBuffer.attach(FinalRender);
 
     LumBuffer.attach(FinalLumMap);
@@ -252,6 +256,7 @@ void paz::App::Init(const std::string& title)
     const VertexFunction textVert(get_builtin("text.vert").str());
     const VertexFunction cursorVert(get_builtin("cursor.vert").str());
     const VertexFunction oitVert(get_builtin("oit.vert").str());
+    const VertexFunction oitDepthVert(get_builtin("oitdepth.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
     const FragmentFunction sceneFrag0(get_asset("scene0.frag").str());
     const FragmentFunction sceneFrag1(get_asset("scene1.frag").str());
@@ -264,6 +269,7 @@ void paz::App::Init(const std::string& title)
     const FragmentFunction oitFrag(get_asset("oit.frag").str());
     const FragmentFunction compositeFrag(get_builtin("composite.frag").str());
     const FragmentFunction dofFrag(get_builtin("dof.frag").str());
+    const FragmentFunction emptyFrag(get_builtin("empty.frag").str());
 
     GeometryPass = RenderPass(GeometryBuffer, geometryVert, geometryFrag);
     RenderPass0 = RenderPass(RenderBuffer, sceneVert0, sceneFrag0);
@@ -274,6 +280,7 @@ void paz::App::Init(const std::string& title)
         One_One, BlendMode::Zero_InvSrcAlpha});
     OitCompositePass = RenderPass(RenderBuffer, quadVert, compositeFrag,
         {BlendMode::InvSrcAlpha_SrcAlpha});
+    OitDepthPass = RenderPass(OitDepthBuffer, oitDepthVert, emptyFrag);
     PostPass0 = RenderPass(PostBuffer, quadVert, postFrag);
     LumPass = RenderPass(LumBuffer, quadVert, lumFrag);
     FxaaPass = RenderPass(quadVert, fxaaFrag);
@@ -755,9 +762,9 @@ void paz::App::Run()
             if(!n.second.back()->model()._transp.empty())
             {
                 oitEnabled = true;
+                break;
             }
         }
-
         if(oitEnabled)
         {
             unsigned int numLights = lightsData0.size()/4;
@@ -774,7 +781,7 @@ void paz::App::Run()
             OitAccumPass.uniform("invProjection", convert_mat(convert_mat(projection).inv())); //TEMP - precompute - used elsewhere
             OitAccumPass.uniform("sunDir", convert_vec(view*SunDir)); //TEMP - precompute
             OitAccumPass.uniform("sunIll", SunIll);
-            OitAccumPass.uniform("view", convert_mat(view));
+            OitAccumPass.uniform("view", convert_mat(view)); //TEMP - precompute
             for(const auto& n : objectsByModel)
             {
                 if(!n.second.back()->model()._transp.empty())
@@ -794,22 +801,28 @@ void paz::App::Run()
         const bool dofEnabled = DofMinDepth < DofMaxDepth;
         if(dofEnabled)
         {
-//            if(oitEnabled) //TEMP - can we get nearest transparent depth while performing OIT earlier ?
-//            {
-//                OitDepthPass.begin();
-//                OitDepthPass.uniform(...);
-//                for(const auto& n : objectsByModel)
-//                {
-//                    ...;
-//                }
-//                OitDepthPass.end();
-//            }
+            if(oitEnabled) //TEMP - can we get nearest transparent depth while performing OIT ?
+            {
+                OitDepthPass.begin();
+                OitDepthPass.depth(DepthTestMode::Less);
+                OitDepthPass.uniform("project", projection);
+                OitDepthPass.uniform("view", convert_mat(view));
+                for(const auto& n : objectsByModel)
+                {
+                    if(!n.second.back()->model()._transp.empty())
+                    {
+                        OitDepthPass.draw(PrimitiveType::Triangles, n.second.back()->model()._transp, Instances.at(n.first));
+                    }
+                }
+                OitDepthPass.end();
+            }
 
             DofPass.begin();
             DofPass.read("hdrRender", HdrRender);
             DofPass.read("depthMap", DepthMap);
             DofPass.uniform("minDepth", DofMinDepth);
             DofPass.uniform("maxDepth", DofMaxDepth);
+            DofPass.uniform("aspectRatio", Window::AspectRatio());
             DofPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
             DofPass.end();
         }
