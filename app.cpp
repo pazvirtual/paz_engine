@@ -6,7 +6,6 @@
 #include <iomanip>
 #include <deque>
 
-#define DO_FXAA
 #define NO_FRICTION
 
 static constexpr std::size_t NumSteps = 100;
@@ -18,10 +17,8 @@ static constexpr int CharWidth = 5;
 
 static paz::Framebuffer _geometryBuffer;
 static paz::Framebuffer _renderBuffer;
-#ifdef DO_FXAA
 static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
-#endif
 
 static paz::RenderTarget _diffuseMap(paz::TextureFormat::RGBA16Float);
 // ...
@@ -29,21 +26,18 @@ static paz::RenderTarget _emissMap(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _normalMap(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _depthMap(paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(paz::TextureFormat::RGBA16Float);
-#ifdef DO_FXAA
 static paz::RenderTarget _finalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
-#endif
 
 static std::unordered_map<void*, paz::InstanceBuffer> _instances;
 
 static paz::RenderPass _geometryPass;
 static paz::RenderPass _renderPass0;
 static paz::RenderPass _renderPass1;
-static paz::RenderPass _postPass;
-#ifdef DO_FXAA
+static paz::RenderPass _postPass0;
 static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
-#endif
+static paz::RenderPass _postPass1;
 static paz::RenderPass _consolePass;
 static paz::RenderPass _textPass;
 
@@ -68,6 +62,11 @@ static const paz::Object* _soundSrc; //TEMP - vector realloc breaks ptrs
 static bool _paused;
 
 static double _gravity;
+
+static bool _fxaaEnabled = true;
+
+static paz::Vec _sunDir = paz::Vec::Zero(4);
+static std::array<float, 4> _sunIll;
 
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
@@ -114,11 +113,9 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     _renderBuffer.attach(_hdrRender);
 //    _renderBuffer.attach(_depthMap);
 
-#ifdef DO_FXAA
     _postBuffer.attach(_finalRender);
 
     _lumBuffer.attach(_finalLumMap);
-#endif
 
     const VertexFunction geometryVert(get_builtin("geometry.vert").str());
     const VertexFunction quadVert(get_builtin("quad.vert").str());
@@ -128,10 +125,8 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
     const FragmentFunction sceneFrag0(get_asset(sceneShaderPath0).str());
     const FragmentFunction sceneFrag1(get_asset(sceneShaderPath1).str());
-#ifdef DO_FXAA
     const FragmentFunction lumFrag(get_builtin("lum.frag").str());
     const FragmentFunction fxaaFrag(get_builtin("fxaa.frag").str());
-#endif
     const FragmentFunction postFrag(get_builtin("post.frag").str());
     const FragmentFunction consoleFrag(get_builtin("console.frag").str());
     const FragmentFunction textFrag(get_builtin("text.frag").str());
@@ -140,13 +135,10 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
     _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1, BlendMode::
         Additive);
-#ifdef DO_FXAA
-    _postPass = RenderPass(_postBuffer, quadVert, postFrag);
+    _postPass0 = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
     _fxaaPass = RenderPass(quadVert, fxaaFrag);
-#else
-    _postPass = RenderPass(quadVert, postFrag);
-#endif
+    _postPass1 = RenderPass(quadVert, postFrag);
     _consolePass = RenderPass(quadVert, consoleFrag, BlendMode::Blend);
     _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
 
@@ -195,7 +187,7 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
 }
 
 static const std::vector<std::vector<std::string>> Buttons = {{"Start",
-    "Options", "Quit"}, {"Fullscreen", "HiDPI", "Back"}};
+    "Options", "Quit"}, {"Fullscreen", "HiDPI", "FXAA", "Back"}};
 
 void paz::App::Run()
 {
@@ -234,7 +226,8 @@ void paz::App::Run()
                     {
                         case 0: Window::MakeFullscreen(); break;
                         case 1: Window::DisableHidpi(); break;
-                        case 2: menuPage = 0; break;
+                        case 2: _fxaaEnabled = false; break;
+                        case 3: menuPage = 0; break;
                     }
                 }
             }
@@ -707,6 +700,8 @@ tempDone[j] = true;
         _renderPass0.read("depthMap", _depthMap);
         _renderPass0.uniform("invProjection", convert_mat(convert_mat(
             projection).inv()));
+        _renderPass0.uniform("lightDir", convert_vec(view*_sunDir));
+        _renderPass0.uniform("ill", _sunIll);
         _renderPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass0.end();
 
@@ -725,27 +720,37 @@ tempDone[j] = true;
             _sphereIndices);
         _renderPass1.end();
 
-        // Tonemap to linear LDR.
-        _postPass.begin();
-        _postPass.read("hdrRender", _hdrRender);
-        _postPass.uniform("whitePoint", 1.f);
-        _postPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
-        _postPass.end();
+        if(_fxaaEnabled)
+        {
+            // Tonemap to linear LDR.
+            _postPass0.begin();
+            _postPass0.read("hdrRender", _hdrRender);
+            _postPass0.uniform("whitePoint", 1.f);
+            _postPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _postPass0.end();
 
-#ifdef DO_FXAA
-        // Get luminance map.
-        _lumPass.begin();
-        _lumPass.read("img", _finalRender);
-        _lumPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
-        _lumPass.end();
+            // Get luminance map.
+            _lumPass.begin();
+            _lumPass.read("img", _finalRender);
+            _lumPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _lumPass.end();
 
-        // Anti-alias.
-        _fxaaPass.begin();
-        _fxaaPass.read("img", _finalRender);
-        _fxaaPass.read("lum", _finalLumMap);
-        _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
-        _fxaaPass.end();
-#endif
+            // Anti-alias.
+            _fxaaPass.begin();
+            _fxaaPass.read("img", _finalRender);
+            _fxaaPass.read("lum", _finalLumMap);
+            _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _fxaaPass.end();
+        }
+        else
+        {
+            // Tonemap to linear LDR.
+            _postPass1.begin();
+            _postPass1.read("hdrRender", _hdrRender);
+            _postPass1.uniform("whitePoint", 1.f);
+            _postPass1.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _postPass1.end();
+        }
 
         std::string line;
         std::size_t numNewRows = 0;
@@ -882,4 +887,10 @@ void paz::App::SetSound(const Object& o, const AudioTrack& sound, bool loop)
 {
     _soundSrc = &o;
     AudioEngine::Play(sound, loop);
+}
+
+void paz::App::SetSun(const Vec& dir, const Vec& ill)
+{
+    std::copy(dir.begin(), dir.end(), _sunDir.begin());
+    std::copy(ill.begin(), ill.end(), _sunIll.begin());
 }

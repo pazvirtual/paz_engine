@@ -144,6 +144,7 @@ namespace paz
         static void SetGravity(double acc);
         static void SetSound(const Object& o, const AudioTrack& sound, bool
             loop);
+        static void SetSun(const Vec& dir, const Vec& ill);
     };
 }
 

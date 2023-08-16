@@ -101,6 +101,7 @@ n[3] /= lum;
 n[4] /= lum;
 n[5] /= lum;
 }
+    paz::App::SetSun(paz::Vec{{1., 0., 0.}}, paz::Vec{{1., 1., 0.9}});
     paz::App::AttachCamera(player.head());
     paz::App::AttachMic(player.head());
     paz::App::SetConsole(paz::ConsoleMode::CurrentFrame);
