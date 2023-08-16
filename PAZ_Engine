@@ -85,7 +85,7 @@ namespace paz
         bool _mouseActive;
 
         InputData() = default;
-        void copyEvents(double timestep);
+        void copyEvents(double timestep, double sensitivity);
         void resetEvents();
 
     public:

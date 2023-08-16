@@ -69,6 +69,7 @@ static paz::ObjectPtr SoundSrc;
 static bool Paused;
 static double AccumTime;
 static constexpr double Timestep = 1./60.; //TEMP
+static int LookSensitivity = 5;
 
 static double GravAcc;
 static paz::Threadpool Threads;
@@ -81,8 +82,8 @@ static std::array<float, 4> SunIll;
 static const std::vector<paz::Button> OptionsButtons =
 {
     {
-        [](){ return paz::Window::IsFullscreen() ? "Fullscreen: ON" :
-            "Fullscreen: OFF"; },
+        [](){ return paz::Window::IsFullscreen() ? "Fullscreen:  ON" :
+            "Fullscreen:  OFF"; },
         [](paz::Menu&)
         {
             if(paz::Window::IsFullscreen())
@@ -102,12 +103,12 @@ static const std::vector<paz::Button> OptionsButtons =
         {
             if(paz::Window::HidpiSupported())
             {
-                return paz::Window::HidpiEnabled() ? "HiDPI:      ON" :
-                    "HiDPI:      OFF";
+                return paz::Window::HidpiEnabled() ? "HiDPI:       ON" :
+                    "HiDPI:       OFF";
             }
             else
             {
-                return "HiDPI:      N/A";
+                return "HiDPI:       N/A";
             }
         },
         [](paz::Menu&)
@@ -132,11 +133,23 @@ static const std::vector<paz::Button> OptionsButtons =
         }
     },
     {
-        [](){ return FxaaEnabled ? "FXAA:       ON" : "FXAA:       OFF"; },
+        [](){ return FxaaEnabled ? "FXAA:        ON" : "FXAA:        OFF"; },
         [](paz::Menu&)
         {
             FxaaEnabled = !FxaaEnabled;
             paz::save_setting("fxaa", FxaaEnabled ? "1" : "0");
+        }
+    },
+    {
+        [](){ return "Sensitivity: " + std::to_string(LookSensitivity); },
+        [](paz::Menu&)
+        {
+            ++LookSensitivity;
+            if(LookSensitivity > 10)
+            {
+                LookSensitivity = 1;
+            }
+            paz::save_setting("sensitivity", std::to_string(LookSensitivity));
         }
     },
     {"Back", [](paz::Menu& m){ m.setState(0, 1); }}
@@ -187,6 +200,13 @@ void paz::App::Init(const std::string& title)
     if(load_setting("fxaa") == "0")
     {
         FxaaEnabled = false;
+    }
+    {
+        const auto str = load_setting("sensitivity");
+        if(!str.empty())
+        {
+            LookSensitivity = std::stoi(str);
+        }
     }
 
     Window::EnableDithering();
@@ -438,7 +458,7 @@ void paz::App::Run()
         else
         {
             AccumTime += Window::FrameTime();
-            input.copyEvents(Timestep);
+            input.copyEvents(Timestep, 0.2*LookSensitivity);
 
             while(AccumTime > 0.)
             {

@@ -1,6 +1,6 @@
 #include "PAZ_Engine"
 
-void paz::InputData::copyEvents(double timestep)
+void paz::InputData::copyEvents(double timestep, double sensitivity)
 {
     _timestep = timestep;
     //TEMP - would be nice to copy these structures directly in PAZ_Graphics
@@ -18,8 +18,8 @@ void paz::InputData::copyEvents(double timestep)
         _mousePressed[i] = _mousePressed[i] || Window::MousePressed(i);
         _mouseReleased[i] = _mouseReleased[i] || Window::MouseReleased(i);
     }
-    _mousePos.first += Window::MousePos().first;
-    _mousePos.second += Window::MousePos().second;
+    _mousePos.first += sensitivity*Window::MousePos().first;
+    _mousePos.second += sensitivity*Window::MousePos().second;
     _scrollOffset.first += Window::ScrollOffset().first;
     _scrollOffset.second += Window::ScrollOffset().second;
     for(int i = 0; i < NumGamepadButtons; ++i)
