@@ -1,6 +1,7 @@
 #include "object.hpp"
 #include "PAZ_Engine"
 #include <cmath>
+#include <limits>
 
 #define _cameraGrounded _cameraObject->grounded()
 #define _cameraX _cameraObject->x()

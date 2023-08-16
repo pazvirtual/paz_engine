@@ -1,5 +1,6 @@
 #include "PAZ_Engine"
 #include "triangle.hpp"
+#include <limits>
 
 paz::Model::Model() {}
 
