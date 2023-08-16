@@ -837,7 +837,7 @@ _msg = ss.str();
             _textPass.uniform("baseWidth", _font.width());
             _textPass.uniform("baseHeight", _font.height());
             bool highlight = false;
-            _textPass.uniform("scale", 3.f*Window::DpiScale());
+            _textPass.uniform("scale", std::round(2.f*Window::UiScale()));
             int row = 0;
             int col = 0;
             for(const auto& n : _msg)
