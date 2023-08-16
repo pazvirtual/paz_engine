@@ -605,11 +605,11 @@ public:
 int main()
 {
     paz::App::Init("scene.frag", "font.pbm");
-    Sphere50 = paz::Model("sphere50.obj");
-    Sphere10 = paz::Model("sphere50.obj", 0, 0., 10./Radius);
+    Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius);
+    Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10.);
     Body = paz::Model("persontest.obj", 0, -0.2);
     Head = paz::Model("persontest.obj", 1, -0.1);
-    PaintballModel = paz::Model("unitsphere.obj", 0, 0., 0.1);
+    PaintballModel = paz::Model("icosphere2.obj", 0, 0., 0.1);
     FancyBox = paz::Model("fancybox.obj");
     Player player;
     player.z() = Radius + 10.;
