@@ -1,6 +1,7 @@
 PROJNAME := PAZ_Engine
 CXXVER := 17
 MINMACOSVER := 10.11
+
 LIBNAME := $(shell echo $(PROJNAME) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
 ifeq ($(OS), Windows_NT)
     LIBPATH := /mingw64/lib

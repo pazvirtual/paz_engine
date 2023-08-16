@@ -3,5 +3,7 @@
 *.exe
 *.zip
 *.pazarchive
+*_arm64
+*_x86_64
 test/test
 test/build

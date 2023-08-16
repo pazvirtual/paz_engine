@@ -1,3 +1,6 @@
+CXXVER := 17
+MINMACOSVER := 10.11
+
 ifeq ($(OS), Windows_NT)
     LIBPATH := /mingw64/lib
     OSPRETTY := Windows
@@ -9,9 +12,7 @@ else
     endif
     LIBPATH := /usr/local/lib
 endif
-CXXVER := 17
 CXXFLAGS := -std=c++$(CXXVER) -O3 -Wall -Wextra -Wno-missing-braces -Wold-style-cast
-MINMACOSVER := 10.11
 ifeq ($(OSPRETTY), macOS)
     CXXFLAGS += -mmacosx-version-min=$(MINMACOSVER) -Wunguarded-availability -Wno-string-plus-int
 else
@@ -35,22 +36,47 @@ endif
 
 ASSETS := $(wildcard assets/*)
 SRC := $(wildcard *.cpp)
-OBJ := build/assets.o $(SRC:%.cpp=build/%.o)
+ifeq ($(OSPRETTY), macOS)
+    ARMOBJ := build/assets_arm64.o $(SRC:%.cpp=build/%_arm64.o)
+    INTOBJ := build/assets_x86_64.o $(SRC:%.cpp=build/%_x86_64.o)
+else
+    OBJ := build/assets.o $(SRC:%.cpp=build/%.o)
+endif
+
+print-% : ; @echo $* = $($*)
 
 .PHONY: test
+ifeq ($(OSPRETTY), macOS)
+test: build/test_arm64 build/test_x86_64
+	lipo -create -output $@ $^
+
+build/test_arm64: build $(ARMOBJ)
+	$(CXX) -arch arm64 $(CXXFLAGS) -o $@ $(ARMOBJ) $(LDLIBS)
+
+build/test_x86_64: build $(INTOBJ)
+	$(CXX) -arch x86_64 $(CXXFLAGS) -o $@ $(INTOBJ) $(LDLIBS)
+else
 test: build $(OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDLIBS)
+endif
 
 build/assets.o: build/assets.pazarchive
 ifeq ($(OSPRETTY), macOS)
 	@printf ".section assets, \"rd\"\n.global _binary_assets_pazarchive_start\n.global _binary_assets_pazarchive_end\n_binary_assets_pazarchive_start: .incbin \"build/assets.pazarchive\"\n_binary_assets_pazarchive_end:" > build/include-assets.s
-	as -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets.o
+	as -arch arm64 -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets_arm64.o
+	as -arch x86_64 -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets_x86_64.o
 else
 	cd build && ld -r -b binary -o assets.o assets.pazarchive
 endif
 
 build/assets.pazarchive: $(ASSETS)
 	paz-archive -c assets build/assets.pazarchive
+
+build/%_arm64.o: %.cpp
+	$(CXX) -arch arm64 $(CXXFLAGS) -c -o $@ $<
+
+build/%_x86_64.o: %.cpp
+	$(CXX) -arch x86_64 $(CXXFLAGS) -c -o $@ $<
 
 build/%.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -60,5 +86,3 @@ build:
 
 clean:
 	$(RM) test build/*
-
-print-% : ; @echo $* = $($*)
