@@ -1,14 +1,13 @@
-#ifdef __linux__
-
 #include "io.hpp"
-#include <unistd.h>
+#include "detect_os.hpp"
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <map>
 #include <regex>
 
-static void ensure_dir(const std::string& path)
+static void ensure_dir(const std::filesystem::path& path)
 {
     std::filesystem::file_status status;
     try
@@ -17,8 +16,8 @@ static void ensure_dir(const std::string& path)
     }
     catch(const std::exception& e)
     {
-        throw std::runtime_error("Failed to get status for \"" + path + "\": " +
-            e.what());
+        throw std::runtime_error("Failed to get status for \"" + path.string() +
+            "\": " + e.what());
     }
     if(status.type() == std::filesystem::file_type::not_found)
     {
@@ -28,19 +27,24 @@ static void ensure_dir(const std::string& path)
         }
         catch(const std::exception& e)
         {
-            throw std::runtime_error("Failed to create directory \"" + path +
-                "\": " + e.what());
+            throw std::runtime_error("Failed to create directory \"" + path.
+                string() + "\": " + e.what());
         }
     }
     else if(status.type() != std::filesystem::file_type::directory)
     {
-        throw std::runtime_error("Path \"" + path + "\" is not a directory.");
+        throw std::runtime_error("Path \"" + path.string() + "\" is not a direc"
+            "tory.");
     }
 }
 
-static std::string get_home()
+static std::filesystem::path get_home()
 {
-    static const char* homeDir = getenv("HOME");
+#ifdef PAZ_LINUX
+    static const char* homeDir = std::getenv("HOME");
+#else
+    static const char* homeDir = std::getenv("APPDATA");
+#endif
     if(!homeDir)
     {
         throw std::runtime_error("Failed to find home directory.");
@@ -48,18 +52,22 @@ static std::string get_home()
     return homeDir;
 }
 
-static std::string ensure_settings_file(const std::string& company, const std::
-    string& app)
+static std::filesystem::path ensure_settings_file(const std::string& company,
+    const std::string& app)
 {
-    std::string path = get_home() + "/.local";
+    auto path = get_home();
+#ifdef LINUX
+    path /= std::filesystem::path(".local");
     ensure_dir(path);
-    path += "/share";
+    path /= "share";
     ensure_dir(path);
-    path += "/" + company;
+#endif
+    path /= company;
     ensure_dir(path);
-    path += "/" + app;
+    path /= app;
     ensure_dir(path);
-    return path + "/settings.txt";
+    path /= "settings.txt";
+    return path;
 }
 
 void paz::save_setting(const std::string& name, const std::string& val)
@@ -71,24 +79,23 @@ void paz::save_setting(const std::string& name, const std::string& val)
     // Get all other settings.
     {
         std::ifstream in(path);
-        if(!in)
+        if(in)
         {
-            throw std::runtime_error("Failed to open \"" + path + "\".");
-        }
-        std::string line;
-        while(std::getline(in, line))
-        {
-            if(std::regex_match(line, std::regex("\\S+\\s+\\S+")))
+            std::string line;
+            while(std::getline(in, line))
             {
-                const auto name = regex_replace(line, std::regex("\\s+\\S+"),
-                    "");
-                if(settings.count(name))
+                if(std::regex_match(line, std::regex("\\S+\\s+\\S+")))
                 {
-                    continue;
+                    const auto name = regex_replace(line, std::regex(
+                        "\\s+\\S+"), "");
+                    if(settings.count(name))
+                    {
+                        continue;
+                    }
+                    const auto val = regex_replace(line, std::regex("\\S+\\s+"),
+                        "");
+                    settings[name] = val;
                 }
-                const auto val = regex_replace(line, std::regex("\\S+\\s+"),
-                    "");
-                settings[name] = val;
             }
         }
     }
@@ -97,7 +104,7 @@ void paz::save_setting(const std::string& name, const std::string& val)
     std::ofstream out(path);
     if(!out)
     {
-        throw std::runtime_error("Failed to open \"" + path + "\".");
+        throw std::runtime_error("Failed to open \"" + path.string() + "\".");
     }
     for(const auto& n : settings)
     {
@@ -107,10 +114,17 @@ void paz::save_setting(const std::string& name, const std::string& val)
 
 std::string paz::load_setting(const std::string& name)
 {
-    std::string path;
+    std::filesystem::path path;
     try
     {
-        path = get_home() + "/.local/share/PAZ Virtual/temp-demo/settings.txt";
+        path = get_home();
+#ifdef PAZ_LINUX
+        path /= ".local";
+        path /= "share";
+#endif
+        path /= "PAZ Virtual";
+        path /= "temp-demo";
+        path /= "settings.txt";
     }
     catch(...)
     {
@@ -132,5 +146,3 @@ std::string paz::load_setting(const std::string& name)
     }
     return "";
 }
-
-#endif
