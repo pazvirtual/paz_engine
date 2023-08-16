@@ -36,9 +36,19 @@ void Npc::update(const paz::InputData& input)
         computeAltitude(alt, nor, surfVel);
         if(nor.dot(up) > CosMaxAngle)
         {
-            xVel() = _parent->xVel() + forward(0);
-            yVel() = _parent->yVel() + forward(1);
-            zVel() = _parent->zVel() + forward(2);
+            const paz::Vec invParentAtt{{_parent->xAtt(), _parent->yAtt(),
+                _parent->zAtt(), -std::sqrt(1. - _parent->xAtt()*_parent->xAtt()
+                - _parent->yAtt()*_parent->yAtt() - _parent->zAtt()*_parent->
+                zAtt())}};
+            const paz::Vec parentAngRate{{_parent->xAngRate(), _parent->
+                yAngRate(), _parent->zAngRate()}};
+            const paz::Vec relPos{{x() - _parent->x(), y() - _parent->y(), z() -
+                _parent->z()}};
+            const paz::Vec relVel = static_cast<paz::Vec>(paz::to_mat(
+                invParentAtt)*parentAngRate).cross(relPos);
+            xVel() = relVel(0) + _parent->xVel() + forward(0);
+            yVel() = relVel(1) + _parent->yVel() + forward(1);
+            zVel() = relVel(2) + _parent->zVel() + forward(2);
         }
         _collided = false;
     }
@@ -64,7 +74,7 @@ void Npc::update(const paz::InputData& input)
 }
 
 void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
-    zNor, double, double, double)
+    zNor, double xB, double yB, double zB)
 {
     const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
     const paz::Vec nor{{xNor, yNor, zNor}};
@@ -77,9 +87,17 @@ void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
         const paz::Mat rot = paz::to_mat(paz::qinv(att));
         const paz::Vec right = rot.col(0);
         const paz::Vec forward = rot.col(1);
-        xVel() = _parent->xVel() + forward(0);
-        yVel() = _parent->yVel() + forward(1);
-        zVel() = _parent->zVel() + forward(2);
+        const paz::Vec invParentAtt{{_parent->xAtt(), _parent->yAtt(), _parent->
+            zAtt(), -std::sqrt(1. - _parent->xAtt()*_parent->xAtt() - _parent->
+            yAtt()*_parent->yAtt() - _parent->zAtt()*_parent->zAtt())}};
+        const paz::Vec parentAngRate{{_parent->xAngRate(), _parent->yAngRate(),
+            _parent->zAngRate()}};
+        const paz::Vec relPos{{x() - xB, y() - yB, z() - zB}};
+        const paz::Vec relVel = static_cast<paz::Vec>(paz::to_mat(invParentAtt)*
+            parentAngRate).cross(relPos);
+        xVel() = relVel(0) + _parent->xVel() + forward(0);
+        yVel() = relVel(1) + _parent->yVel() + forward(1);
+        zVel() = relVel(2) + _parent->zVel() + forward(2);
         const paz::Vec up = rot.col(2);
         const paz::Vec east = paz::Vec{{0, 0, 1}}.cross(up).normalized();
         const paz::Vec north = up.cross(east);
