@@ -63,15 +63,8 @@ public:
 
 int main()
 {
-    paz::UiDescriptor startMenu;
-    startMenu.setTitle("PAZ Engine Test Program");
-    startMenu.alignText(paz::UiAlignment::Center);
-    startMenu.setLayout(paz::UiLayout::Horizontal);
-    startMenu.addButton(paz::UiAction::Start, "Start");
-    startMenu.addButton(paz::UiAction::ToggleFullscreen, "Toggle Fullscreen");
-    startMenu.addButton(paz::UiAction::Quit, "Quit");
-
-    paz::App::Init("scene0.frag", "scene1.frag", "font.pbm", startMenu);
+    paz::App::Init("scene0.frag", "scene1.frag", "font.pbm", "PAZ Engine Test P"
+        "rogram");
     Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp");
     Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10., "moon.bmp");
     FancyBox = paz::Model("fancybox.obj");

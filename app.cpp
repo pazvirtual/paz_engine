@@ -56,7 +56,7 @@ static std::stringstream _msgStream;
 static std::deque<std::string> _console;
 static paz::ConsoleMode _consoleMode = paz::ConsoleMode::Disable;
 
-static paz::UiDescriptor _startMenu;
+static std::string _title;
 
 static paz::Texture _defaultDiffTex;
 
@@ -101,10 +101,9 @@ static std::array<float, 4> convert_vec(const paz::Vec& v)
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
 void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
-    sceneShaderPath1, const std::string& fontPath, const UiDescriptor&
-    startMenu)
+    sceneShaderPath1, const std::string& fontPath, const std::string& title)
 {
-    _startMenu = startMenu;
+    _title = title;
 
     _geometryBuffer.attach(_diffuseMap);
     // ...
@@ -195,30 +194,15 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
         Linear, WrapMode::Repeat, WrapMode::Repeat);
 }
 
+static const std::vector<std::vector<std::string>> Buttons = {{"Start",
+    "Options", "Quit"}, {"Fullscreen", "HiDPI", "Back"}};
+
 void paz::App::Run()
 {
-    if(true) // Has start menu
     {
         bool done = false;
         int curButton = 0;
-        std::size_t maxCols = _startMenu._title.size();
-        if(_startMenu._layout == UiLayout::Vertical)
-        {
-            for(const auto& n : _startMenu._buttons)
-            {
-                maxCols = std::max(maxCols, n.second.size());
-            }
-        }
-        else
-        {
-            std::size_t buttonCols = _startMenu._buttons.size() > 1 ?
-                _startMenu._buttons.size() - 1 : 0;
-            for(const auto& n : _startMenu._buttons)
-            {
-                buttonCols += n.second.size();
-            }
-            maxCols = std::max(maxCols, buttonCols);
-        }
+        int menuPage = 0;
         while(!Window::Done() && !done)
         {
             if(Window::MouseActive())
@@ -235,69 +219,50 @@ void paz::App::Run()
                 KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
                 GamepadButton::A)))
             {
-                switch(_startMenu._buttons[curButton].first)
+                if(menuPage == 0)
                 {
-                    case UiAction::Start: done = true; break;
-                    case UiAction::Quit: Window::Quit(); break;
-                    case UiAction::ToggleFullscreen: Window::IsFullscreen() ?
-                        Window::MakeWindowed() : Window::MakeFullscreen();
-                        break;
-                    //case UiAction::ToggleHidpi: Window::HidpiEnabled() ?
-                    //    Window::DisableHidpi() : Window::EnableHidpi(); break;
-                    case UiAction::ToggleHidpi: Window::DisableHidpi(); break;
-                    case UiAction::None: break;
-                    default: throw std::logic_error("Unrecognized UI action.");
+                    switch(curButton)
+                    {
+                        case 0: done = true; break;
+                        case 1: menuPage = 1; break;
+                        case 2: Window::Quit(); break;
+                    }
+                }
+                else if(menuPage == 1)
+                {
+                    switch(curButton)
+                    {
+                        case 0: Window::MakeFullscreen(); break;
+                        case 1: Window::DisableHidpi(); break;
+                        case 2: menuPage = 0; break;
+                    }
                 }
             }
-            if(_startMenu._layout == UiLayout::Vertical)
+            if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
+                Window::GamepadPressed(GamepadButton::Down))
             {
-                if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down)
-                    || Window::GamepadPressed(GamepadButton::Down))
-                {
-                    curButton = std::min(static_cast<std::size_t>(curButton) +
-                        1, _startMenu._buttons.size() - 1);
-                }
-                if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
-                    Window::GamepadPressed(GamepadButton::Up))
-                {
-                    curButton = std::max(curButton - 1, 0);
-                }
+                curButton = std::min(static_cast<std::size_t>(curButton) + 1,
+                    Buttons[menuPage].size() - 1);
             }
-            else
+            if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
+                 Window::GamepadPressed(GamepadButton::Up))
             {
-                if(Window::KeyPressed(Key::D) || Window::KeyPressed(Key::Right)
-                    || Window::GamepadPressed(GamepadButton::Right))
-                {
-                    curButton = std::min(static_cast<std::size_t>(curButton) +
-                        1, _startMenu._buttons.size() - 1);
-                }
-                if(Window::KeyPressed(Key::A) || Window::KeyPressed(Key::Left)
-                    || Window::GamepadPressed(GamepadButton::Left))
-                {
-                    curButton = std::max(curButton - 1, 0);
-                }
+                curButton = std::max(curButton - 1, 0);
             }
             const float scale = std::round(2.f*FontScale*Window::UiScale());
             int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
                 height()));
-            const int startRow = _startMenu._layout == UiLayout::Vertical ?
-                (maxVisRows + _startMenu._buttons.size() - 1)/2 : (maxVisRows -
-                1)/2;
-            const int startCol = _startMenu._alignment == UiAlignment::Center ?
-                std::round(0.5*(Window::ViewportWidth()/(scale*(CharWidth + 1))
-                - maxCols)) : 0;
+            const int startRow = (maxVisRows + Buttons[menuPage].size() - 1)/2;
 
             if(Window::MouseActive())
             {
                 curButton = -1;
-                int row = 0;
-                int col = startCol;
-                for(std::size_t i = 0; i < _startMenu._buttons.size(); ++i)
+                for(std::size_t i = 0; i < Buttons[menuPage].size(); ++i)
                 {
-                    const double x0 = col*scale*(CharWidth + 1);
-                    const double x1 = x0 + _startMenu._buttons[i].second.size()*
+                    const double x0 = 0;
+                    const double x1 = x0 + (Buttons[menuPage][i].size() + 2)*
                         scale*(CharWidth + 1);
-                    const double y0 = (startRow - row - 1)*scale*_font.height();
+                    const double y0 = (startRow - i - 1)*scale*_font.height();
                     const double y1 = y0 + scale*_font.height();
                     if(Window::MousePos().first >= x0 && Window::MousePos().
                         first < x1 && Window::MousePos().second >= y0 &&
@@ -305,7 +270,6 @@ void paz::App::Run()
                     {
                         curButton = i;
                     }
-                    col += _startMenu._buttons[i].second.size() + 1;
                 }
             }
 
@@ -314,13 +278,25 @@ void paz::App::Run()
             std::vector<int> colAttr;
             std::vector<int> rowAttr;
             int row = 0;
-            int col = startCol;
-            for(std::size_t i = 0; i < _startMenu._buttons.size() + 1; ++i)
+            int col = 0;
+            for(std::size_t i = 0; i < Buttons[menuPage].size() + 1; ++i)
             {
                 const bool highlight = curButton >= 0 && i == static_cast<std::
                     size_t>(curButton) + 1;
-                for(auto n : (i ? _startMenu._buttons[i - 1].second :
-                    _startMenu._title))
+                std::string str = (i ? Buttons[menuPage][i - 1] : (menuPage ?
+                    "Options" : _title));
+                if(i)
+                {
+                    if(highlight)
+                    {
+                        str = "->" + str;
+                    }
+                    else
+                    {
+                        str = "> " + str;
+                    }
+                }
+                for(auto n : str)
                 {
                     if(n == ' ')
                     {
@@ -339,15 +315,8 @@ void paz::App::Run()
                         ++col;
                     }
                 }
-                if(!i || _startMenu._layout == UiLayout::Vertical)
-                {
-                    ++row;
-                    col = startCol;
-                }
-                else
-                {
-                    ++col;
-                }
+                ++row;
+                col = 0;
             }
 
             InstanceBuffer chars;

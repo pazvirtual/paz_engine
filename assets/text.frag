@@ -5,5 +5,5 @@ layout(location = 0) out vec4 color;
 void main()
 {
     float t = texture(font, uv).x;
-    color = vec4(mix(vec3(0.9, 0.9, 0.9), vec3(1., 1., 0.), h), t);
+    color = vec4(mix(vec3(0.8, 0.8, 0.8), vec3(1., 1., 0.), h), t);
 }

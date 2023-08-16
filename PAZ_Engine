@@ -121,37 +121,6 @@ namespace paz
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
     };
 
-    enum class UiAction
-    {
-        None, Start, Quit, ToggleFullscreen, ToggleHidpi
-    };
-
-    enum class UiLayout
-    {
-        Horizontal, Vertical
-    };
-
-    enum class UiAlignment
-    {
-        Left, Center, Right
-    };
-
-    class UiDescriptor
-    {
-        friend class App;
-
-        std::string _title;
-        std::vector<std::pair<UiAction, std::string>> _buttons;
-        UiLayout _layout = UiLayout::Vertical;
-        UiAlignment _alignment = UiAlignment::Left;
-
-    public:
-        void setTitle(const std::string& title);
-        void setLayout(UiLayout layout);
-        void alignText(UiAlignment alignment);
-        void addButton(UiAction action, const std::string& str);
-    };
-
     enum class ConsoleMode
     {
         Disable, ShowAll, CurrentFrame
@@ -162,8 +131,8 @@ namespace paz
     public:
         App() = delete;
         static void Init(const std::string& sceneShaderPath0, const std::string&
-            sceneShaderPath1, const std::string& fontPath, const UiDescriptor&
-            startMenu);
+            sceneShaderPath1, const std::string& fontPath, const std::string&
+            title);
         static void Run();
         static void AttachCamera(const Object& o);
         static void AttachMic(const Object& o);
