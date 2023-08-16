@@ -424,6 +424,12 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
 
 paz::Object& paz::Object::operator=(const Object& o)
 {
+    // If source and destination are the same, do nothing.
+    if(_id == o._id)
+    {
+        return *this;
+    }
+
     // If destination is in a valid state, copy data, otherwise, copy construct.
     const auto otherIdx = objects().at(o._id);
     if(objects().count(_id))
