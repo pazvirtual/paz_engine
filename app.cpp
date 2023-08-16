@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iomanip>
 #include <deque>
+#include <regex>
 
 //#define DO_FXAA
 #define NO_FRICTION
@@ -386,6 +387,33 @@ void main()
 
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
+static paz::Texture get_asset_image(const std::string& path)
+{
+    static const std::regex bmp("\\.bmp", std::regex_constants::icase);
+    static const std::regex pbm("\\.pbm", std::regex_constants::icase);
+    //static const std::regex jpg("\\.jpe?g", std::regex_constants::icase);
+    //static const std::regex png("\\.jpe?g", std::regex_constants::icase);
+    const std::string ext = paz::split_path(path)[2];
+    if(std::regex_match(ext, bmp))
+    {
+        return paz::Texture(paz::parse_bmp(paz::get_asset(path)));
+    }
+    if(std::regex_match(ext, pbm))
+    {
+        return paz::Texture(paz::parse_pbm(paz::get_asset(path)));
+    }
+    //if(std::regex_match(ext, jpg))
+    //{
+    //    return paz::Texture(paz::parse_jpg(paz::get_asset(path)));
+    //}
+    //if(std::regex_match(ext, png))
+    //{
+    //    return paz::Texture(paz::parse_png(paz::get_asset(path)));
+    //}
+    throw std::runtime_error("Unrecognized image extension \"" + ext + "\".");
+}
+
+
 void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     fontPath)
 {
@@ -430,7 +458,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
     _quadVertices.attribute(2, QuadPos);
 
-    _font = Texture(parse_pbm(get_asset(fontPath)));
+    _font = Texture(get_asset_image(fontPath)); //TEMP - note that only red channel is used
 
     Window::SetCursorMode(CursorMode::Disable);
 }
