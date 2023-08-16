@@ -76,16 +76,16 @@ void paz::Menu::update()
     if(Window::MouseActive())
     {
         _curButton = -1;
+        const double x = Window::MousePos().first*Window::DpiScale();
+        const double y = Window::MousePos().second*Window::DpiScale();
         for(std::size_t i = 0; i < _buttons[_curPage].size(); ++i)
         {
-            const double x0 = 0;
+            const double x0 = 0.;
             const double x1 = x0 + (_buttons[_curPage][i].label().size() + 2)*
                 scale*(_font.charWidth() + 1);
             const double y0 = (startRow - i - 1)*scale*_font.tex().height();
             const double y1 = y0 + scale*_font.tex().height();
-            if(Window::MousePos().first >= x0 && Window::MousePos().
-                first < x1 && Window::MousePos().second >= y0 &&
-                Window::MousePos().second < y1)
+            if(x >= x0 && x < x1 && y >= y0 && y < y1)
             {
                 _curButton = i;
             }
