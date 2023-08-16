@@ -57,7 +57,7 @@ public:
         model() = PlatformModel;
         collisionType() = paz::CollisionType::World;
     }
-    void update()
+    void update() override
     {
         if(_shouldAscend)
         {
