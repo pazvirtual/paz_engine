@@ -20,10 +20,16 @@ int paz::Font::charWidth() const
 }
 
 paz::Button::Button(const std::string& label, const std::function<void(Menu&)>&
-    action) : _label({[label](){ return label; }}), _action(action) {}
+    action) : _label({[label](){ return label; }}), _action(action), _enabled(
+    {[](){ return true; }}) {}
 
 paz::Button::Button(const std::function<std::string(void)>& label, const std::
-    function<void(Menu&)>& action) : _label(label), _action(action) {}
+    function<void(Menu&)>& action) : _label(label), _action(action), _enabled(
+    {[](){ return true; }}) {}
+
+paz::Button::Button(const std::function<std::string(void)>& label, const std::
+    function<void(Menu&)>& action, const std::function<bool(void)>& enabled) :
+    _label(label), _action(action), _enabled(enabled) {}
 
 std::string paz::Button::label() const
 {
@@ -33,6 +39,11 @@ std::string paz::Button::label() const
 void paz::Button::operator()(Menu& m)
 {
     _action(m);
+}
+
+bool paz::Button::enabled() const
+{
+    return _enabled();
 }
 
 paz::Menu::Menu(const Font& font, const std::string& title, const std::vector<
@@ -57,16 +68,33 @@ void paz::Menu::update()
     {
         _buttons[_curPage][_curButton](*this);
     }
-    if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
-        Window::GamepadPressed(GamepadButton::Down))
+    const bool down = Window::KeyPressed(Key::S) || Window::KeyPressed(Key::
+        Down) || Window::GamepadPressed(GamepadButton::Down);
+    const bool up = Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up)
+        || Window::GamepadPressed(GamepadButton::Up);
+    if(down && !up)
     {
-        _curButton = std::min(static_cast<std::size_t>(_curButton) + 1,
-            _buttons[_curPage].size() - 1);
+        while(true)
+        {
+            _curButton = std::min(static_cast<std::size_t>(_curButton) + 1,
+                _buttons[_curPage].size() - 1);
+            if(_curButton == _buttons[_curPage].size() - 1 || _buttons[
+                _curPage][_curButton].enabled())
+            {
+                break;
+            }
+        }
     }
-    if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
-         Window::GamepadPressed(GamepadButton::Up))
+    if(up && !down)
     {
-        _curButton = std::max(_curButton - 1, 0);
+        while(true)
+        {
+            _curButton = std::max(_curButton - 1, 0);
+            if(!_curButton || _buttons[_curPage][_curButton].enabled())
+            {
+                break;
+            }
+        }
     }
     const int scale = _font.curScale();
     int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.tex().
@@ -100,7 +128,7 @@ void paz::Menu::update()
     int col = 0;
     for(std::size_t i = 0; i < _buttons[_curPage].size() + 1; ++i)
     {
-        const bool highlight = _curButton >= 0 && i == static_cast<std::
+        const bool highlight = curButtonEnabled() && i == static_cast<std::
             size_t>(_curButton) + 1;
         std::string str = (i ? _buttons[_curPage][i - 1].label() : (_curPage ?
             "Options" : _title));
@@ -169,4 +197,9 @@ int paz::Menu::curPage() const
 int paz::Menu::curButton() const
 {
     return _curButton;
+}
+
+bool paz::Menu::curButtonEnabled() const
+{
+    return _curButton >= 0 && _buttons[_curPage][_curButton].enabled();
 }

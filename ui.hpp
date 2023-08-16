@@ -24,14 +24,19 @@ namespace paz
     {
         std::function<std::string(void)> _label;
         std::function<void(Menu&)> _action;
+        std::function<bool(void)> _enabled;
 
     public:
         Button(const std::string& label, const std::function<void(Menu&)>&
             action);
         Button(const std::function<std::string(void)>& label, const std::
             function<void(Menu&)>& action);
+        Button(const std::function<std::string(void)>& label, const std::
+            function<void(Menu&)>& action, const std::function<bool(void)>&
+            enabled);
         std::string label() const;
         void operator()(Menu& m);
+        bool enabled() const;
     };
 
     class Menu
@@ -53,6 +58,7 @@ namespace paz
         InstanceBuffer chars() const;
         int curPage() const;
         int curButton() const;
+        bool curButtonEnabled() const;
     };
 }
 

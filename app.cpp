@@ -122,6 +122,10 @@ static const std::vector<paz::Button> OptionsButtons =
                     paz::save_setting("hidpi", "1");
                 }
             }
+        },
+        []()
+        {
+            return paz::Window::HidpiSupported();
         }
     },
     {
@@ -329,7 +333,8 @@ void paz::App::Run()
                     first)/(Window::Width() - 1));
                 CursorPass.uniform("y", static_cast<float>(Window::MousePos().
                     second)/(Window::Height() - 1));
-                CursorPass.uniform("h", startMenu.curButton() < 0 ? 0.f : 1.f);
+                CursorPass.uniform("h", static_cast<float>(startMenu.
+                    curButtonEnabled()));
                 CursorPass.uniform("scale", static_cast<int>(std::round(20.*
                     Window::UiScale()))); //TEMP
                 CursorPass.uniform("width", Window::ViewportWidth());
@@ -829,7 +834,8 @@ void paz::App::Run()
                     first)/(Window::Width() - 1));
                 CursorPass.uniform("y", static_cast<float>(Window::MousePos().
                     second)/(Window::Height() - 1));
-                CursorPass.uniform("h", pauseMenu.curButton() < 0 ? 0.f : 1.f);
+                CursorPass.uniform("h", static_cast<float>(pauseMenu.
+                    curButtonEnabled()));
                 CursorPass.uniform("scale", static_cast<int>(std::round(20.*
                     Window::UiScale()))); //TEMP
                 CursorPass.uniform("width", Window::ViewportWidth());
