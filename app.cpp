@@ -187,13 +187,14 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
 }
 
 static const std::vector<std::vector<std::string>> Buttons = {{"Start",
-    "Options", "Quit"}, {"Fullscreen", "HiDPI", "FXAA", "Back"}};
+    "Options", "Quit"}, {"Fullscreen", "HiDPI", "FXAA", "Back"}, {"Resume",
+    "Fullscreen", "HiDPI", "FXAA", "Quit"}};
 
 void paz::App::Run()
 {
+    int curButton = -1;
     {
         bool done = false;
-        int curButton = 0;
         int menuPage = 0;
         while(!Window::Done() && !done)
         {
@@ -337,13 +338,16 @@ void paz::App::Run()
         }
     }
 
-    Window::SetCursorMode(CursorMode::Disable);
-
     while(!Window::Done())
     {
-        if(Window::KeyPressed(Key::Escape) || Window::GamepadPressed(GamepadButton::Start))
+        if(!_paused)
         {
-            _paused = !_paused;
+            if(Window::KeyPressed(Key::Escape) || Window::GamepadPressed(GamepadButton::Start))
+            {
+                _paused = true;
+                curButton = -1;
+            }
+            Window::SetCursorMode(CursorMode::Disable);
         }
 
         if(_micObject && !_paused && objects().count(reinterpret_cast<std::
@@ -787,7 +791,7 @@ tempDone[j] = true;
             const float consoleWidth = std::min(1.f, (1 + maxCols*(CharWidth +
                 1))*scale/Window::ViewportWidth());
 
-            _consolePass.begin();
+            _consolePass.begin({LoadAction::Load});
             _consolePass.uniform("width", consoleWidth);
             _consolePass.uniform("height", consoleHeight);
             _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
@@ -832,7 +836,136 @@ tempDone[j] = true;
             chars.addAttribute(1, colAttr);
             chars.addAttribute(1, rowAttr);
 
-            _textPass.begin();
+            _textPass.begin({LoadAction::Load});
+            _textPass.read("font", _font);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", CharWidth);
+            _textPass.uniform("baseWidth", _font.width());
+            _textPass.uniform("baseHeight", _font.height());
+            _textPass.uniform("scale", scale);
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, chars);
+            _textPass.end();
+        }
+
+        if(_paused)
+        {
+            _consolePass.begin({LoadAction::Load});
+            _consolePass.uniform("width", 1.f);
+            _consolePass.uniform("height", 1.f);
+            _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _consolePass.end();
+
+            if(Window::MouseActive())
+            {
+                Window::SetCursorMode(CursorMode::Normal);
+            }
+            else
+            {
+                Window::SetCursorMode(CursorMode::Disable);
+            }
+
+            if(curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
+                Key::Space) || Window::KeyPressed(Key::Enter) || Window::
+                KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
+                GamepadButton::A)))
+            {
+                switch(curButton)
+                {
+                    case 0: _paused = false; break;
+                    case 1: Window::MakeFullscreen(); break;
+                    case 2: Window::DisableHidpi(); break;
+                    case 3: _fxaaEnabled = false; break;
+                    case 4: Window::Quit(); break;
+                }
+            }
+            if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
+                Window::GamepadPressed(GamepadButton::Down))
+            {
+                curButton = std::min(static_cast<std::size_t>(curButton) + 1,
+                    Buttons.back().size() - 1);
+            }
+            if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
+                 Window::GamepadPressed(GamepadButton::Up))
+            {
+                curButton = std::max(curButton - 1, 0);
+            }
+            const float scale = std::round(2.f*FontScale*Window::UiScale());
+            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
+                height()));
+            const int startRow = (maxVisRows + Buttons.back().size() - 1)/2;
+
+            if(Window::MouseActive())
+            {
+                curButton = -1;
+                for(std::size_t i = 0; i < Buttons.back().size(); ++i)
+                {
+                    const double x0 = 0;
+                    const double x1 = x0 + (Buttons.back()[i].size() + 2)*scale*
+                        (CharWidth + 1);
+                    const double y0 = (startRow - i - 1)*scale*_font.height();
+                    const double y1 = y0 + scale*_font.height();
+                    if(Window::MousePos().first >= x0 && Window::MousePos().
+                        first < x1 && Window::MousePos().second >= y0 &&
+                        Window::MousePos().second < y1)
+                    {
+                        curButton = i;
+                    }
+                }
+            }
+
+            std::vector<float> highlightAttr;
+            std::vector<int> characterAttr;
+            std::vector<int> colAttr;
+            std::vector<int> rowAttr;
+            int row = 0;
+            int col = 0;
+            for(std::size_t i = 0; i < Buttons.back().size() + 1; ++i)
+            {
+                const bool highlight = curButton >= 0 && i == static_cast<std::
+                    size_t>(curButton) + 1;
+                std::string str = (i ? Buttons.back()[i - 1] : "Paused");
+                if(i)
+                {
+                    if(highlight)
+                    {
+                        str = "->" + str;
+                    }
+                    else
+                    {
+                        str = "> " + str;
+                    }
+                }
+                for(auto n : str)
+                {
+                    if(n == ' ')
+                    {
+                        ++col;
+                    }
+                    else if(n == '\t')
+                    {
+                        col = (col/4 + 1)*4;
+                    }
+                    else if(n >= '!' && n <= '~')
+                    {
+                        highlightAttr.push_back(highlight);
+                        characterAttr.push_back(n - '!');
+                        colAttr.push_back(col);
+                        rowAttr.push_back(startRow - row);
+                        ++col;
+                    }
+                }
+                ++row;
+                col = 0;
+            }
+
+            InstanceBuffer chars;
+            chars.addAttribute(1, highlightAttr);
+            chars.addAttribute(1, characterAttr);
+            chars.addAttribute(1, colAttr);
+            chars.addAttribute(1, rowAttr);
+
+            _textPass.begin({LoadAction::Load});
             _textPass.read("font", _font);
             _textPass.uniform("width", Window::ViewportWidth());
             _textPass.uniform("height", Window::ViewportHeight());
