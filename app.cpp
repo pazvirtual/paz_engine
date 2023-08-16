@@ -75,6 +75,38 @@ static std::array<float, 4> mat_mult(const std::array<float, 16>& a, const std::
     return m;
 }
 
+static std::array<float, 16> mat_inv(const std::array<float, 16>& m)
+{
+    std::array<float, 32> a = {};
+    std::copy(m.begin(), m.end(), a.begin());
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        a[16 + i + 4*i] = 1.;
+    }
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        const double t0 = a[i + 4*i];
+        for(std::size_t j = i; j < 8; ++j)
+        {
+            a[i + 4*j] /= t0;
+        }
+        for(std::size_t j = 0; j < 4; ++j)
+        {
+            if(i != j)
+            {
+                const double t1 = a[j + 4*i];
+                for(std::size_t k = 0; k < 8; ++k)
+                {
+                    a[j + 4*k] -= t1*a[i + 4*k];
+                }
+            }
+        }
+    }
+    std::array<float, 16> b;
+    std::copy(a.begin() + 16, a.end(), b.begin());
+    return b;
+}
+
 inline double fract(const double n)
 {
     return n - std::floor(n);
@@ -162,10 +194,8 @@ struct LumData
     float maxLum;
     float contrast;
 };
-LumData lum_neighborhood(in sampler2D lum, in vec2 uv)
+LumData lum_neighborhood(in sampler2D lum, in vec2 texOffset, in vec2 uv)
 {
-    vec2 texOffset = 1./textureSize(lum, 0);
-
     LumData l;
     l.m = texture(lum, uv).r;
     l.n = texture(lum, uv + texOffset*vec2(0, 1)).r;
@@ -196,10 +226,8 @@ struct EdgeData
     float oppositeLum;
     float grad;
 };
-EdgeData determine_edge(in sampler2D lum, in LumData l)
+EdgeData determine_edge(in sampler2D lum, in vec2 texOffset, in LumData l)
 {
-    vec2 texOffset = 1./textureSize(lum, 0);
-
     EdgeData e;
 
     float horizontal = 2.*abs(l.n + l.s - 2.*l.m) + abs(l.ne + l.se - 2.*l.e) +
@@ -220,10 +248,9 @@ EdgeData determine_edge(in sampler2D lum, in LumData l)
 
     return e;
 }
-float edge_blend_fac(in sampler2D lum, in LumData l, in EdgeData e, in vec2 uv)
+float edge_blend_fac(in sampler2D lum, in vec2 texOffset, in LumData l, in
+    EdgeData e, in vec2 uv)
 {
-    vec2 texOffset = 1./textureSize(lum, 0);
-
     vec2 uvEdge = uv + mix(vec2(0.5*e.pixelStep, 0), vec2(0, 0.5*e.pixelStep),
         float(e.isHorizontal));
     vec2 edgeStep = mix(vec2(0, texOffset.y), vec2(texOffset.x, 0), float(e.
@@ -264,10 +291,12 @@ float edge_blend_fac(in sampler2D lum, in LumData l, in EdgeData e, in vec2 uv)
 }
 void main()
 {
-    LumData l = lum_neighborhood(lum, uv);
+    ivec2 texSize = textureSize(lum, 0);
+    vec2 texOffset = vec2(1./texSize.x, 1./texSize.y);
+    LumData l = lum_neighborhood(lum, texOffset, uv);
     float pixelFac = blend_fac(l);
-    EdgeData e = determine_edge(lum, l);
-    float edgeFac = edge_blend_fac(lum, l, e, uv);
+    EdgeData e = determine_edge(lum, texOffset, l);
+    float edgeFac = edge_blend_fac(lum, texOffset, l, e, uv);
     float fac = max(pixelFac, edgeFac);
     vec2 deltaUv = mix(vec2(e.pixelStep*fac, 0.), vec2(0., e.pixelStep*fac),
         float(e.isHorizontal));
@@ -549,7 +578,7 @@ for(auto& a0 : objects())
 //        _renderPass.read("materialMap", _materialMap);
         _renderPass.read("normalMap", _normalMap);
         _renderPass.read("depthMap", _depthMap);
-        _renderPass.uniform("projection", projection);
+        _renderPass.uniform("invProjection", mat_inv(projection));
         _renderPass.uniform("sun", mat_mult(view, SunVec));
         _renderPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();
