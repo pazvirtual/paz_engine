@@ -19,46 +19,25 @@ int paz::Font::charWidth() const
     return _charWidth;
 }
 
-paz::Button::Button(const std::vector<std::string>& labels, const std::function<
-    void(Button&)>& action) : _mode(0), _labels(labels), _action(action) {}
+paz::Button::Button(const std::string& label, const std::function<void(Menu&)>&
+    action) : _label({[label](){ return label; }}), _action(action) {}
 
-int paz::Button::mode() const
+paz::Button::Button(const std::function<std::string(void)>& label, const std::
+    function<void(Menu&)>& action) : _label(label), _action(action) {}
+
+std::string paz::Button::label() const
 {
-    return _mode;
+    return _label();
 }
 
-void paz::Button::setMode(int mode)
+void paz::Button::operator()(Menu& m)
 {
-    _mode = mode;
-}
-
-const std::string& paz::Button::label() const
-{
-    return _labels.at(_mode);
-}
-
-void paz::Button::operator()()
-{
-    _action(*this);
-}
-
-paz::Menu& paz::Button::parent() const
-{
-    return *_parent;
+    _action(m);
 }
 
 paz::Menu::Menu(const Font& font, const std::string& title, const std::vector<
     std::vector<Button>>& buttons) : _curPage(0), _curButton(0), _font(font),
-    _title(title), _buttons(buttons)
-{
-    for(auto& m : _buttons)
-    {
-        for(auto& n : m)
-        {
-            n._parent = this;
-        }
-    }
-}
+    _title(title), _buttons(buttons) {}
 
 void paz::Menu::update()
 {
@@ -76,7 +55,7 @@ void paz::Menu::update()
         KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
         GamepadButton::A)))
     {
-        _buttons[_curPage][_curButton]();
+        _buttons[_curPage][_curButton](*this);
     }
     if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
         Window::GamepadPressed(GamepadButton::Down))

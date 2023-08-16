@@ -71,49 +71,23 @@ static std::array<float, 4> _sunIll;
 
 static const std::vector<paz::Button> OptionsButtons =
 {
-    {{"Fullscreen: OFF", "Fullscreen: ON"}, [](paz::Button& b)
-        {
-            if(b.mode())
-            {
-                b.setMode(0);
-                paz::Window::MakeWindowed();
-            }
-            else
-            {
-                b.setMode(1);
-                paz::Window::MakeFullscreen();
-            }
-        }
+    {
+        [](){ return paz::Window::IsFullscreen() ? "Fullscreen: ON" :
+            "Fullscreen: OFF"; },
+        [](paz::Menu&){ paz::Window::IsFullscreen() ? paz::Window::
+            MakeWindowed() : paz::Window::MakeFullscreen(); }
     },
-    {{"HiDPI:      ON", "HiDPI:      OFF"}, [](paz::Button& b)
-        {
-            if(b.mode())
-            {
-                b.setMode(0);
-                paz::Window::EnableHidpi();
-            }
-            else
-            {
-                b.setMode(1);
-                paz::Window::DisableHidpi();
-            }
-        }
+    {
+        [](){ return paz::Window::HidpiEnabled() ? "HiDPI:      ON" :
+            "HiDPI:      OFF"; },
+        [](paz::Menu&){ paz::Window::HidpiEnabled() ? paz::Window::
+            DisableHidpi() : paz::Window::EnableHidpi(); }
     },
-    {{"FXAA:       ON", "FXAA:       OFF"}, [](paz::Button& b)
-        {
-            if(b.mode())
-            {
-                b.setMode(0);
-                _fxaaEnabled = true;
-            }
-            else
-            {
-                b.setMode(1);
-                _fxaaEnabled = false;
-            }
-        }
+    {
+        [](){ return _fxaaEnabled ? "FXAA:       ON" : "FXAA:       OFF"; },
+        [](paz::Menu&){ _fxaaEnabled = !_fxaaEnabled; }
     },
-    {{"Back"}, [](paz::Button& b){ b.parent().setState(0, 1); }}
+    {"Back", [](paz::Menu& m){ m.setState(0, 1); }}
 };
 
 
@@ -244,9 +218,9 @@ void paz::App::Run()
         Menu startMenu(menuFont, _title,
         {
             {
-                {{"Start"}, [&](Button&){ done = true; }},
-                {{"Options"}, [](Button& b){ b.parent().setState(1, 0); }},
-                {{"Quit"}, [](Button&){ Window::Quit(); }}
+                {{"Start"}, [&](Menu&){ done = true; }},
+                {{"Options"}, [](Menu& m){ m.setState(1, 0); }},
+                {{"Quit"}, [](Menu&){ Window::Quit(); }}
             },
             OptionsButtons
         }
@@ -286,14 +260,14 @@ void paz::App::Run()
     Menu pauseMenu(menuFont, "Paused",
     {
         {
-            {{"Resume"}, [&](Button&)
+            {{"Resume"}, [&](Menu&)
                 {
                     _paused = false;
                     Window::SetCursorMode(CursorMode::Disable);
                 }
             },
-            {{"Options"}, [](Button& b){ b.parent().setState(1, 0); }},
-            {{"Quit"}, [](Button&){ Window::Quit(); }}
+            {{"Options"}, [](Menu& m){ m.setState(1, 0); }},
+            {{"Quit"}, [](Menu&){ Window::Quit(); }}
         },
         OptionsButtons
     }

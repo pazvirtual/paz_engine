@@ -22,21 +22,16 @@ namespace paz
     class Menu;
     class Button
     {
-        friend class Menu;
-
-        Menu* _parent;
-        int _mode;
-        std::vector<std::string> _labels;
-        std::function<void(Button&)> _action;
+        std::function<std::string(void)> _label;
+        std::function<void(Menu&)> _action;
 
     public:
-        Button(const std::vector<std::string>& labels, const std::function<void(
-            Button&)>& action);
-        int mode() const;
-        void setMode(int mode);
-        const std::string& label() const;
-        void operator()();
-        Menu& parent() const;
+        Button(const std::string& label, const std::function<void(Menu&)>&
+            action);
+        Button(const std::function<std::string(void)>& label, const std::
+            function<void(Menu&)>& action);
+        std::string label() const;
+        void operator()(Menu& m);
     };
 
     class Menu
