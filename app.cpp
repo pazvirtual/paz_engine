@@ -140,8 +140,7 @@ void main()
 
 static const std::string FxaaFragSrc = 1 + R"===(
 // Linear LDR -> Antialiased gamma-corrected LDR
-const int numSteps = 10;
-const float[] edgeSteps = float[](1., 1.5, 2., 2., 2., 2., 2., 2., 4.);
+const float edgeSteps[] = float[](1., 1.5, 2., 2., 2., 2., 2., 2., 2., 4.);
 const float edgeGuess = 8.;
 uniform sampler2D img;
 uniform sampler2D lum;
@@ -235,7 +234,7 @@ float edge_blend_fac(in sampler2D lum, in LumData l, in EdgeData e, in vec2 uv)
     vec2 puv = uvEdge + edgeStep;
     float pLumDelta = texture(lum, puv).r - edgeLum;
     bool pAtEnd = abs(pLumDelta) >= gradThresh;
-    for(int i = 0; i + 1 < numSteps && !pAtEnd; ++i)
+    for(int i = 0; i + 1 < edgeSteps.length() && !pAtEnd; ++i)
     {
         puv += edgeStep*edgeSteps[i];
         pLumDelta = texture(lum, puv).r - edgeLum;
@@ -247,7 +246,7 @@ float edge_blend_fac(in sampler2D lum, in LumData l, in EdgeData e, in vec2 uv)
     vec2 nuv = uvEdge - edgeStep;
     float nLumDelta = texture(lum, nuv).r - edgeLum;
     bool nAtEnd = abs(nLumDelta) >= gradThresh;
-    for(int i = 0; i + 1 < numSteps && !nAtEnd; ++i)
+    for(int i = 0; i + 1 < edgeSteps.length() && !nAtEnd; ++i)
     {
         nuv -= edgeStep*edgeSteps[i];
         nLumDelta = texture(lum, nuv).r - edgeLum;
@@ -260,7 +259,8 @@ float edge_blend_fac(in sampler2D lum, in LumData l, in EdgeData e, in vec2 uv)
     bool deltaSign = (pDist < nDist && pLumDelta >= 0.) || (pDist >= nDist &&
         nLumDelta >= 0.);
 
-    return float(deltaSign == (l.m - edgeLum >= 0.))*numSteps*shortestDist;
+    return float(deltaSign == (l.m - edgeLum >= 0.))*edgeSteps.length()*
+        shortestDist;
 }
 void main()
 {
