@@ -346,11 +346,13 @@ uniform int baseHeight;
 uniform float scale;
 uniform int height;
 uniform int width;
-uniform int character;
-uniform int col;
-uniform int row;
 layout(location = 0) in vec2 position;
+layout(location = 1) in float highlight [[instance]];
+layout(location = 2) in int character [[instance]];
+layout(location = 3) in int col [[instance]];
+layout(location = 4) in int row [[instance]];
 out vec2 uv;
+flat out float h;
 void main()
 {
     float a = 1./float(charWidth);
@@ -363,18 +365,19 @@ void main()
         1
     );
     uv.x = (uv.x + float(character))*float(charWidth)/float(baseWidth);
+    h = highlight;
 }
 )===";
 
 static const std::string TextFragSrc = 1 + R"===(
 uniform sampler2D font;
-uniform float highlight;
 in vec2 uv;
+in float h;
 layout(location = 0) out vec4 color;
 void main()
 {
     float t = texture(font, uv).x;
-    float c = 1. - 0.8*highlight;
+    float c = 1. - 0.8*h;
     color = vec4(1., 1., c, t);
 }
 )===";
@@ -512,14 +515,10 @@ void paz::App::Run()
             int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
                 height()));
 
-            _textPass.begin({paz::LoadAction::Clear});
-            _textPass.read("font", _font);
-            _textPass.uniform("width", Window::ViewportWidth());
-            _textPass.uniform("height", Window::ViewportHeight());
-            _textPass.uniform("charWidth", CharWidth);
-            _textPass.uniform("baseWidth", _font.width());
-            _textPass.uniform("baseHeight", _font.height());
-            _textPass.uniform("scale", scale);
+            std::vector<float> highlightAttr;
+            std::vector<int> characterAttr;
+            std::vector<int> colAttr;
+            std::vector<int> rowAttr;
             const int startRow = (maxVisRows + _startMenu._buttons.size())/2 -
                 1;
             const int startCol = _startMenu._alignment == UiAlignment::Center ?
@@ -544,14 +543,10 @@ void paz::App::Run()
                     }
                     else if(n >= '!' && n <= '~')
                     {
-                        _textPass.uniform("highlight", static_cast<float>(
-                            highlight));
-                        _textPass.uniform("row", startRow - row);
-                        _textPass.uniform("col", col);
-                        _textPass.uniform("character", static_cast<int>(n -
-                            '!'));
-                        _textPass.draw(PrimitiveType::TriangleStrip,
-                            _quadVertices);
+                        highlightAttr.push_back(highlight);
+                        characterAttr.push_back(n - '!');
+                        colAttr.push_back(col);
+                        rowAttr.push_back(startRow - row);
                         ++col;
                     }
                 }
@@ -565,6 +560,22 @@ void paz::App::Run()
                     ++col;
                 }
             }
+
+            InstanceBuffer chars;
+            chars.addAttribute(1, highlightAttr);
+            chars.addAttribute(1, characterAttr);
+            chars.addAttribute(1, colAttr);
+            chars.addAttribute(1, rowAttr);
+
+            _textPass.begin({paz::LoadAction::Clear});
+            _textPass.read("font", _font);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", CharWidth);
+            _textPass.uniform("baseWidth", _font.width());
+            _textPass.uniform("baseHeight", _font.height());
+            _textPass.uniform("scale", scale);
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, chars);
             _textPass.end();
 
             Window::EndFrame();
@@ -913,14 +924,10 @@ _msgStream << std::endl;
             _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
             _consolePass.end();
 
-            _textPass.begin();
-            _textPass.read("font", _font);
-            _textPass.uniform("width", Window::ViewportWidth());
-            _textPass.uniform("height", Window::ViewportHeight());
-            _textPass.uniform("charWidth", CharWidth);
-            _textPass.uniform("baseWidth", _font.width());
-            _textPass.uniform("baseHeight", _font.height());
-            _textPass.uniform("scale", scale);
+            std::vector<float> highlightAttr;
+            std::vector<int> characterAttr;
+            std::vector<int> colAttr;
+            std::vector<int> rowAttr;
             bool highlight = false;
             for(int row = 0; row < maxVisRows; ++row)
             {
@@ -941,18 +948,30 @@ _msgStream << std::endl;
                     }
                     else if(n >= '!' && n <= '~')
                     {
-                        _textPass.uniform("highlight", static_cast<float>(
-                            highlight));
-                        _textPass.uniform("row", row);
-                        _textPass.uniform("col", col);
-                        _textPass.uniform("character", static_cast<int>(n -
-                            '!'));
-                        _textPass.draw(PrimitiveType::TriangleStrip,
-                            _quadVertices);
+                        highlightAttr.push_back(highlight);
+                        characterAttr.push_back(n - '!');
+                        colAttr.push_back(col);
+                        rowAttr.push_back(row);
                         ++col;
                     }
                 }
             }
+
+            InstanceBuffer chars;
+            chars.addAttribute(1, highlightAttr);
+            chars.addAttribute(1, characterAttr);
+            chars.addAttribute(1, colAttr);
+            chars.addAttribute(1, rowAttr);
+
+            _textPass.begin();
+            _textPass.read("font", _font);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", CharWidth);
+            _textPass.uniform("baseWidth", _font.width());
+            _textPass.uniform("baseHeight", _font.height());
+            _textPass.uniform("scale", scale);
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, chars);
             _textPass.end();
         }
 
