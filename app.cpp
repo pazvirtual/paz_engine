@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <deque>
 
-//#define DO_FXAA
+#define DO_FXAA
 #define NO_FRICTION
 
 static constexpr std::size_t NumSteps = 100;
@@ -221,18 +221,19 @@ void paz::App::Run()
         }
         while(!Window::Done() && !done)
         {
-            if(Window::GamepadActive())
-            {
-                Window::SetCursorMode(CursorMode::Disable);
-            }
-            else
+            if(Window::MouseActive())
             {
                 Window::SetCursorMode(CursorMode::Normal);
             }
+            else
+            {
+                Window::SetCursorMode(CursorMode::Disable);
+            }
 
-            if(Window::KeyPressed(Key::Space) || Window::KeyPressed(Key::Enter)
-                || Window::KeyPressed(Key::KeypadEnter) || Window::
-                GamepadPressed(GamepadButton::A))
+            if(curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
+                Key::Space) || Window::KeyPressed(Key::Enter) || Window::
+                KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
+                GamepadButton::A)))
             {
                 switch(_startMenu._buttons[curButton].first)
                 {
@@ -276,27 +277,48 @@ void paz::App::Run()
                     curButton = std::max(curButton - 1, 0);
                 }
             }
-
             const float scale = std::round(2.f*FontScale*Window::UiScale());
             int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
                 height()));
-
-            std::vector<float> highlightAttr;
-            std::vector<int> characterAttr;
-            std::vector<int> colAttr;
-            std::vector<int> rowAttr;
             const int startRow = _startMenu._layout == UiLayout::Vertical ?
                 (maxVisRows + _startMenu._buttons.size() - 1)/2 : (maxVisRows -
                 1)/2;
             const int startCol = _startMenu._alignment == UiAlignment::Center ?
                 std::round(0.5*(Window::ViewportWidth()/(scale*(CharWidth + 1))
                 - maxCols)) : 0;
+
+            if(Window::MouseActive())
+            {
+                curButton = -1;
+                int row = 0;
+                int col = startCol;
+                for(std::size_t i = 0; i < _startMenu._buttons.size(); ++i)
+                {
+                    const double x0 = col*scale*(CharWidth + 1);
+                    const double x1 = x0 + _startMenu._buttons[i].second.size()*
+                        scale*(CharWidth + 1);
+                    const double y0 = (startRow - row - 1)*scale*_font.height();
+                    const double y1 = y0 + scale*_font.height();
+                    if(Window::MousePos().first >= x0 && Window::MousePos().
+                        first < x1 && Window::MousePos().second >= y0 &&
+                        Window::MousePos().second < y1)
+                    {
+                        curButton = i;
+                    }
+                    col += _startMenu._buttons[i].second.size() + 1;
+                }
+            }
+
+            std::vector<float> highlightAttr;
+            std::vector<int> characterAttr;
+            std::vector<int> colAttr;
+            std::vector<int> rowAttr;
             int row = 0;
             int col = startCol;
             for(std::size_t i = 0; i < _startMenu._buttons.size() + 1; ++i)
             {
-                const bool highlight = i == static_cast<std::size_t>(curButton)
-                    + 1;
+                const bool highlight = curButton >= 0 && i == static_cast<std::
+                    size_t>(curButton) + 1;
                 for(auto n : (i ? _startMenu._buttons[i - 1].second :
                     _startMenu._title))
                 {
@@ -334,7 +356,7 @@ void paz::App::Run()
             chars.addAttribute(1, colAttr);
             chars.addAttribute(1, rowAttr);
 
-            _textPass.begin({paz::LoadAction::Clear});
+            _textPass.begin({LoadAction::Clear});
             _textPass.read("font", _font);
             _textPass.uniform("width", Window::ViewportWidth());
             _textPass.uniform("height", Window::ViewportHeight());
