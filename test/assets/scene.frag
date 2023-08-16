@@ -19,7 +19,7 @@ void main()
     float spec = cosAngle*pow(max(0., dot(nor, halfwayDir)), 32);
     color.rgb = mix(diff, spec, 0.3)*vec3(0.8, 1, 0.5) + vec3(0.1, 0, 0);
     if(sin(100.*lat) > 0.95) color.r = 1.;
-    if(sin(100.*lon) > 0.95) color.g = 1.;
+    if(sin(100.*lon) > 0.95 || coord.y > 0.9 || coord.y < 0.1) color.g = 1.;
     uint mtl = texture(materialMap, uv).r;
     color.rgb = mix(vec3(0, 1, 1), color.rgb, float(mtl > 0u));
 }
