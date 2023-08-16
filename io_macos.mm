@@ -9,16 +9,12 @@
 #include <regex>
 #include <map>
 
-static bool check_sandbox()
-{
-    return [[[NSProcessInfo processInfo] environment] objectForKey:
-        @"APP_SANDBOX_CONTAINER_ID"] != nil;
-}
+static const bool IsSandboxed = [[[NSProcessInfo processInfo] environment]
+    objectForKey:@"APP_SANDBOX_CONTAINER_ID"] != nil;
 
 static std::string get_home()
 {
-    static const bool isSandboxed = check_sandbox();
-    if(!isSandboxed)
+    if(!IsSandboxed)
     {
         throw std::runtime_error("App is not sandboxed.");
     }

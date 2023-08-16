@@ -12,7 +12,7 @@ endif
 CXXVER := 14
 CXXFLAGS := -std=c++$(CXXVER) -Ofast -Wall -Wextra -Wno-missing-braces -Wold-style-cast
 ifeq ($(OSPRETTY), macOS)
-    CXXFLAGS += -mmacosx-version-min=10.10
+    CXXFLAGS += -mmacosx-version-min=10.11 -Wunguarded-availability
 else
     ifeq ($(OSPRETTY), Windows)
         CXXFLAGS += -Wno-deprecated-copy -static -mwindows
