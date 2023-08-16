@@ -97,7 +97,6 @@ layout(location = 3) in vec2 coord;
 layout(location = 4) in vec4 model0;
 layout(location = 5) in vec4 model1;
 layout(location = 6) in vec4 model2;
-layout(location = 7) in vec4 model3;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
@@ -107,7 +106,10 @@ out vec4 norCs;
 out vec2 uv;
 void main()
 {
-    mat4 model = mat4(model0, model1, model2, model3);
+    mat4 model = mat4(model0.xyz, 0.,
+                      model0.w, model1.xy, 0.,
+                      model1.zw, model2.x, 0.,
+                      model2.yzw, 1.);
     mat4 mv = view*model;
     mtl = material;
     posCs = mv*position;
@@ -599,23 +601,13 @@ tempDone[j] = true;
         }
 const double colTime1 = timer.getAndRestart();
 static double avgColTime0Sq = 0.;
-avgColTime0Sq = 0.95*avgColTime0Sq + 0.05*colTime0*colTime0;
+avgColTime0Sq = 0.99*avgColTime0Sq + 0.01*colTime0*colTime0;
 static double avgColTime1Sq = 0.;
-avgColTime1Sq = 0.95*avgColTime1Sq + 0.05*colTime1*colTime1;
+avgColTime1Sq = 0.99*avgColTime1Sq + 0.01*colTime1*colTime1;
 _msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgColTime0Sq) << " " << std::setw(8) << std::sqrt(avgColTime1Sq) << std::endl;
 static double avgFrameTimeSq = 1./(60.*60.);
-avgFrameTimeSq = 0.95*avgFrameTimeSq + 0.05*Window::FrameTime()*Window::FrameTime();
+avgFrameTimeSq = 0.99*avgFrameTimeSq + 0.01*Window::FrameTime()*Window::FrameTime();
 _msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
-static std::deque<double> rHist(60*30, 0.);
-static std::deque<double> latHist(60*30, 0.);
-{
-const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
-const double lat = std::asin(_cameraObject->z()/r);
-rHist.pop_front();
-rHist.push_back(r);
-latHist.pop_front();
-latHist.push_back(lat);
-}
 
         const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
         for(const auto& n : tempObjects)
@@ -631,6 +623,17 @@ latHist.push_back(lat);
             - _cameraObject->zAtt()*_cameraObject->zAtt());
         const Vec cameraAtt{{_cameraObject->xAtt(), _cameraObject->yAtt(),
             _cameraObject->zAtt(), cameraWAtt}};
+
+        const Vec cameraPos{{_cameraObject->x(), _cameraObject->y(),
+            _cameraObject->z()}};
+static std::deque<double> rHist(60*30, cameraPos.norm());
+static std::deque<double> latHist(60*30, cameraPos(2)/rHist.back());
+{
+rHist.pop_front();
+rHist.push_back(cameraPos.norm());
+latHist.pop_front();
+latHist.push_back(cameraPos(2)/rHist.back());
+}
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             1e3);
@@ -658,44 +661,60 @@ timer.start();
                 objectsByModel[o->model()._t.get()].push_back(o);
             }
         }
+std::array<double, 4> timeSum = {};
+timeSum[0] += timer.get();
         for(const auto& m : objectsByModel)
         {
-            std::array<std::vector<float>, 4> modelMats;
-            for(auto& n : modelMats)
+Timer timer1;
+            std::array<std::vector<float>, 3> modelMatData;
+            for(auto& n : modelMatData)
             {
                 n.resize(4*m.second.size());
             }
             for(std::size_t i = 0; i < m.second.size(); ++i)
             {
-                const double q0 = m.second[i]->xAtt();
-                const double q1 = m.second[i]->yAtt();
-                const double q2 = m.second[i]->zAtt();
-                const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
-                Mat model = Mat::Identity(4);
-                model(0, 3) = m.second[i]->x() - _cameraObject->x();
-                model(1, 3) = m.second[i]->y() - _cameraObject->y();
-                model(2, 3) = m.second[i]->z() - _cameraObject->z();
-                model.setBlock(0, 0, 3, 3, to_mat(Vec{{q0, q1, q2, q3}}));
-                for(int j = 0; j < 4; ++j)
-                {
-                    std::copy(model.begin() + 4*j, model.begin() + 4*j + 4,
-                        modelMats[j].begin() + 4*i);
-                }
+                Vec att(4);
+                att(0) = m.second[i]->xAtt();
+                att(1) = m.second[i]->yAtt();
+                att(2) = m.second[i]->zAtt();
+                att(3) = -std::sqrt(1. - att(0)*att(0) - att(1)*att(1) - att(2)*
+                    att(2));
+                const Mat rot = to_mat(att);
+                modelMatData[0][4*i + 0] = rot(0);
+                modelMatData[0][4*i + 1] = rot(1);
+                modelMatData[0][4*i + 2] = rot(2);
+                modelMatData[0][4*i + 3] = rot(3);
+                modelMatData[1][4*i + 0] = rot(4);
+                modelMatData[1][4*i + 1] = rot(5);
+                modelMatData[1][4*i + 2] = rot(6);
+                modelMatData[1][4*i + 3] = rot(7);
+                modelMatData[2][4*i + 0] = rot(8);
+                modelMatData[2][4*i + 1] = m.second[i]->x() - cameraPos(0);
+                modelMatData[2][4*i + 2] = m.second[i]->y() - cameraPos(1);
+                modelMatData[2][4*i + 3] = m.second[i]->z() - cameraPos(2);
             }
+timeSum[1] += timer1.getAndRestart();
             const VertexBuffer verts = m.second.back()->model()._v;
             const IndexBuffer inds = m.second.back()->model()._i;
             paz::VertexBuffer buf;
-            for(const auto& n : modelMats)
+            for(const auto& n : modelMatData)
             {
                 buf.attribute(4, n);
             }
+timeSum[2] += timer1.getAndRestart();
             _geometryPass.draw(PrimitiveType::Triangles, verts, buf, inds);
+timeSum[3] += timer1.get();
         }
         _geometryPass.end();
 const double gTime = timer.getAndRestart();
 static double avgGTimeSq = 0.;
-avgGTimeSq = 0.95*avgGTimeSq + 0.05*gTime*gTime;
-_msgStream << "Avg. G-pass time: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgGTimeSq) << std::endl;
+avgGTimeSq = 0.99*avgGTimeSq + 0.01*gTime*gTime;
+_msgStream << "Avg. G-pass time: " << std::fixed << std::setprecision(5) << std::setw(7) << std::sqrt(avgGTimeSq) << std::endl;
+static decltype(timeSum) avgTimeSumSq;
+for(std::size_t i = 0; i < timeSum.size(); ++i){ avgTimeSumSq[i] = 0.99*avgTimeSumSq[i] + 0.01*timeSum[i]*timeSum[i]; }
+_msgStream << "    details: " << std::fixed << std::setprecision(5);
+for(auto n : avgTimeSumSq){ _msgStream << std::setw(7) << std::sqrt(n) << " "; }
+_msgStream << std::endl;
 
         // Render in HDR.
         _renderPass.begin();

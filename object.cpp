@@ -552,7 +552,7 @@ bool paz::Object::isTagged(const std::string& tag) const
 
 void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
 {
-    nor = Vec{{0., 0., 1.}};
+    nor = {{0, 0, 1}};
     vel = Vec::Zero(3);
     const auto idx = objects().at(_id);
     alt = std::numeric_limits<double>::infinity();
