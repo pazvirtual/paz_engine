@@ -47,6 +47,8 @@ static paz::RenderPass _consolePass;
 static paz::RenderPass _textPass;
 
 static paz::VertexBuffer _quadVertices;
+static paz::VertexBuffer _sphereVertices;
+static paz::IndexBuffer _sphereIndices;
 
 static paz::Texture _font;
 static std::stringstream _msgStream;
@@ -118,6 +120,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
     const VertexFunction geometryVert(get_builtin("geometry.vert").str());
     const VertexFunction quadVert(get_builtin("quad.vert").str());
+    const VertexFunction sceneVert(get_builtin("scene.vert").str());
     const VertexFunction textVert(get_builtin("text.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
     const FragmentFunction sceneFrag(get_asset(sceneShaderPath).str());
@@ -130,7 +133,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     const FragmentFunction textFrag(get_builtin("text.frag").str());
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
-    _renderPass = RenderPass(_renderBuffer, quadVert, sceneFrag);
+    _renderPass = RenderPass(_renderBuffer, sceneVert, sceneFrag, BlendMode::Additive);
 #ifdef DO_FXAA
     _postPass = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
@@ -142,6 +145,21 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
 
     _quadVertices.addAttribute(2, QuadPos);
+
+    {
+        std::vector<std::string> names;
+        std::vector<std::vector<float>> positions;
+        std::vector<std::vector<float>> uvs;
+        std::vector<std::vector<float>> normals;
+        std::vector<std::vector<unsigned int>> materials;
+        std::vector<std::string> materialNames;
+        std::vector<std::string> materialLibs;
+        std::vector<std::vector<unsigned int>> indices;
+        parse_obj(get_builtin("icosphere3.obj"), names, positions, uvs, normals,
+            materials, materialNames, materialLibs, indices);
+        _sphereVertices.addAttribute(4, positions[0]);
+        _sphereIndices = IndexBuffer(indices[0]);
+    }
 
     _font = Texture(get_asset_image(fontPath)); //TEMP - note that only red channel is used
 
@@ -567,7 +585,8 @@ tempDone[j] = true;
                 _instances.at(n.first).addAttribute(2, DataType::Float);
             }
         }
-        std::vector<float> lightsData;
+        std::vector<float> lightsData0;
+        std::vector<float> lightsData1;
         for(const auto& n : objectsByModel)
         {
             std::array<std::vector<float>, 2> modelMatData;
@@ -602,10 +621,14 @@ tempDone[j] = true;
                     for(const auto& m : n.second[i]->lights())
                     {
                         const Vec p = mv*Vec{{m[0], m[1], m[2], 1.}};
-                        lightsData.push_back(p(0));
-                        lightsData.push_back(p(1));
-                        lightsData.push_back(p(2));
-                        lightsData.push_back(m[3]);
+                        lightsData0.push_back(p(0));
+                        lightsData0.push_back(p(1));
+                        lightsData0.push_back(p(2));
+                        lightsData0.push_back(m[3]);
+                        lightsData1.push_back(m[4]);
+                        lightsData1.push_back(m[5]);
+                        lightsData1.push_back(m[6]);
+                        lightsData1.push_back(0.f);
                     }
                 }
             }
@@ -636,15 +659,20 @@ tempDone[j] = true;
                 for(const auto& m : n->lights())
                 {
                     const Vec p = mv*Vec{{m[0], m[1], m[2], 1.}};
-                    lightsData.push_back(p(0));
-                    lightsData.push_back(p(1));
-                    lightsData.push_back(p(2));
-                    lightsData.push_back(m[3]);
+                    lightsData0.push_back(p(0));
+                    lightsData0.push_back(p(1));
+                    lightsData0.push_back(p(2));
+                    lightsData0.push_back(m[3]);
+                    lightsData1.push_back(m[4]);
+                    lightsData1.push_back(m[5]);
+                    lightsData1.push_back(m[6]);
+                    lightsData1.push_back(0.f);
                 }
             }
         }
-        Texture lights(TextureFormat::RGBA32Float, 1, lightsData.size()/4,
-            lightsData.data());
+        InstanceBuffer lights; //TEMP - should just sub data if same number
+        lights.addAttribute(4, lightsData0);
+        lights.addAttribute(4, lightsData1);
 
         // Get geometry map.
         _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
@@ -672,16 +700,18 @@ tempDone[j] = true;
         _geometryPass.end();
 
         // Render in HDR.
-        _renderPass.begin();
+        _renderPass.begin({LoadAction::Clear});
+        _renderPass.cull(CullMode::Front);
         _renderPass.read("diffuseMap", _diffuseMap);
         // ...
         _renderPass.read("emissMap", _emissMap);
         _renderPass.read("normalMap", _normalMap);
         _renderPass.read("depthMap", _depthMap);
+        _renderPass.uniform("projection", projection);
         _renderPass.uniform("invProjection", convert_mat(convert_mat(
             projection).inv()));
-        _renderPass.read("lights", lights);
-        _renderPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+        _renderPass.draw(PrimitiveType::Triangles, _sphereVertices, lights,
+            _sphereIndices);
         _renderPass.end();
 
         // Tonemap to linear LDR.

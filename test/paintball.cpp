@@ -1,6 +1,6 @@
 #include "paintball.hpp"
 
-static const paz::Model Model("icosphere2.obj", 0, 0., 0.1);
+static const paz::Model Model("icosphere3.obj", 0, 0., 0.1, "", 2.f);
 static const paz::AudioTrack SoundEffect = []()
 {
     std::vector<float> samples(44'100/200);
@@ -23,25 +23,49 @@ static const paz::AudioTrack SoundEffect = []()
     return paz::AudioTrack(moreSamples);
 }();
 
-Paintball::Paintball(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
-    dir) : paz::Object()
+Paintball::Paintball() : paz::Object(), _parent(nullptr)
 {
+    collisionRadius() = 0.05;
+    model() = Model;
+    lights().push_back({0., 0., 0., 0.5, 2., 2., 0.1});
+}
+
+void Paintball::update()
+{
+    if(_parent)
+    {
+        x() = _relX + _parent->x();
+        y() = _relY + _parent->y();
+        z() = _relZ + _parent->z();
+        xVel() = _parent->xVel();
+        yVel() = _parent->yVel();
+        zVel() = _parent->zVel();
+    }
+}
+
+void Paintball::launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
+    dir)
+{
+    _parent = nullptr;
+    collisionType() = paz::CollisionType::Default;
+    gravityType() = paz::GravityType::Default;
     x() = pos(0);
     y() = pos(1);
     z() = pos(2);
     xVel() = vel(0) + LaunchSpeed*dir(0);
     yVel() = vel(1) + LaunchSpeed*dir(1);
     zVel() = vel(2) + LaunchSpeed*dir(2);
-    collisionRadius() = 0.05;
-    model() = Model;
 }
 
-void Paintball::onCollide(const Object&)
+void Paintball::onCollide(const Object& o)
 {
-    //paz::AudioEngine::Play(SoundEffect, false);
-    xVel() = 0.;
-    yVel() = 0.;
-    zVel() = 0.;
+    _parent = &o;
+    _relX = x() - o.x();
+    _relY = y() - o.y();
+    _relZ = z() - o.z();
+    xVel() = o.xVel();
+    yVel() = o.yVel();
+    zVel() = o.zVel();
     collisionType() = paz::CollisionType::None;
     gravityType() = paz::GravityType::None;
 }

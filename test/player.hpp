@@ -19,7 +19,7 @@ class Player : public paz::Object
     paz::Vec _mousePos = paz::Vec::Zero(2);
     paz::Object _head; // camera
 
-    std::vector<Paintball> _paintballs; //TEMP - should these really be owned by `this` ?
+    Paintball _paintball;
 
 public:
     Player();

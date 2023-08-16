@@ -6,10 +6,15 @@
 
 class Paintball : public paz::Object
 {
+    const Object* _parent;
+    double _relX, _relY, _relZ;
+
 public:
     static constexpr double LaunchSpeed = 15.;
 
-    Paintball(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir);
+    Paintball();
+    void update() override;
+    void launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir);
     void onCollide(const Object&) override;
 };
 

@@ -313,8 +313,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         const paz::Vec dir = paz::to_mat(cameraAtt).row(1).trans();
         const paz::Vec pos{{_head.x(), _head.y(), _head.z()}};
         const paz::Vec vel{{xVel(), yVel(), zVel()}};
-        _paintballs.emplace_back(pos, vel, dir);
-        _paintballs.back().lights().push_back({});
+        _paintball.launch(pos, vel, dir);
     }
 }
 
