@@ -33,6 +33,8 @@ static paz::RenderTarget _finalRender(1., paz::TextureFormat::RGBA16Float, paz::
 static paz::RenderTarget _finalLumMap(1., paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 #endif
 
+static std::unordered_map<void*, paz::InstanceBuffer> _instances;
+
 static paz::RenderPass _geometryPass;
 static paz::RenderPass _renderPass;
 static paz::RenderPass _postPass;
@@ -420,7 +422,6 @@ static paz::Texture get_asset_image(const std::string& path)
     throw std::runtime_error("Unrecognized image extension \"" + ext + "\".");
 }
 
-
 void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     fontPath)
 {
@@ -654,12 +655,6 @@ latHist.push_back(cameraPos(2)/rHist.back());
 
         // Get geometry map.
 timer.start();
-        _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
-            LoadAction::Clear);
-        _geometryPass.cull(CullMode::Back);
-        _geometryPass.depth(DepthTestMode::Less);
-        _geometryPass.uniform("projection", projection);
-        _geometryPass.uniform("view", convert_mat(view));
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
         for(const auto& n : objects())
         {
@@ -671,31 +666,46 @@ timer.start();
                 objectsByModel[o->model()._t.get()].push_back(o);
             }
         }
+        for(const auto& n : objectsByModel)
+        {
+            if(!_instances.count(n.first) || _instances.at(n.first).size() !=
+                n.second.size()) //TEMP - should only need to change _numInstances if larger, not reinit whole buffer
+            {
+                _instances[n.first] = InstanceBuffer(n.second.size());
+                _instances.at(n.first).addAttribute(4, DataType::Float);
+                _instances.at(n.first).addAttribute(2, DataType::Float);
+            }
+        }
+        _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
+            LoadAction::Clear);
+        _geometryPass.cull(CullMode::Back);
+        _geometryPass.depth(DepthTestMode::Less);
+        _geometryPass.uniform("projection", projection);
+        _geometryPass.uniform("view", convert_mat(view));
 std::array<double, 4> timeSum = {};
 timeSum[0] += timer.get();
-        for(const auto& m : objectsByModel)
+        for(const auto& n : objectsByModel)
         {
 Timer timer1;
             std::array<std::vector<float>, 2> modelMatData;
-            modelMatData[0].resize(4*m.second.size());
-            modelMatData[1].resize(2*m.second.size());
-            for(std::size_t i = 0; i < m.second.size(); ++i)
+            modelMatData[0].resize(4*n.second.size());
+            modelMatData[1].resize(2*n.second.size());
+            for(std::size_t i = 0; i < n.second.size(); ++i)
             {
-                modelMatData[0][4*i + 0] = m.second[i]->xAtt();
-                modelMatData[0][4*i + 1] = m.second[i]->yAtt();
-                modelMatData[0][4*i + 2] = m.second[i]->zAtt();
-                modelMatData[0][4*i + 3] = m.second[i]->x() - cameraPos(0);
-                modelMatData[1][2*i + 0] = m.second[i]->y() - cameraPos(1);
-                modelMatData[1][2*i + 1] = m.second[i]->z() - cameraPos(2);
+                modelMatData[0][4*i + 0] = n.second[i]->xAtt();
+                modelMatData[0][4*i + 1] = n.second[i]->yAtt();
+                modelMatData[0][4*i + 2] = n.second[i]->zAtt();
+                modelMatData[0][4*i + 3] = n.second[i]->x() - cameraPos(0);
+                modelMatData[1][2*i + 0] = n.second[i]->y() - cameraPos(1);
+                modelMatData[1][2*i + 1] = n.second[i]->z() - cameraPos(2);
             }
 timeSum[1] += timer1.getAndRestart();
-            const VertexBuffer verts = m.second.back()->model()._v;
-            const IndexBuffer inds = m.second.back()->model()._i;
-            paz::InstanceBuffer buf;
-            buf.attribute(4, modelMatData[0]);
-            buf.attribute(2, modelMatData[1]);
+            _instances.at(n.first).subAttribute(0, modelMatData[0]);
+            _instances.at(n.first).subAttribute(1, modelMatData[1]);
 timeSum[2] += timer1.getAndRestart();
-            _geometryPass.draw(PrimitiveType::Triangles, verts, buf, inds);
+            _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
+                model()._v, _instances.at(n.first), n.second.back()->model().
+                _i);
 timeSum[3] += timer1.get();
         }
         _geometryPass.end();
