@@ -703,7 +703,11 @@ tempDone[j] = true;
             {
                 _geometryPass.read("diffTex", _defaultDiffTex);
             }
-            _geometryPass.uniform("emiss", n.second.back()->model()._emiss);
+            std::array<float, 4> emiss;
+            std::copy(n.second.back()->model()._emiss.begin(), n.second.back()->
+                model()._emiss.end(), emiss.begin());
+            emiss[3] = 1.f;
+            _geometryPass.uniform("emiss", emiss);
             _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
                 model()._v, _instances.at(n.first), n.second.back()->model().
                 _i);
@@ -783,6 +787,7 @@ tempDone[j] = true;
             }
         }
         std::stringstream{}.swap(_msgStream);
+        InstanceBuffer consoleChars; //TEMP - needs wider scope because of MTLBuffer purge issue
         if(_consoleMode != ConsoleMode::Disable && !_console.empty())
         {
             const float scale = std::round(FontScale*Window::UiScale());
@@ -845,11 +850,10 @@ tempDone[j] = true;
                 }
             }
 
-            InstanceBuffer chars;
-            chars.addAttribute(1, highlightAttr);
-            chars.addAttribute(1, characterAttr);
-            chars.addAttribute(1, colAttr);
-            chars.addAttribute(1, rowAttr);
+            consoleChars.addAttribute(1, highlightAttr);
+            consoleChars.addAttribute(1, characterAttr);
+            consoleChars.addAttribute(1, colAttr);
+            consoleChars.addAttribute(1, rowAttr);
 
             _textPass.begin({LoadAction::Load});
             _textPass.read("font", _font);
@@ -859,10 +863,12 @@ tempDone[j] = true;
             _textPass.uniform("baseWidth", _font.width());
             _textPass.uniform("baseHeight", _font.height());
             _textPass.uniform("scale", scale);
-            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, chars);
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
+                consoleChars);
             _textPass.end();
         }
 
+        InstanceBuffer menuChars; //TEMP - needs wider scope because of MTLBuffer purge issue
         if(_paused)
         {
             _consolePass.begin({LoadAction::Load});
@@ -1010,11 +1016,10 @@ tempDone[j] = true;
                 col = 0;
             }
 
-            InstanceBuffer chars;
-            chars.addAttribute(1, highlightAttr);
-            chars.addAttribute(1, characterAttr);
-            chars.addAttribute(1, colAttr);
-            chars.addAttribute(1, rowAttr);
+            menuChars.addAttribute(1, highlightAttr);
+            menuChars.addAttribute(1, characterAttr);
+            menuChars.addAttribute(1, colAttr);
+            menuChars.addAttribute(1, rowAttr);
 
             _textPass.begin({LoadAction::Load});
             _textPass.read("font", _font);
@@ -1024,7 +1029,7 @@ tempDone[j] = true;
             _textPass.uniform("baseWidth", _font.width());
             _textPass.uniform("baseHeight", _font.height());
             _textPass.uniform("scale", scale);
-            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, chars);
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, menuChars);
             _textPass.end();
         }
 

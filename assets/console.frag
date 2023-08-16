@@ -7,6 +7,6 @@ void main()
     color = vec4(0., 0., 0., 0.);
     if(uv.y < height && uv.x < width)
     {
-        color.a = 0.5;
+        color.a = 0.95;
     }
 }
