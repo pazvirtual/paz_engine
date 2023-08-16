@@ -49,7 +49,7 @@ public:
 
 class Platform : public paz::Object
 {
-    bool _shouldAscend = false;
+    double _timeAtTop = 0.1;
 
 public:
     Platform()
@@ -59,7 +59,7 @@ public:
     }
     void update() override
     {
-        if(_shouldAscend)
+        if(_timeAtTop < 0.1)
         {
             if(z() < 3.)
             {
@@ -69,7 +69,7 @@ public:
             {
                 z() = 3.;
                 zVel() = 0.;
-                _shouldAscend = false;
+                _timeAtTop += paz::Window::FrameTime();
             }
         }
         else
@@ -87,14 +87,14 @@ public:
     }
     void onCollide(const Object& o) override
     {
-        if(!_shouldAscend && o.z() > z())
+        if(o.z() > z())
         {
-            _shouldAscend = true;
+            _timeAtTop = 0.;
         }
     }
     void onInteract(const Object&) override
     {
-//        _shouldAscend = true;
+        _timeAtTop = 0.;
     }
 };
 
