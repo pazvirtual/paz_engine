@@ -49,10 +49,6 @@ void paz::InputData::resetEvents()
     _mouseReleased = {};
     _gamepadPressed = {};
     _gamepadReleased = {};
-    _gamepadLeftStick = {};
-    _gamepadRightStick = {};
-    _gamepadLeftTrigger = -1.;
-    _gamepadRightTrigger = -1.;
 }
 
 double paz::InputData::timestep() const
