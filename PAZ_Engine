@@ -113,6 +113,11 @@ namespace paz
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
     };
 
+    enum class ConsoleMode
+    {
+        Disable, ShowAll, CurrentFrame
+    };
+
     class App
     {
     public:
@@ -125,6 +130,7 @@ namespace paz
         static std::stringstream& MsgStream();
         static Bytes GetAsset(const std::string& path);
         static double PhysTime();
+        static void SetConsole(ConsoleMode mode);
     };
 }
 

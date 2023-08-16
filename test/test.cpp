@@ -645,5 +645,6 @@ int main()
         n.setDir(up(0), up(1), up(2));
     }
     paz::App::AttachCamera(player.head());
+    paz::App::SetConsole(paz::ConsoleMode::CurrentFrame);
     paz::App::Run();
 }

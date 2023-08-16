@@ -7,13 +7,16 @@
 #include <iomanip>
 #include <deque>
 
-//#define DO_FXAA
+#define DO_FXAA
 #define NO_FRICTION
 
 static constexpr std::size_t NumSteps = 100;
 static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
+static constexpr std::size_t MaxConsoleLines = 1000;
+static constexpr float FontScale = 1.5f;
+static constexpr int CharWidth = 5;
 
 static paz::Framebuffer _geometryBuffer;
 static paz::Framebuffer _renderBuffer;
@@ -41,13 +44,15 @@ static paz::RenderPass _postPass;
 static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
 #endif
+static paz::RenderPass _consolePass;
 static paz::RenderPass _textPass;
-static paz::RenderPass _plotPass;
 
 static paz::VertexBuffer _quadVertices;
 
 static paz::Texture _font;
 static std::stringstream _msgStream;
+static std::deque<std::string> _console;
+static paz::ConsoleMode _consoleMode = paz::ConsoleMode::Disable;
 
 static paz::Texture _defaultTex;
 
@@ -312,8 +317,26 @@ void main()
 }
 )===";
 
+static const std::string ConsoleFragSrc = 1 + R"===(
+uniform float width;
+uniform float height;
+in vec2 uv;
+layout(location = 0) out vec4 color;
+void main()
+{
+    if(uv.y < height && uv.x < width)
+    {
+        color = vec4(0., 0., 0., 0.5);
+    }
+    else
+    {
+        color = vec4(0.);
+    }
+}
+)===";
+
 static const std::string TextVertSrc = 1 + R"===(
-const int charWidth = 5;
+uniform int charWidth;
 uniform int baseWidth;
 uniform int baseHeight;
 uniform float scale;
@@ -326,14 +349,15 @@ layout(location = 0) in vec2 position;
 out vec2 uv;
 void main()
 {
+    float a = 1./float(charWidth);
     uv = 0.5*position.xy + 0.5;
-    gl_Position = vec4((uv.x +
-        0.2 + //TEMP
-        float(col)
-        *1.2 //TEMP
-        )*scale*float(charWidth)*2./float(width) - 1., (uv.y - 1.
-        - 0.1 //TEMP
-        - float(row))*scale*float(baseHeight)*2./float(height) + 1., 0, 1);
+    gl_Position = vec4
+    (
+        (uv.x + a + float(col)*(1. + a))*scale*float(charWidth)*2./float(width) - 1.,
+        (uv.y + float(row))*scale*float(baseHeight)*2./float(height) - 1.,
+        0,
+        1
+    );
     uv.x = (uv.x + float(character))*float(charWidth)/float(baseWidth);
 }
 )===";
@@ -348,22 +372,6 @@ void main()
     float t = texture(font, uv).x;
     float c = 1. - 0.8*highlight;
     color = vec4(1., 1., c, t);
-}
-)===";
-
-static const std::string PlotVertSrc = 1 + R"===(
-layout(location = 0) in vec2 pos;
-void main()
-{
-    gl_Position = vec4(pos, 0, 1);
-}
-)===";
-
-static const std::string PlotFragSrc = 1 + R"===(
-layout(location = 0) out vec4 color;
-void main()
-{
-    color = vec4(1.);
 }
 )===";
 
@@ -388,7 +396,6 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     const VertexFunction geometryVert(GeometryVertSrc);
     const VertexFunction quadVert(QuadVertSrc);
     const VertexFunction textVert(TextVertSrc);
-    const VertexFunction plotVert(PlotVertSrc);
     const FragmentFunction geometryFrag(GeometryFragSrc);
     const FragmentFunction sceneFrag(get_asset(sceneShaderPath).str());
 #ifdef DO_FXAA
@@ -396,8 +403,8 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     const FragmentFunction fxaaFrag(FxaaFragSrc);
 #endif
     const FragmentFunction postFrag(PostFragSrc);
+    const FragmentFunction consoleFrag(ConsoleFragSrc);
     const FragmentFunction textFrag(TextFragSrc);
-    const FragmentFunction plotFrag(PlotFragSrc);
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass = RenderPass(_renderBuffer, quadVert, sceneFrag);
@@ -408,8 +415,8 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 #else
     _postPass = RenderPass(quadVert, postFrag);
 #endif
+    _consolePass = RenderPass(quadVert, consoleFrag, BlendMode::Blend);
     _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
-    _plotPass = RenderPass(plotVert, plotFrag, BlendMode::Blend);
 
     _quadVertices.attribute(2, QuadPos);
 
@@ -697,7 +704,7 @@ _msgStream << "Avg. G-pass time: " << std::fixed << std::setprecision(5) << std:
 static decltype(timeSum) avgTimeSumSq;
 for(std::size_t i = 0; i < timeSum.size(); ++i){ avgTimeSumSq[i] = 0.99*avgTimeSumSq[i] + 0.01*timeSum[i]*timeSum[i]; }
 _msgStream << "Breakdown: " << std::fixed << std::setprecision(5);
-for(auto n : avgTimeSumSq){ _msgStream << std::setw(7) << std::sqrt(n) << " "; }
+for(std::size_t i = 0; i < avgTimeSumSq.size(); ++i){ _msgStream << std::setw(7) << std::sqrt(avgTimeSumSq[i]) << (i + 1 < avgTimeSumSq.size() ? " " : ""); }
 _msgStream << std::endl;
 
         // Render in HDR.
@@ -734,76 +741,89 @@ _msgStream << std::endl;
         _fxaaPass.end();
 #endif
 
-        const std::string msg = _msgStream.str();
-        if(!msg.empty())
+        std::string line;
+        std::size_t numNewRows = 0;
+        while(std::getline(_msgStream, line))
         {
-            std::stringstream{}.swap(_msgStream);
+            _console.push_back(line);
+            ++numNewRows;
+            if(_console.size() > MaxConsoleLines)
+            {
+                _console.pop_front();
+            }
+        }
+        std::stringstream{}.swap(_msgStream);
+        if(_consoleMode != ConsoleMode::Disable && !_console.empty())
+        {
+            const float scale = std::round(FontScale*Window::UiScale());
+            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
+                height()));
+            maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
+                _console.size());
+            if(_consoleMode == ConsoleMode::CurrentFrame)
+            {
+                maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
+                    numNewRows);
+            }
+
+            const float consoleHeight = std::min(1.f, (maxVisRows + 1.f/_font.
+                height())*scale*_font.height()/Window::ViewportHeight());
+            std::size_t maxCols = 0;
+            for(int i = 0; i < maxVisRows; ++i)
+            {
+                maxCols = std::max(maxCols, _console.rbegin()[i].size());
+            }
+            const float consoleWidth = std::min(1.f, (1 + maxCols*(CharWidth +
+                1))*scale/Window::ViewportWidth());
+
+            _consolePass.begin();
+            _consolePass.uniform("width", consoleWidth);
+            _consolePass.uniform("height", consoleHeight);
+            _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _consolePass.end();
 
             _textPass.begin();
             _textPass.read("font", _font);
             _textPass.uniform("width", Window::ViewportWidth());
             _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", CharWidth);
             _textPass.uniform("baseWidth", _font.width());
             _textPass.uniform("baseHeight", _font.height());
             bool highlight = false;
-            _textPass.uniform("scale", std::round(2.f*Window::UiScale()));
-            int row = 0;
-            int col = 0;
-            for(auto n : msg)
+            _textPass.uniform("scale", scale);
+            for(int row = 0; row < maxVisRows; ++row)
             {
-                if(n == '`')
+                int col = 0;
+                for(auto n : _console.rbegin()[row])
                 {
-                    highlight = !highlight;
-                    continue;
+                    if(n == '`')
+                    {
+                        highlight = !highlight;
+                    }
+                    else if(n == ' ')
+                    {
+                        ++col;
+                    }
+                    else if(n == '\t')
+                    {
+                        col = (col/4 + 1)*4;
+                    }
+                    else if(n >= '!' && n <= '~')
+                    {
+                        _textPass.uniform("highlight", static_cast<float>(
+                            highlight));
+                        _textPass.uniform("row", row);
+                        _textPass.uniform("col", col);
+                        _textPass.uniform("character", static_cast<int>(n -
+                            '!'));
+                        _textPass.draw(PrimitiveType::TriangleStrip,
+                            _quadVertices);
+                        ++col;
+                    }
                 }
-                if(n == '\n')
-                {
-                    ++row;
-                    col = 0;
-                    continue;
-                }
-                if(n >= '!' && n <= '~')
-                {
-                    _textPass.uniform("highlight", static_cast<float>(
-                        highlight));
-                    _textPass.uniform("row", row);
-                    _textPass.uniform("col", col);
-                    _textPass.uniform("character", static_cast<int>(n - '!'));
-                    _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
-                }
-                ++col;
             }
             _textPass.end();
         }
-
-        /*_plotPass.begin();
-        {
-            VertexBuffer plotData;
-            {
-                std::vector<float> v(2*60*30);
-                for(std::size_t i = 0; i < 60*30; ++i)
-                {
-                    v[2*i] = i*2./(60*30 - 1) - 1.;
-                    v[2*i + 1] = 0.3*std::log(rHist[i] - 50.) - 1.;
-                }
-                plotData.attribute(2, v);
-            }
-            _plotPass.draw(PrimitiveType::LineStrip, plotData);
-        }
-        {
-            VertexBuffer plotData;
-            {
-                std::vector<float> v(2*60*30);
-                for(std::size_t i = 0; i < 60*30; ++i)
-                {
-                    v[2*i] = i*2./(60*30 - 1) - 1.;
-                    v[2*i + 1] = 2.*latHist[i]/M_PI;
-                }
-                plotData.attribute(2, v);
-            }
-            _plotPass.draw(PrimitiveType::LineStrip, plotData);
-        }
-        _plotPass.end();*/
 
         Window::EndFrame();
     }
@@ -827,4 +847,9 @@ paz::Bytes paz::App::GetAsset(const std::string& path)
 double paz::App::PhysTime()
 {
     return std::min(0.1, Window::FrameTime());
+}
+
+void paz::App::SetConsole(ConsoleMode mode)
+{
+    _consoleMode = mode;
 }
