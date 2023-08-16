@@ -531,14 +531,14 @@ for(auto& a0 : objects())
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
-            if(o->model()._vc)
+            if(!o->model()._i.empty())
             {
-                _geometryPass.uniform("model", std::array<float, 16>{
-1, 0, 0, 0,
-0, 1, 0, 0,
-0, 0, 1, 0,
-static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z() + o->height()), 1});
-                _geometryPass.indexed(PrimitiveType::Triangles, o->model()._vg, o->model()._ig);
+                _geometryPass.uniform("model", std::array<float, 16>{1, 0, 0, 0,
+                    0, 1, 0, 0, 0, 0, 1, 0, static_cast<float>(o->x()),
+                    static_cast<float>(o->y()), static_cast<float>(o->z() + o->
+                    height()), 1});
+                _geometryPass.indexed(PrimitiveType::Triangles, o->model()._v,
+                    o->model()._i);
             }
         }
         _geometryPass.end();
