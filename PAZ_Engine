@@ -118,6 +118,9 @@ namespace paz
         double xPrev() const;
         double yPrev() const;
         double zPrev() const;
+        double xAttPrev() const;
+        double yAttPrev() const;
+        double zAttPrev() const;
 
         virtual void update(const InputData& inputs);
         virtual void onCollide(const Object& o, double xNor, double yNor, double

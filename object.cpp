@@ -36,6 +36,9 @@ static std::vector<paz::GravityType> GType;
 static std::vector<double> XPrev;
 static std::vector<double> YPrev;
 static std::vector<double> ZPrev;
+static std::vector<double> XAttPrev;
+static std::vector<double> YAttPrev;
+static std::vector<double> ZAttPrev;
 static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
@@ -83,6 +86,9 @@ void paz::do_physics(double gravity, double timestep)
     XPrev = X;
     YPrev = Y;
     ZPrev = Z;
+    XAttPrev = XAtt;
+    YAttPrev = YAtt;
+    ZAttPrev = ZAtt;
     for(std::size_t i = 0; i < n; ++i)
     {
         if(GType[i] == GravityType::Default)
@@ -802,6 +808,21 @@ double paz::Object::yPrev() const
 double paz::Object::zPrev() const
 {
     return ZPrev[objects().at(_id)];
+}
+
+double paz::Object::xAttPrev() const
+{
+    return XAttPrev[objects().at(_id)];
+}
+
+double paz::Object::yAttPrev() const
+{
+    return YAttPrev[objects().at(_id)];
+}
+
+double paz::Object::zAttPrev() const
+{
+    return ZAttPrev[objects().at(_id)];
 }
 
 double& paz::Object::collisionRadius()

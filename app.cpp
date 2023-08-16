@@ -338,6 +338,8 @@ void paz::App::Run()
         );
         while(!Window::Done() && !done)
         {
+            Window::PollEvents();
+
             if(startMenu.curPage() == 1 && (Window::KeyPressed(Key::Escape) ||
                 Window::GamepadPressed(GamepadButton::Start)))
             {
@@ -411,15 +413,6 @@ void paz::App::Run()
 
     while(!Window::Done())
     {
-        bool justPaused = false;
-        if(!Paused && (Window::KeyPressed(Key::Escape) || Window::
-            GamepadPressed(GamepadButton::Start)))
-        {
-            justPaused = true;
-            Paused = true;
-            pauseMenu.setState(0, 0);
-        }
-
         if(!Paused && MicObject && SoundSrc)
         {
             const Vec relPos{{SoundSrc->x() - MicObject->x(), SoundSrc->y() -
@@ -462,14 +455,25 @@ void paz::App::Run()
             AudioEngine::SetVolume(0.);
         }
 
+        bool justPaused = false;
         if(Paused)
         {
             AccumTime = 0.;
+            Window::PollEvents();
             input.resetEvents();
         }
         else
         {
             AccumTime += Window::FrameTime();
+
+            Window::PollEvents();
+            if(Window::KeyPressed(Key::Escape) || Window::GamepadPressed(
+                GamepadButton::Start))
+            {
+                justPaused = true;
+                Paused = true;
+                pauseMenu.setState(0, 0);
+            }
             input.copyEvents(Timestep, 0.2*LookSensitivity);
 
             while(AccumTime > 0.)
@@ -495,14 +499,22 @@ void paz::App::Run()
             }
         }
 
+        const double fac = 1. + AccumTime/Timestep;
+
+        const double cameraWAttPrev = std::sqrt(1. - CameraObject->xAttPrev()*
+            CameraObject->xAttPrev() - CameraObject->yAttPrev()*CameraObject->
+            yAttPrev() - CameraObject->zAttPrev()*CameraObject->zAttPrev());
         const double cameraWAtt = std::sqrt(1. - CameraObject->xAtt()*
             CameraObject->xAtt() - CameraObject->yAtt()*CameraObject->yAtt() -
             CameraObject->zAtt()*CameraObject->zAtt());
-        const Vec cameraAtt{{CameraObject->xAtt(), CameraObject->yAtt(),
-            CameraObject->zAtt(), cameraWAtt}};
+        const Vec cameraAtt = nlerp(Vec{{CameraObject->xAttPrev(),
+            CameraObject->yAttPrev(), CameraObject->zAttPrev(),
+            cameraWAttPrev}}, Vec{{CameraObject->xAtt(), CameraObject->yAtt(),
+            CameraObject->zAtt(), cameraWAtt}}, fac);
 
-        const Vec cameraPos{{CameraObject->x(), CameraObject->y(),
-            CameraObject->z()}};
+        const Vec cameraPos{{mix(CameraObject->xPrev(), CameraObject->x(), fac),
+            mix(CameraObject->yPrev(), CameraObject->y(), fac), mix(
+            CameraObject->zPrev(), CameraObject->z(), fac)}};
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             1e3);
@@ -550,9 +562,9 @@ void paz::App::Run()
                 modelMatData[0][4*i + 0] = n.second[i]->xAtt();
                 modelMatData[0][4*i + 1] = n.second[i]->yAtt();
                 modelMatData[0][4*i + 2] = n.second[i]->zAtt();
-                modelMatData[0][4*i + 3] = n.second[i]->x() - cameraPos(0);
-                modelMatData[1][2*i + 0] = n.second[i]->y() - cameraPos(1);
-                modelMatData[1][2*i + 1] = n.second[i]->z() - cameraPos(2);
+                modelMatData[0][4*i + 3] = mix(n.second[i]->xPrev(), n.second[i]->x(), fac) - cameraPos(0);
+                modelMatData[1][2*i + 0] = mix(n.second[i]->yPrev(), n.second[i]->y(), fac) - cameraPos(1);
+                modelMatData[1][2*i + 1] = mix(n.second[i]->zPrev(), n.second[i]->z(), fac) - cameraPos(2);
                 if(!n.second[i]->lights().empty())
                 {
                     const Vec model0{{modelMatData[0][4*i + 0], modelMatData[0][4*i + 1], modelMatData[0][4*i + 2], modelMatData[0][4*i + 3]}};
@@ -605,9 +617,9 @@ void paz::App::Run()
                 const double yw = yAtt*wAtt;
                 const double yz = yAtt*zAtt;
                 const double xw = xAtt*wAtt;
-                const Mat mv = view*Mat{{1. - 2.*(yy + zz), 2.*(xy - zw), 2.*(xz + yw), n->x() - cameraPos(0)},
-                                        {2.*(xy + zw), 1. - 2.*(xx + zz), 2.*(yz - xw), n->y() - cameraPos(1)},
-                                        {2.*(xz - yw), 2.*(yz + xw), 1. - 2.*(xx + yy), n->z() - cameraPos(2)},
+                const Mat mv = view*Mat{{1. - 2.*(yy + zz), 2.*(xy - zw), 2.*(xz + yw), mix(n->xPrev(), n->x(), fac) - cameraPos(0)},
+                                        {2.*(xy + zw), 1. - 2.*(xx + zz), 2.*(yz - xw), mix(n->yPrev(), n->y(), fac) - cameraPos(1)},
+                                        {2.*(xz - yw), 2.*(yz + xw), 1. - 2.*(xx + yy), mix(n->zPrev(), n->z(), fac) - cameraPos(2)},
                                         {0., 0., 0., 1.}};
                 for(const auto& m : n->lights())
                 {
