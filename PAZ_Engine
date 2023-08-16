@@ -84,7 +84,9 @@ namespace paz
         bool _gamepadActive;
         bool _mouseActive;
 
-        InputData(double timestep);
+        InputData() = default;
+        void copyEvents(double timestep);
+        void resetEvents();
 
     public:
         double timestep() const;

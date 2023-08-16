@@ -1,38 +1,58 @@
 #include "PAZ_Engine"
 
-paz::InputData::InputData(double timestep) : _timestep(timestep)
+void paz::InputData::copyEvents(double timestep)
 {
+    _timestep = timestep;
     //TEMP - would be nice to copy these structures directly in PAZ_Graphics
     for(int i = 0; i < NumKeys; ++i)
     {
-        _keyDown[i] = Window::KeyDown(static_cast<paz::Key>(i));
-        _keyPressed[i] = Window::KeyPressed(static_cast<paz::Key>(i));
-        _keyReleased[i] = Window::KeyReleased(static_cast<paz::Key>(i));
+        _keyDown[i] = Window::KeyDown(static_cast<Key>(i));
+        _keyPressed[i] = _keyPressed[i] || Window::KeyPressed(static_cast<Key>(
+            i));
+        _keyReleased[i] = _keyReleased[i] || Window::KeyReleased(static_cast<
+            Key>(i));
     }
     for(int i = 0; i < NumMouseButtons; ++i)
     {
         _mouseDown[i] = Window::MouseDown(i);
-        _mousePressed[i] = Window::MousePressed(i);
-        _mouseReleased[i] = Window::MouseReleased(i);
+        _mousePressed[i] = _mousePressed[i] || Window::MousePressed(i);
+        _mouseReleased[i] = _mouseReleased[i] || Window::MouseReleased(i);
     }
-    _mousePos = paz::Window::MousePos();
-    _scrollOffset = paz::Window::ScrollOffset();
+    _mousePos.first += Window::MousePos().first;
+    _mousePos.second += Window::MousePos().second;
+    _scrollOffset.first += Window::ScrollOffset().first;
+    _scrollOffset.second += Window::ScrollOffset().second;
     for(int i = 0; i < NumGamepadButtons; ++i)
     {
-        _gamepadDown[i] = Window::GamepadDown(static_cast<paz::GamepadButton>(
-            i));
-        _gamepadPressed[i] = Window::GamepadPressed(static_cast<paz::
-            GamepadButton>(i));
-        _gamepadReleased[i] = Window::GamepadReleased(static_cast<paz::
-            GamepadButton>(i));
+        _gamepadDown[i] = Window::GamepadDown(static_cast<GamepadButton>(i));
+        _gamepadPressed[i] = _gamepadPressed[i] || Window::GamepadPressed(
+            static_cast<GamepadButton>(i));
+        _gamepadReleased[i] = _gamepadReleased[i] || Window::GamepadReleased(
+            static_cast<GamepadButton>(i));
     }
     //TEMP - end
-    _gamepadLeftStick = paz::Window::GamepadLeftStick();
-    _gamepadRightStick = paz::Window::GamepadRightStick();
-    _gamepadLeftTrigger = paz::Window::GamepadLeftTrigger();
-    _gamepadRightTrigger = paz::Window::GamepadRightTrigger();
-    _gamepadActive = paz::Window::GamepadActive();
-    _mouseActive = paz::Window::MouseActive();
+    _gamepadLeftStick = Window::GamepadLeftStick();
+    _gamepadRightStick = Window::GamepadRightStick();
+    _gamepadLeftTrigger = Window::GamepadLeftTrigger();
+    _gamepadRightTrigger = Window::GamepadRightTrigger();
+    _gamepadActive = Window::GamepadActive();
+    _mouseActive = Window::MouseActive();
+}
+
+void paz::InputData::resetEvents()
+{
+    _mousePos = {}; // Assuming cursor is disabled.
+    _scrollOffset = {};
+    _keyPressed = {};
+    _keyReleased = {};
+    _mousePressed = {};
+    _mouseReleased = {};
+    _gamepadPressed = {};
+    _gamepadReleased = {};
+    _gamepadLeftStick = {};
+    _gamepadRightStick = {};
+    _gamepadLeftTrigger = -1.;
+    _gamepadRightTrigger = -1.;
 }
 
 double paz::InputData::timestep() const

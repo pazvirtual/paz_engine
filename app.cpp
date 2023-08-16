@@ -375,6 +375,8 @@ void paz::App::Run()
     }
     );
 
+    InputData input;
+
     while(!Window::Done())
     {
         bool justPaused = false;
@@ -431,19 +433,22 @@ void paz::App::Run()
         if(Paused)
         {
             AccumTime = 0.;
+            input.resetEvents();
         }
         else
         {
             AccumTime += Window::FrameTime();
+            input.copyEvents(Timestep);
 
-            InputData input(Timestep);
-
-            while(true) // Ensure that at least one update happens.
+            while(AccumTime > 0.)
             {
+                if(CurConsoleMode == ConsoleMode::LatestStep)
+                {
+                    std::stringstream{}.swap(::MsgStream);
+                }
+
                 do_physics(GravAcc, Timestep);
-
                 do_collisions(Threads, Timestep);
-
                 const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
                 for(const auto& n : tempObjects)
                 {
@@ -453,28 +458,8 @@ void paz::App::Run()
                     }
                 }
 
-                input._mousePos = {}; // Assuming cursor is disabled.
-                input._scrollOffset = {};
-                input._keyPressed = {};
-                input._keyReleased = {};
-                input._mousePressed = {};
-                input._mouseReleased = {};
-                input._gamepadPressed = {};
-                input._gamepadReleased = {};
-                input._gamepadLeftStick = {};
-                input._gamepadRightStick = {};
-                input._gamepadLeftTrigger = -1.;
-                input._gamepadRightTrigger = -1.;
-
+                input.resetEvents();
                 AccumTime -= Timestep;
-                if(AccumTime < Timestep)
-                {
-                    break;
-                }
-                if(CurConsoleMode == ConsoleMode::LatestStep)
-                {
-                    std::stringstream{}.swap(::MsgStream);
-                }
             }
         }
 
@@ -747,7 +732,15 @@ void paz::App::Run()
                 Console.pop_front();
             }
         }
-        std::stringstream{}.swap(::MsgStream);
+        if(CurConsoleMode == ConsoleMode::LatestStep)
+        {
+            ::MsgStream.clear();
+            ::MsgStream.seekg(0);
+        }
+        else
+        {
+            std::stringstream{}.swap(::MsgStream);
+        }
         InstanceBuffer consoleChars; //TEMP - needs wider scope because of MTLBuffer purge issue
         if(CurConsoleMode != ConsoleMode::Disable && !Console.empty())
         {
