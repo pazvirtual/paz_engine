@@ -27,11 +27,10 @@ void main()
     float spec = max(0., sign(cosViewAngle))*cosLightAngle*pow(abs(dot(nor,
         halfwayDir)), 32);
     vec3 ill = _intens*exp(-_falloff*lightDist); //TEMP
-    vec3 col = (0.01 + ill*mix(diff, spec, 0.3))*diffCol;
+    vec3 color = (0.01 + ill*mix(diff, spec, 0.3))*diffCol;
     float alpha = max(0.01, mix((1. - cosViewAngle)*(1. - cosViewAngle), spec,
         0.3));
-    col *= alpha;
     float w = pow(abs(_pos.z), -0.1);
-    accum = vec4(col, alpha)*w; // Assumes col is premultiplied by alpha
+    accum = vec4(color*alpha, alpha)*w;
     r = vec4(0., 0., 0., alpha);
 }
