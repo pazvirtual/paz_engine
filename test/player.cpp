@@ -1,6 +1,8 @@
 #include "player.hpp"
 #include <iomanip>
 
+#define NO_FRICTION
+
 Player::Player()
 {
     _head.collisionType() = paz::CollisionType::None;
