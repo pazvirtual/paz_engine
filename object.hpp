@@ -8,8 +8,8 @@
 namespace paz
 {
     std::unordered_map<std::uintptr_t, std::size_t>& objects();
-    void do_physics(double gravity);
-    void do_collisions(Threadpool& threads);
+    void do_physics(double gravity, double timestep);
+    void do_collisions(Threadpool& threads, double timestep);
 }
 
 #endif

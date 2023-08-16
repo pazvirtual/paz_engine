@@ -13,10 +13,10 @@ public:
     static constexpr double LaunchSpeed = 15.;
 
     Paintball();
-    void update() override;
+    void update(const paz::InputData&) override;
     void launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir);
-    void onCollide(const Object&, double, double, double, double, double,
-        double) override;
+    void onCollide(const Object&, double, double, double, double xB, double yB,
+        double zB) override;
 };
 
 #endif

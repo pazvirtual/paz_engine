@@ -32,7 +32,7 @@ Paintball::Paintball() : paz::Object()
     gravityType() = paz::GravityType::None;
 }
 
-void Paintball::update()
+void Paintball::update(const paz::InputData&)
 {
     if(_parent)
     {
@@ -59,13 +59,13 @@ void Paintball::launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
     zVel() = vel(2) + LaunchSpeed*dir(2);
 }
 
-void Paintball::onCollide(const Object& o, double, double, double, double,
-    double, double)
+void Paintball::onCollide(const Object& o, double, double, double, double xB,
+    double yB, double zB)
 {
     _parent.reset(o);
-    _relX = x() - o.x();
-    _relY = y() - o.y();
-    _relZ = z() - o.z();
+    _relX = x() - xB;
+    _relY = y() - yB;
+    _relZ = z() - zB;
     xVel() = o.xVel();
     yVel() = o.yVel();
     zVel() = o.zVel();

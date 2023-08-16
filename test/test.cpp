@@ -48,9 +48,9 @@ public:
         gravityType() = paz::GravityType::None; //TEMP
         stdGravParam() = 9.81*10.*10.;
     }
-    void update() override
+    void update(const paz::InputData& input) override
     {
-        _angle = paz::normalize_angle(_angle + AngRate*paz::App::PhysTime());
+        _angle = paz::normalize_angle(_angle + AngRate*input.timestep());
         x() = std::cos(_angle)*2.*Radius;
         y() = std::sin(_angle)*2.*Radius;
         z() = 0.;

@@ -69,7 +69,7 @@ static void grav_ode(double x, double y, double z, double u, double v, double w,
     }
 }
 
-void paz::do_physics(double gravity)
+void paz::do_physics(double gravity, double timestep)
 {
     std::vector<std::size_t> massiveIds;
     const auto n = X.size();
@@ -90,39 +90,39 @@ void paz::do_physics(double gravity)
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
                 du, dv, dw, massiveIds, gravity);
-            const double k1_1 = App::PhysTime()*dx;
-            const double k1_2 = App::PhysTime()*dy;
-            const double k1_3 = App::PhysTime()*dz;
-            const double k1_4 = App::PhysTime()*du;
-            const double k1_5 = App::PhysTime()*dv;
-            const double k1_6 = App::PhysTime()*dw;
+            const double k1_1 = timestep*dx;
+            const double k1_2 = timestep*dy;
+            const double k1_3 = timestep*dz;
+            const double k1_4 = timestep*du;
+            const double k1_5 = timestep*dv;
+            const double k1_6 = timestep*dw;
             grav_ode(X[i] + 0.5*k1_1, Y[i] + 0.5*k1_2, Z[i] + 0.5*k1_3, XVel[i]
                 + 0.5*k1_4, YVel[i] + 0.5*k1_5, ZVel[i] + 0.5*k1_6, dx, dy, dz,
                 du, dv, dw, massiveIds, gravity);
-            const double k2_1 = App::PhysTime()*dx;
-            const double k2_2 = App::PhysTime()*dy;
-            const double k2_3 = App::PhysTime()*dz;
-            const double k2_4 = App::PhysTime()*du;
-            const double k2_5 = App::PhysTime()*dv;
-            const double k2_6 = App::PhysTime()*dw;
+            const double k2_1 = timestep*dx;
+            const double k2_2 = timestep*dy;
+            const double k2_3 = timestep*dz;
+            const double k2_4 = timestep*du;
+            const double k2_5 = timestep*dv;
+            const double k2_6 = timestep*dw;
             grav_ode(X[i] + 0.5*k2_1, Y[i] + 0.5*k2_2, Z[i] + 0.5*k2_3, XVel[i]
                 + 0.5*k2_4, YVel[i] + 0.5*k2_5, ZVel[i] + 0.5*k2_6, dx, dy, dz,
                 du, dv, dw, massiveIds, gravity);
-            const double k3_1 = App::PhysTime()*dx;
-            const double k3_2 = App::PhysTime()*dy;
-            const double k3_3 = App::PhysTime()*dz;
-            const double k3_4 = App::PhysTime()*du;
-            const double k3_5 = App::PhysTime()*dv;
-            const double k3_6 = App::PhysTime()*dw;
+            const double k3_1 = timestep*dx;
+            const double k3_2 = timestep*dy;
+            const double k3_3 = timestep*dz;
+            const double k3_4 = timestep*du;
+            const double k3_5 = timestep*dv;
+            const double k3_6 = timestep*dw;
             grav_ode(X[i] + k3_1, Y[i] + k3_2, Z[i] + k3_3, XVel[i] + k3_4,
                 YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw,
                 massiveIds, gravity);
-            const double k4_1 = App::PhysTime()*dx;
-            const double k4_2 = App::PhysTime()*dy;
-            const double k4_3 = App::PhysTime()*dz;
-            const double k4_4 = App::PhysTime()*du;
-            const double k4_5 = App::PhysTime()*dv;
-            const double k4_6 = App::PhysTime()*dw;
+            const double k4_1 = timestep*dx;
+            const double k4_2 = timestep*dy;
+            const double k4_3 = timestep*dz;
+            const double k4_4 = timestep*du;
+            const double k4_5 = timestep*dv;
+            const double k4_6 = timestep*dw;
             static constexpr double c = 1./6.;
             X[i] += c*(k1_1 + 2.*(k2_1 + k3_1) + k4_1);
             Y[i] += c*(k1_2 + 2.*(k2_2 + k3_2) + k4_2);
@@ -136,9 +136,9 @@ void paz::do_physics(double gravity)
         }
         else
         {
-            X[i] += App::PhysTime()*XVel[i];
-            Y[i] += App::PhysTime()*YVel[i];
-            Z[i] += App::PhysTime()*ZVel[i];
+            X[i] += timestep*XVel[i];
+            Y[i] += timestep*YVel[i];
+            Z[i] += timestep*ZVel[i];
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
                 du, dv, dw, massiveIds, gravity);
@@ -166,12 +166,12 @@ void paz::do_physics(double gravity)
     {
         double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[
             i]*ZAtt[i]);
-        const double deltaX = normalize_angle(0.5*App::PhysTime()*XAngRate[i] +
-            Pi) - Pi;
-        const double deltaY = normalize_angle(0.5*App::PhysTime()*YAngRate[i] +
-            Pi) - Pi;
-        const double deltaZ = normalize_angle(0.5*App::PhysTime()*ZAngRate[i] +
-            Pi) - Pi;
+        const double deltaX = normalize_angle(0.5*timestep*XAngRate[i] + Pi) -
+            Pi;
+        const double deltaY = normalize_angle(0.5*timestep*YAngRate[i] + Pi) -
+            Pi;
+        const double deltaZ = normalize_angle(0.5*timestep*ZAngRate[i] + Pi) -
+            Pi;
         XAtt[i] +=  WAtt   *deltaX - ZAtt[i]*deltaY + YAtt[i]*deltaZ;
         YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
         ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;
@@ -184,7 +184,7 @@ void paz::do_physics(double gravity)
     }
 }
 
-void paz::do_collisions(Threadpool& threads)
+void paz::do_collisions(Threadpool& threads, double timestep)
 {
     // Identify all objects that can collide and precompute as much as possible.
     std::vector<std::size_t> a;
@@ -316,12 +316,11 @@ void paz::do_collisions(Threadpool& threads)
                     }
 
                     // Adjust positions to fit new trajectory.
-                    const double time0 = App::PhysTime()*(times[j] - times[0]);
+                    const double time0 = timestep*(times[j] - times[0]);
                     XPrev[a[i]] = x - time0*XVel[a[i]];
                     YPrev[a[i]] = y - time0*YVel[a[i]];
                     ZPrev[a[i]] = z - time0*ZVel[a[i]];
-                    const double time1 = App::PhysTime()*(times.back() - times[
-                        j]);
+                    const double time1 = timestep*(times.back() - times[j]);
                     X[a[i]] = x + time1*XVel[a[i]];
                     Y[a[i]] = y + time1*YVel[a[i]];
                     Z[a[i]] = z + time1*ZVel[a[i]];
@@ -604,7 +603,7 @@ paz::Object::~Object()
     }
 }
 
-void paz::Object::update() {}
+void paz::Object::update(const InputData&) {}
 
 void paz::Object::onCollide(const Object&, double, double, double, double,
     double, double) {}

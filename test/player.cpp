@@ -11,7 +11,7 @@ Player::Player()
     _head.gravityType() = paz::GravityType::None;
 }
 
-void Player::update()
+void Player::update(const paz::InputData& input)
 {
     const double wAtt = std::sqrt(1. - xAtt()*xAtt() - yAtt()*yAtt() - zAtt()*
         zAtt());
@@ -75,8 +75,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     {
         _mousePos = paz::Vec::Zero(2);
         xAngRate() = 0.;
-        zAngRate() = -0.1*(paz::Window::GamepadActive() ? 15.*paz::Window::
-            GamepadRightStick().first : paz::Window::MousePos().first);
+        zAngRate() = -0.1*(input.gamepadActive() ? 15.*input.
+            gamepadRightStick().first : input.mousePos().first);
         rot.setRow(0, right.trans());
         rot.setRow(1, baseForward.trans());
         rot.setRow(2, -gravDir.trans());
@@ -101,9 +101,9 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         }
 
         const double deltaGravPitch = gravPitch - _prevGravPitch;
-        const double deltaPitch = -deltaGravPitch + 0.1*(paz::Window::
-            GamepadActive() ? 15.*-paz::Window::GamepadRightStick().second :
-            paz::Window::MousePos().second)*paz::App::PhysTime();
+        const double deltaPitch = -deltaGravPitch + 0.1*(input.gamepadActive() ?
+            15.*-input.gamepadRightStick().second : input.mousePos().second)*
+            input.timestep();
         _pitch = std::max(-0.45*paz::Pi, std::min(0.45*paz::Pi, _pitch +
             deltaPitch));
     }
@@ -121,10 +121,10 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             _pitch *= 1. - fac;
         }
 
-        _mousePos(0) += (paz::Window::GamepadActive() ? 15.*paz::Window::
-            GamepadRightStick().first : paz::Window::MousePos().first);
-        _mousePos(1) += (paz::Window::GamepadActive() ? 15.*-paz::Window::
-            GamepadRightStick().second : paz::Window::MousePos().second);
+        _mousePos(0) += (input.gamepadActive() ? 15.*input.gamepadRightStick().
+            first : input.mousePos().first);
+        _mousePos(1) += (input.gamepadActive() ? 15.*-input.gamepadRightStick().
+            second : input.mousePos().second);
         const double norm = _mousePos.norm();
         if(norm > 100.)
         {
@@ -132,7 +132,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         }
         else if(norm > 0.1)
         {
-            _mousePos -= 50.0/norm*paz::App::PhysTime()*_mousePos;
+            _mousePos -= 50.0/norm*input.timestep()*_mousePos;
         }
         else
         {
@@ -170,11 +170,10 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         double u = 0.;
         double v = 0.;
         double w = 0.;
-        if(paz::Window::GamepadActive())
+        if(input.gamepadActive())
         {
-            const paz::Vec net = paz::Window::GamepadLeftStick().first*
-                groundRight - paz::Window::GamepadLeftStick().second*
-                groundForward;
+            const paz::Vec net = input.gamepadLeftStick().first*groundRight -
+                input.gamepadLeftStick().second*groundForward;
             const double norm = std::max(1., net.norm());
             u = 3.*net(0)/norm;
             v = 3.*net(1)/norm;
@@ -182,25 +181,25 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         }
         else
         {
-            if(paz::Window::KeyDown(paz::Key::A))
+            if(input.keyDown(paz::Key::A))
             {
                 u -= groundRight(0);
                 v -= groundRight(1);
                 w -= groundRight(2);
             }
-            if(paz::Window::KeyDown(paz::Key::D))
+            if(input.keyDown(paz::Key::D))
             {
                 u += groundRight(0);
                 v += groundRight(1);
                 w += groundRight(2);
             }
-            if(paz::Window::KeyDown(paz::Key::S))
+            if(input.keyDown(paz::Key::S))
             {
                 u -= groundForward(0);
                 v -= groundForward(1);
                 w -= groundForward(2);
             }
-            if(paz::Window::KeyDown(paz::Key::W))
+            if(input.keyDown(paz::Key::W))
             {
                 u += groundForward(0);
                 v += groundForward(1);
@@ -227,94 +226,92 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     }
     else if(reg == Regime::Low)
     {
-        if(paz::Window::GamepadActive())
+        if(input.gamepadActive())
         {
-            const paz::Vec net = paz::Window::GamepadLeftStick().first*
-                groundRight - paz::Window::GamepadLeftStick().second*
-                groundForward;
-            xVel() += 12.*net(0)*paz::App::PhysTime();
-            yVel() += 12.*net(1)*paz::App::PhysTime();
-            zVel() += 12.*net(2)*paz::App::PhysTime();
+            const paz::Vec net = input.gamepadLeftStick().first*groundRight -
+                input.gamepadLeftStick().second*groundForward;
+            xVel() += 12.*net(0)*input.timestep();
+            yVel() += 12.*net(1)*input.timestep();
+            zVel() += 12.*net(2)*input.timestep();
         }
         else
         {
-            if(paz::Window::KeyDown(paz::Key::A))
+            if(input.keyDown(paz::Key::A))
             {
-                xVel() -= 12.*groundRight(0)*paz::App::PhysTime();
-                yVel() -= 12.*groundRight(1)*paz::App::PhysTime();
-                zVel() -= 12.*groundRight(2)*paz::App::PhysTime();
+                xVel() -= 12.*groundRight(0)*input.timestep();
+                yVel() -= 12.*groundRight(1)*input.timestep();
+                zVel() -= 12.*groundRight(2)*input.timestep();
             }
-            if(paz::Window::KeyDown(paz::Key::D))
+            if(input.keyDown(paz::Key::D))
             {
-                xVel() += 12.*groundRight(0)*paz::App::PhysTime();
-                yVel() += 12.*groundRight(1)*paz::App::PhysTime();
-                zVel() += 12.*groundRight(2)*paz::App::PhysTime();
+                xVel() += 12.*groundRight(0)*input.timestep();
+                yVel() += 12.*groundRight(1)*input.timestep();
+                zVel() += 12.*groundRight(2)*input.timestep();
             }
-            if(paz::Window::KeyDown(paz::Key::W))
+            if(input.keyDown(paz::Key::W))
             {
-                xVel() += 12.*groundForward(0)*paz::App::PhysTime();
-                yVel() += 12.*groundForward(1)*paz::App::PhysTime();
-                zVel() += 12.*groundForward(2)*paz::App::PhysTime();
+                xVel() += 12.*groundForward(0)*input.timestep();
+                yVel() += 12.*groundForward(1)*input.timestep();
+                zVel() += 12.*groundForward(2)*input.timestep();
             }
-            if(paz::Window::KeyDown(paz::Key::S))
+            if(input.keyDown(paz::Key::S))
             {
-                xVel() -= 12.*groundForward(0)*paz::App::PhysTime();
-                yVel() -= 12.*groundForward(1)*paz::App::PhysTime();
-                zVel() -= 12.*groundForward(2)*paz::App::PhysTime();
+                xVel() -= 12.*groundForward(0)*input.timestep();
+                yVel() -= 12.*groundForward(1)*input.timestep();
+                zVel() -= 12.*groundForward(2)*input.timestep();
             }
         }
     }
     else
     {
-        if(paz::Window::GamepadActive())
+        if(input.gamepadActive())
         {
-            const paz::Vec net = paz::Window::GamepadLeftStick().first*right -
-                paz::Window::GamepadLeftStick().second*forward;
-            xVel() += 12.*net(0)*paz::App::PhysTime();
-            yVel() += 12.*net(1)*paz::App::PhysTime();
-            zVel() += 12.*net(2)*paz::App::PhysTime();
+            const paz::Vec net = input.gamepadLeftStick().first*right - input.
+                gamepadLeftStick().second*forward;
+            xVel() += 12.*net(0)*input.timestep();
+            yVel() += 12.*net(1)*input.timestep();
+            zVel() += 12.*net(2)*input.timestep();
         }
         else
         {
-            if(paz::Window::KeyDown(paz::Key::A))
+            if(input.keyDown(paz::Key::A))
             {
-                xVel() -= 12.*right(0)*paz::App::PhysTime();
-                yVel() -= 12.*right(1)*paz::App::PhysTime();
-                zVel() -= 12.*right(2)*paz::App::PhysTime();
+                xVel() -= 12.*right(0)*input.timestep();
+                yVel() -= 12.*right(1)*input.timestep();
+                zVel() -= 12.*right(2)*input.timestep();
             }
-            if(paz::Window::KeyDown(paz::Key::D))
+            if(input.keyDown(paz::Key::D))
             {
-                xVel() += 12.*right(0)*paz::App::PhysTime();
-                yVel() += 12.*right(1)*paz::App::PhysTime();
-                zVel() += 12.*right(2)*paz::App::PhysTime();
+                xVel() += 12.*right(0)*input.timestep();
+                yVel() += 12.*right(1)*input.timestep();
+                zVel() += 12.*right(2)*input.timestep();
             }
-            if(paz::Window::KeyDown(paz::Key::W))
+            if(input.keyDown(paz::Key::W))
             {
-                xVel() += 12.*forward(0)*paz::App::PhysTime();
-                yVel() += 12.*forward(1)*paz::App::PhysTime();
-                zVel() += 12.*forward(2)*paz::App::PhysTime();
+                xVel() += 12.*forward(0)*input.timestep();
+                yVel() += 12.*forward(1)*input.timestep();
+                zVel() += 12.*forward(2)*input.timestep();
             }
-            if(paz::Window::KeyDown(paz::Key::S))
+            if(input.keyDown(paz::Key::S))
             {
-                xVel() -= 12.*forward(0)*paz::App::PhysTime();
-                yVel() -= 12.*forward(1)*paz::App::PhysTime();
-                zVel() -= 12.*forward(2)*paz::App::PhysTime();
+                xVel() -= 12.*forward(0)*input.timestep();
+                yVel() -= 12.*forward(1)*input.timestep();
+                zVel() -= 12.*forward(2)*input.timestep();
             }
         }
     }
     double net = 0.;
-    if(paz::Window::GamepadActive())
+    if(input.gamepadActive())
     {
-        net = paz::Window::GamepadRightTrigger() - paz::Window::
-            GamepadLeftTrigger();
+        net = input.gamepadRightTrigger() - input.gamepadLeftTrigger();
     }
     else
     {
-        if(paz::Window::KeyDown(paz::Key::LeftShift))
+        if(input.keyDown(paz::Key::LeftShift))
         {
             net += 1.;
         }
-        if(paz::Window::KeyDown(paz::Key::LeftControl))
+        if(input.keyDown(paz::Key::LeftControl))
         {
             net -= 1.;
         }
@@ -322,13 +319,12 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     if(net)
     {
         _moving = true;
-        xVel() += 12.*up(0)*net*paz::App::PhysTime();
-        yVel() += 12.*up(1)*net*paz::App::PhysTime();
-        zVel() += 12.*up(2)*net*paz::App::PhysTime();
+        xVel() += 12.*up(0)*net*input.timestep();
+        yVel() += 12.*up(1)*net*input.timestep();
+        zVel() += 12.*up(2)*net*input.timestep();
     }
 
-    if(paz::Window::MousePressed(0) || paz::Window::GamepadPressed(paz::
-        GamepadButton::A))
+    if(input.mousePressed(0) || input.gamepadPressed(paz::GamepadButton::A))
     {
         const paz::Vec dir = paz::to_mat(cameraAtt).row(1).trans();
         const paz::Vec pos{{_head.x(), _head.y(), _head.z()}};

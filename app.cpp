@@ -67,6 +67,8 @@ static paz::ObjectPtr MicObject;
 static paz::ObjectPtr SoundSrc;
 
 static bool Paused;
+static double AccumTime;
+static constexpr double Timestep = 1./60.; //TEMP
 
 static double GravAcc;
 static paz::Threadpool Threads;
@@ -424,18 +426,48 @@ void paz::App::Run()
             AudioEngine::SetVolume(0.);
         }
 
-        if(!Paused)
+        if(Paused)
         {
-            do_physics(GravAcc);
+            AccumTime = 0.;
+        }
+        else
+        {
+            AccumTime += Window::FrameTime();
 
-            do_collisions(Threads);
+            InputData input(Timestep);
 
-            const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
-            for(const auto& n : tempObjects)
+            while(true) // Ensure that at least one update happens.
             {
-                if(objects().count(n.first))
+                do_physics(GravAcc, Timestep);
+
+                do_collisions(Threads, Timestep);
+
+                const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
+                for(const auto& n : tempObjects)
                 {
-                    reinterpret_cast<Object*>(n.first)->update();
+                    if(objects().count(n.first))
+                    {
+                        reinterpret_cast<Object*>(n.first)->update(input);
+                    }
+                }
+
+                input._mousePos = {}; // Assuming cursor is disabled.
+                input._scrollOffset = {};
+                input._keyPressed = {};
+                input._keyReleased = {};
+                input._mousePressed = {};
+                input._mouseReleased = {};
+                input._gamepadPressed = {};
+                input._gamepadReleased = {};
+                input._gamepadLeftStick = {};
+                input._gamepadRightStick = {};
+                input._gamepadLeftTrigger = -1.;
+                input._gamepadRightTrigger = -1.;
+
+                AccumTime -= Timestep;
+                if(AccumTime < Timestep)
+                {
+                    break;
                 }
             }
         }
@@ -869,11 +901,6 @@ std::stringstream& paz::App::MsgStream()
 paz::Bytes paz::App::GetAsset(const std::string& path)
 {
     return get_asset(path);
-}
-
-double paz::App::PhysTime()
-{
-    return std::min(0.1, Window::FrameTime());
 }
 
 void paz::App::SetConsole(ConsoleMode mode)

@@ -5,13 +5,14 @@
 
 class Npc : public paz::Object
 {
+    bool _collided;
     double _destYaw;
     double _walkTime;
     paz::Object _head;
 
 public:
     Npc();
-    void update() override;
+    void update(const paz::InputData& input) override;
     void onCollide(const Object&, double, double, double, double, double,
         double) override;
 };

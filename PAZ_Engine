@@ -22,11 +22,14 @@ namespace paz
 
     class Threadpool;
     class Triangle;
+    class VertexBuffer;
+    class IndexBuffer;
+    class Texture;
     class Model
     {
         friend class App;
         friend class Object;
-        friend void do_collisions(Threadpool&);
+        friend void do_collisions(Threadpool&, double);
 
         std::shared_ptr<std::vector<Triangle>> _t;
         double _radius = 0.;
@@ -58,10 +61,56 @@ namespace paz
             {});
     };
 
+    class InputData
+    {
+        friend class App;
+
+        double _timestep;
+        std::array<bool, NumKeys> _keyDown;
+        std::array<bool, NumKeys> _keyPressed;
+        std::array<bool, NumKeys> _keyReleased;
+        std::array<bool, NumMouseButtons> _mouseDown;
+        std::array<bool, NumMouseButtons> _mousePressed;
+        std::array<bool, NumMouseButtons> _mouseReleased;
+        std::pair<double, double> _mousePos;
+        std::pair<double, double> _scrollOffset;
+        std::array<bool, NumGamepadButtons> _gamepadDown;
+        std::array<bool, NumGamepadButtons> _gamepadPressed;
+        std::array<bool, NumGamepadButtons> _gamepadReleased;
+        std::pair<double, double> _gamepadLeftStick;
+        std::pair<double, double> _gamepadRightStick;
+        double _gamepadLeftTrigger;
+        double _gamepadRightTrigger;
+        bool _gamepadActive;
+        bool _mouseActive;
+
+        InputData(double timestep);
+
+    public:
+        double timestep() const;
+        bool keyDown(Key key) const;
+        bool keyPressed(Key key) const;
+        bool keyReleased(Key key) const;
+        bool mouseDown(int button) const;
+        bool mousePressed(int button) const;
+        bool mouseReleased(int button) const;
+        const std::pair<double, double>& mousePos() const;
+        const std::pair<double, double>& scrollOffset() const;
+        bool gamepadDown(GamepadButton button) const;
+        bool gamepadPressed(GamepadButton button) const;
+        bool gamepadReleased(GamepadButton button) const;
+        const std::pair<double, double>& gamepadLeftStick() const;
+        const std::pair<double, double>& gamepadRightStick() const;
+        double gamepadLeftTrigger() const;
+        double gamepadRightTrigger() const;
+        bool gamepadActive() const;
+        bool mouseActive() const;
+    };
+
     class Object
     {
         friend class App;
-        friend void do_collisions(Threadpool&);
+        friend void do_collisions(Threadpool&, double);
 
         const std::uintptr_t _id;
 
@@ -69,7 +118,7 @@ namespace paz
         double yPrev() const;
         double zPrev() const;
 
-        virtual void update();
+        virtual void update(const InputData& inputs);
         virtual void onCollide(const Object& o, double xNor, double yNor, double
             zNor, double xB, double yB, double zB);
         virtual void onInteract(const Object& o);
@@ -172,7 +221,6 @@ namespace paz
         static double CameraYaw();
         static std::stringstream& MsgStream();
         static Bytes GetAsset(const std::string& path);
-        static double PhysTime();
         static void SetConsole(ConsoleMode mode);
         static void SetGravity(double acc);
         static void SetSound(const Object& o, const AudioTrack& sound, bool
