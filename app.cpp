@@ -487,13 +487,17 @@ for(auto& a0 : objects())
             continue;
         }
 
-        double x = a->x() - b->x();
-        double y = a->y() - b->y();
-        double z = a->z() - b->z() + a->collisionRadius();
+        const double x = a->x() - b->x();
+        const double y = a->y() - b->y();
+        const double z = a->z() - b->z() + a->collisionRadius();
+
+        const double xPrev = a->xPrev() - b->xPrev();
+        const double yPrev = a->yPrev() - b->yPrev();
+        const double zPrev = a->zPrev() - b->zPrev() + a->collisionRadius();
 
         double hx, hy, hz;
         const double c = b->model().collide(x, y, z, hx, hy, hz, a->
-            collisionRadius());
+            collisionRadius(), xPrev, yPrev, zPrev);
         if(c < minDist)
         {
             collided = true;

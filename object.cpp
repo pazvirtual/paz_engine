@@ -20,6 +20,9 @@ static std::vector<paz::CollisionType> CType;
 static std::vector<double> LocalNorX;
 static std::vector<double> LocalNorY;
 static std::vector<double> LocalNorZ;
+static std::vector<double> XPrev;
+static std::vector<double> YPrev;
+static std::vector<double> ZPrev;
 static std::vector<char> Grounded;
 static std::vector<double> Height;
 static std::vector<double> CRadius;
@@ -27,16 +30,22 @@ static std::vector<double> CRadius;
 void paz::physics()
 {
     const std::size_t n = X.size();
+    XPrev.resize(n);
+    YPrev.resize(n);
+    ZPrev.resize(n);
     for(std::size_t i = 0; i < n; ++i)
     {
+        XPrev[i] = X[i];
         X[i] += paz::Window::FrameTime()*XVel[i];
     }
     for(std::size_t i = 0; i < n; ++i)
     {
+        YPrev[i] = Y[i];
         Y[i] += paz::Window::FrameTime()*YVel[i];
     }
     for(std::size_t i = 0; i < n; ++i)
     {
+        ZPrev[i] = Z[i];
         Z[i] += paz::Window::FrameTime()*ZVel[i];
     }
 }
@@ -194,6 +203,21 @@ double& paz::Object::localNorZ()
 double paz::Object::localNorZ() const
 {
     return LocalNorZ[objects().at(_id)];
+}
+
+double paz::Object::xPrev() const
+{
+    return XPrev[objects().at(_id)];
+}
+
+double paz::Object::yPrev() const
+{
+    return YPrev[objects().at(_id)];
+}
+
+double paz::Object::zPrev() const
+{
+    return ZPrev[objects().at(_id)];
 }
 
 char& paz::Object::grounded()
