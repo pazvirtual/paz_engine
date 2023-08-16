@@ -8,7 +8,7 @@ layout(location = 0) out vec4 color;
 void main()
 {
     vec3 dir = normalize((inverse(projection)*vec4(2.*uv - 1., 1., 1.)).xyz);
-    vec3 nor = normalize(texture(normalMap, uv).rgb);
+    vec3 nor = texture(normalMap, uv).rgb;
     float cosAngle = max(0., dot(nor, sun.xyz));
     float diff = cosAngle;
     vec3 halfwayDir = normalize(sun.xyz - dir);

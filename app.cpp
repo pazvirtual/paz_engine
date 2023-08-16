@@ -123,7 +123,7 @@ layout(location = 0/*1*/) out vec4 normal;
 void main()
 {
 //    material = mtl;
-    normal = norCs;
+    normal = vec4(normalize(norCs.xyz), 0.);
 }
 )====";
 
