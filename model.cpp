@@ -3,6 +3,7 @@
 #include "shared.hpp"
 #include <limits>
 #include <cmath>
+#include <numeric>
 
 paz::Model::Model(const std::string& path, int idx, double zOffset, double
     scale, const std::string& texPath)
@@ -67,6 +68,44 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
         _tex = Texture(get_asset_image(texPath), MinMagFilter::Linear,
             MinMagFilter::Linear, MipmapFilter::Linear);
     }
+}
+
+paz::Model::Model(const std::vector<float>& positions) //TEMP
+{
+    const std::size_t numVertices = positions.size()/4;
+    const std::size_t numFaces = numVertices/3;
+    _t = std::make_shared<std::vector<Triangle>>();
+    _t->reserve(numFaces);
+    double radiusSq = 0.;
+    std::vector<float> normals(4*numVertices, 0.f);
+    for(std::size_t i = 0; i < numVertices; i += 3)
+    {
+        const std::size_t i0 = 4*i;
+        const std::size_t i1 = 4*(i + 1);
+        const std::size_t i2 = 4*(i + 2);
+        const double t0x = positions[i0];
+        const double t0y = positions[i0 + 1];
+        const double t0z = positions[i0 + 2];
+        const double t1x = positions[i1];
+        const double t1y = positions[i1 + 1];
+        const double t1z = positions[i1 + 2];
+        const double t2x = positions[i2];
+        const double t2y = positions[i2 + 1];
+        const double t2z = positions[i2 + 2];
+        _t->emplace_back(t0x, t0y, t0z, t1x, t1y, t1z, t2x, t2y, t2z);
+//        normals[...] = ...
+        radiusSq = std::max(radiusSq, t0x*t0x + t0y*t0y + t0z*t0z);
+        radiusSq = std::max(radiusSq, t1x*t1x + t1y*t1y + t1z*t1z);
+        radiusSq = std::max(radiusSq, t2x*t2x + t2y*t2y + t2z*t2z);
+    }
+    _radius = std::sqrt(radiusSq);
+    _v.addAttribute(4, positions);
+    _v.addAttribute(4, normals);
+    _v.addAttribute(1, std::vector<unsigned int>(numVertices, 1));
+    _v.addAttribute(2, std::vector<float>(2*numVertices, 0.25f));
+    std::vector<unsigned int> indices(numVertices);
+    std::iota(indices.begin(), indices.end(), 0);
+    _i = IndexBuffer(indices);
 }
 
 double paz::Model::collide(double x, double y, double z, double radius, double&

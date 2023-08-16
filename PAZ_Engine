@@ -46,6 +46,7 @@ namespace paz
         Model() = default;
         Model(const std::string& path, int idx = 0, double zOffset = 0., double
             scale = 1., const std::string& texPath = "");
+        Model(const std::vector<float>& positions);
     };
 
     class Object
