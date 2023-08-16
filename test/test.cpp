@@ -58,6 +58,9 @@ public:
         xAtt() = -att(0);
         yAtt() = -att(1);
         zAtt() = -att(2);
+        _head.xAtt() = -att(0);
+        _head.yAtt() = -att(1);
+        _head.zAtt() = -att(2);
     }
     void onCollide(const Object&) override
     {
