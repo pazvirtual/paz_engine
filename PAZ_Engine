@@ -19,6 +19,7 @@ namespace paz
         friend class App;
 
         std::shared_ptr<std::vector<paz::Triangle>> _t;
+        double _radius = 0.;
         VertexBuffer _v;
         IndexBuffer _i;
 

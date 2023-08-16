@@ -25,6 +25,7 @@ paz::Model::Model(const std::string& path, int idx, double zOffset)
             positions[idx][i + 2] += zOffset;
         }
     }
+    double radiusSq = 0.;
     for(std::size_t i = 0; i < indices[idx].size(); i += 3)
     {
         const std::size_t i0 = 4*indices[idx][i];
@@ -40,7 +41,11 @@ paz::Model::Model(const std::string& path, int idx, double zOffset)
         const double t2y = positions[idx][i2 + 1];
         const double t2z = positions[idx][i2 + 2];
         _t->emplace_back(t0x, t0y, t0z, t1x, t1y, t1z, t2x, t2y, t2z);
+        radiusSq = std::max(radiusSq, t0x*t0x + t0y*t0y + t0z*t0z);
+        radiusSq = std::max(radiusSq, t1x*t1x + t1y*t1y + t1z*t1z);
+        radiusSq = std::max(radiusSq, t2x*t2x + t2y*t2y + t2z*t2z);
     }
+    _radius = std::sqrt(radiusSq);
     _v.attribute(4, positions[idx]);
     _v.attribute(4, normals[idx]);
     _v.attribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
@@ -56,6 +61,10 @@ double paz::Model::collide(double x, double y, double z, double radius, double&
     xNor = 0.;
     yNor = 0.;
     zNor = 1.;
+    if(std::sqrt(x*x + y*y + z*z) > _radius + radius)
+    {
+        return minDist;
+    }
     double gx = 0.;
     double gy = 0.;
     double gz = 0.;

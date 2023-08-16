@@ -185,31 +185,35 @@ public:
 int main()
 {
     paz::App::Init("scene.frag", "font.pbm");
-    Ground = paz::Model("plane.obj");
-    Tri = paz::Model("tri.obj");
-    PlatformModel = paz::Model("platform.obj");
+//    Ground = paz::Model("plane.obj");
+//    Tri = paz::Model("tri.obj");
+//    PlatformModel = paz::Model("platform.obj");
     Sphere50 = paz::Model("sphere50.obj");
-    Sphere = paz::Model("unitsphere.obj");
+//    Sphere = paz::Model("unitsphere.obj");
     Body = paz::Model("persontest.obj", 0, -0.2);
     Head = paz::Model("persontest.obj", 1, -0.1);
     Player player;
     player.z() = Radius + 10.;
-    Ball b;
-    b.z() = Radius;
-    b.x() = 5.;
-    World w;
-    std::vector<World1> w1(10);
-    for(std::size_t i = 0; i < w1.size(); ++i)
-    {
-        w1[i].y() = 20.*i;
-        w1[i].z() = Radius - 2.;
-    }
-    Platform p;
+//    Ball b;
+//    b.z() = Radius;
+//    b.x() = 5.;
+    std::vector<World> w(5);
+    w[1].x() = Radius;
+    w[2].x() = -Radius;
+    w[3].y() = Radius;
+    w[4].y() = -Radius;
+//    std::vector<World1> w1(10);
+//    for(std::size_t i = 0; i < w1.size(); ++i)
+//    {
+//        w1[i].y() = 20.*i;
+//        w1[i].z() = Radius - 2.;
+//    }
+//    Platform p;
     Npc npc0;
     npc0.x() = 10.;
     npc0.z() = Radius;
     Npc npc1;
-    npc1.x() = Radius;
+    npc1.x() = 2.*Radius;
     npc1.z() = 10.;
     paz::App::AttachCamera(player);
     paz::App::Run();

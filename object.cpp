@@ -40,15 +40,24 @@ static std::vector<double> ZDown;
 static void grav_ode(double x, double y, double z, double u, double v, double w,
     double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
 {
-    static constexpr double StdGravParam = 9.81*50.*50.;
-    const double radius = std::sqrt(x*x + y*y + z*z);
-    const double c = -StdGravParam/(radius*radius*radius);
+    static constexpr double StdGravParam = 0.2*9.81*50.*50.;
+    const double radius0 = std::sqrt(x*x + y*y + z*z);
+    const double radius1 = std::sqrt((x - 50.)*(x - 50.) + y*y + z*z);
+    const double radius2 = std::sqrt((x + 50.)*(x + 50.) + y*y + z*z);
+    const double radius3 = std::sqrt(x*x + (y - 50.)*(y - 50.) + z*z);
+    const double radius4 = std::sqrt(x*x + (y + 50.)*(y + 50.) + z*z);
+    const double c0 = -StdGravParam/(radius0*radius0*radius0);
+    const double c1 = -StdGravParam/(radius1*radius1*radius1);
+    const double c2 = -StdGravParam/(radius2*radius2*radius2);
+    const double c3 = -StdGravParam/(radius3*radius3*radius3);
+    const double c4 = -StdGravParam/(radius4*radius4*radius4);
+    const double sum = c0 + c1 + c2 + c3 + c4;
     dx = u;
     dy = v;
     dz = w;
-    du = c*x;
-    dv = c*y;
-    dw = c*z;
+    du = sum*x - c1*50. + c2*50.;
+    dv = sum*y - c3*50. + c4*50.;
+    dw = sum*z;
 }
 
 void paz::physics()
