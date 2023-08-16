@@ -1,4 +1,5 @@
 #include "object.hpp"
+#include "ui.hpp"
 #include "shared.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
@@ -186,161 +187,47 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
         Linear, WrapMode::Repeat, WrapMode::Repeat);
 }
 
-static const std::vector<std::vector<std::string>> Buttons = {{"Start",
-    "Options", "Quit"}, {"Fullscreen", "HiDPI", "FXAA", "Back"}, {"Resume",
-    "Options", "Quit"}};
-
 void paz::App::Run()
 {
-    int curButton = 0;
-    int menuPage = 0;
+    Font menuFont(_font, 2*FontScale, CharWidth);
+
     {
         bool done = false;
+        Menu startMenu(menuFont, _title,
+        {
+            {
+                {"Start", [&](Menu&){ done = true; }},
+                {"Options", [](Menu& m){ m.setState(1, 0); }},
+                {"Quit", [](Menu&){ Window::Quit(); }}
+            },
+            {
+                {"Fullscreen", [](Menu&){ Window::MakeFullscreen(); }},
+                {"HiDPI", [](Menu&){ Window::DisableHidpi(); }},
+                {"FXAA", [](Menu&){ _fxaaEnabled = false; }},
+                {"Back", [](Menu& m){ m.setState(0, 1); }}
+            }
+        }
+        );
         while(!Window::Done() && !done)
         {
-            if(Window::MouseActive())
+            if(startMenu.curPage() == 1 && (Window::KeyPressed(Key::Escape) ||
+                Window::GamepadPressed(GamepadButton::Start)))
             {
-                Window::SetCursorMode(CursorMode::Normal);
-            }
-            else
-            {
-                Window::SetCursorMode(CursorMode::Disable);
+                startMenu.setState(0, 1);
             }
 
-            if(menuPage == 1 && (Window::KeyPressed(Key::Escape) || Window::
-                GamepadPressed(GamepadButton::Start)))
-            {
-                menuPage = 0;
-                curButton = 1;
-            }
-
-            if(curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
-                Key::Space) || Window::KeyPressed(Key::Enter) || Window::
-                KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
-                GamepadButton::A)))
-            {
-                if(menuPage == 0)
-                {
-                    switch(curButton)
-                    {
-                        case 0: done = true; break;
-                        case 1:
-                            menuPage = 1;
-                            curButton = 0;
-                            break;
-                        case 2: Window::Quit(); break;
-                    }
-                }
-                else if(menuPage == 1)
-                {
-                    switch(curButton)
-                    {
-                        case 0: Window::MakeFullscreen(); break;
-                        case 1: Window::DisableHidpi(); break;
-                        case 2: _fxaaEnabled = false; break;
-                        case 3:
-                            menuPage = 0;
-                            curButton = 1;
-                            break;
-                    }
-                }
-            }
-            if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
-                Window::GamepadPressed(GamepadButton::Down))
-            {
-                curButton = std::min(static_cast<std::size_t>(curButton) + 1,
-                    Buttons[menuPage].size() - 1);
-            }
-            if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
-                 Window::GamepadPressed(GamepadButton::Up))
-            {
-                curButton = std::max(curButton - 1, 0);
-            }
-            const float scale = std::round(2.f*FontScale*Window::UiScale());
-            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
-                height()));
-            const int startRow = (maxVisRows + Buttons[menuPage].size() - 1)/2;
-
-            if(Window::MouseActive())
-            {
-                curButton = -1;
-                for(std::size_t i = 0; i < Buttons[menuPage].size(); ++i)
-                {
-                    const double x0 = 0;
-                    const double x1 = x0 + (Buttons[menuPage][i].size() + 2)*
-                        scale*(CharWidth + 1);
-                    const double y0 = (startRow - i - 1)*scale*_font.height();
-                    const double y1 = y0 + scale*_font.height();
-                    if(Window::MousePos().first >= x0 && Window::MousePos().
-                        first < x1 && Window::MousePos().second >= y0 &&
-                        Window::MousePos().second < y1)
-                    {
-                        curButton = i;
-                    }
-                }
-            }
-
-            std::vector<float> highlightAttr;
-            std::vector<int> characterAttr;
-            std::vector<int> colAttr;
-            std::vector<int> rowAttr;
-            int row = 0;
-            int col = 0;
-            for(std::size_t i = 0; i < Buttons[menuPage].size() + 1; ++i)
-            {
-                const bool highlight = curButton >= 0 && i == static_cast<std::
-                    size_t>(curButton) + 1;
-                std::string str = (i ? Buttons[menuPage][i - 1] : (menuPage ?
-                    "Options" : _title));
-                if(i)
-                {
-                    if(highlight)
-                    {
-                        str = "->" + str;
-                    }
-                    else
-                    {
-                        str = "> " + str;
-                    }
-                }
-                for(auto n : str)
-                {
-                    if(n == ' ')
-                    {
-                        ++col;
-                    }
-                    else if(n == '\t')
-                    {
-                        col = (col/4 + 1)*4;
-                    }
-                    else if(n >= '!' && n <= '~')
-                    {
-                        highlightAttr.push_back(highlight);
-                        characterAttr.push_back(n - '!');
-                        colAttr.push_back(col);
-                        rowAttr.push_back(startRow - row);
-                        ++col;
-                    }
-                }
-                ++row;
-                col = 0;
-            }
-
-            InstanceBuffer chars;
-            chars.addAttribute(1, highlightAttr);
-            chars.addAttribute(1, characterAttr);
-            chars.addAttribute(1, colAttr);
-            chars.addAttribute(1, rowAttr);
+            startMenu.update();
 
             _textPass.begin({LoadAction::Clear});
-            _textPass.read("font", _font);
+            _textPass.read("font", startMenu.font().tex());
             _textPass.uniform("width", Window::ViewportWidth());
             _textPass.uniform("height", Window::ViewportHeight());
-            _textPass.uniform("charWidth", CharWidth);
-            _textPass.uniform("baseWidth", _font.width());
-            _textPass.uniform("baseHeight", _font.height());
-            _textPass.uniform("scale", scale);
-            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, chars);
+            _textPass.uniform("charWidth", startMenu.font().charWidth());
+            _textPass.uniform("baseWidth", startMenu.font().tex().width());
+            _textPass.uniform("baseHeight", startMenu.font().tex().height());
+            _textPass.uniform("scale", startMenu.font().curScale());
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
+                startMenu.chars());
             _textPass.end();
 
             Window::EndFrame();
@@ -353,6 +240,27 @@ void paz::App::Run()
 
     Window::SetCursorMode(CursorMode::Disable);
 
+    Menu pauseMenu(menuFont, "Paused",
+    {
+        {
+            {"Resume", [&](Menu&)
+                {
+                    _paused = false;
+                    Window::SetCursorMode(CursorMode::Disable);
+                }
+            },
+            {"Options", [](Menu& m){ m.setState(1, 0); }},
+            {"Quit", [](Menu&){ Window::Quit(); }}
+        },
+        {
+            {"Fullscreen", [](Menu&){ Window::MakeFullscreen(); }},
+            {"HiDPI", [](Menu&){ Window::DisableHidpi(); }},
+            {"FXAA", [](Menu&){ _fxaaEnabled = false; }},
+            {"Back", [](Menu& m){ m.setState(0, 1); }}
+        }
+    }
+    );
+
     while(!Window::Done())
     {
         bool justPaused = false;
@@ -361,8 +269,7 @@ void paz::App::Run()
         {
             justPaused = true;
             _paused = true;
-            curButton = 0;
-            menuPage = 2;
+            pauseMenu.setState(0, 0);
         }
 
         if(_micObject && !_paused && objects().count(reinterpret_cast<std::
@@ -862,7 +769,7 @@ tempDone[j] = true;
             _textPass.uniform("charWidth", CharWidth);
             _textPass.uniform("baseWidth", _font.width());
             _textPass.uniform("baseHeight", _font.height());
-            _textPass.uniform("scale", scale);
+            _textPass.uniform("scale", static_cast<int>(scale));
             _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
                 consoleChars);
             _textPass.end();
@@ -877,159 +784,32 @@ tempDone[j] = true;
             _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
             _consolePass.end();
 
-            if(Window::MouseActive())
-            {
-                Window::SetCursorMode(CursorMode::Normal);
-            }
-            else
-            {
-                Window::SetCursorMode(CursorMode::Disable);
-            }
-
             if(!justPaused && (Window::KeyPressed(Key::Escape) || Window::
                 GamepadPressed(GamepadButton::Start)))
             {
-                if(menuPage == 1)
-                {
-                    menuPage = 2;
-                    curButton = 1;
-                }
-                else if(menuPage == 2)
+                if(pauseMenu.curPage() == 0)
                 {
                     _paused = false;
                     Window::SetCursorMode(CursorMode::Disable);
                 }
-            }
-
-            if(curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
-                Key::Space) || Window::KeyPressed(Key::Enter) || Window::
-                KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
-                GamepadButton::A)))
-            {
-                if(menuPage == 2)
+                else if(pauseMenu.curPage() == 1)
                 {
-                    switch(curButton)
-                    {
-                        case 0:
-                            _paused = false;
-                            Window::SetCursorMode(CursorMode::Disable);
-                            break;
-                        case 1:
-                            menuPage = 1;
-                            curButton = 0;
-                            break;
-                        case 2: Window::Quit(); break;
-                    }
-                }
-                else if(menuPage == 1)
-                {
-                    switch(curButton)
-                    {
-                        case 0: Window::MakeFullscreen(); break;
-                        case 1: Window::DisableHidpi(); break;
-                        case 2: _fxaaEnabled = false; break;
-                        case 3:
-                            menuPage = 2;
-                            curButton = 1;
-                            break;
-                    }
-                }
-            }
-            if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
-                Window::GamepadPressed(GamepadButton::Down))
-            {
-                curButton = std::min(static_cast<std::size_t>(curButton) + 1,
-                    Buttons[menuPage].size() - 1);
-            }
-            if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
-                 Window::GamepadPressed(GamepadButton::Up))
-            {
-                curButton = std::max(curButton - 1, 0);
-            }
-            const float scale = std::round(2.f*FontScale*Window::UiScale());
-            int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*_font.
-                height()));
-            const int startRow = (maxVisRows + Buttons[menuPage].size() - 1)/2;
-
-            if(Window::MouseActive())
-            {
-                curButton = -1;
-                for(std::size_t i = 0; i < Buttons[menuPage].size(); ++i)
-                {
-                    const double x0 = 0;
-                    const double x1 = x0 + (Buttons[menuPage][i].size() + 2)*
-                        scale*(CharWidth + 1);
-                    const double y0 = (startRow - i - 1)*scale*_font.height();
-                    const double y1 = y0 + scale*_font.height();
-                    if(Window::MousePos().first >= x0 && Window::MousePos().
-                        first < x1 && Window::MousePos().second >= y0 &&
-                        Window::MousePos().second < y1)
-                    {
-                        curButton = i;
-                    }
+                    pauseMenu.setState(0, 1);
                 }
             }
 
-            std::vector<float> highlightAttr;
-            std::vector<int> characterAttr;
-            std::vector<int> colAttr;
-            std::vector<int> rowAttr;
-            int row = 0;
-            int col = 0;
-            for(std::size_t i = 0; i < Buttons[menuPage].size() + 1; ++i)
-            {
-                const bool highlight = curButton >= 0 && i == static_cast<std::
-                    size_t>(curButton) + 1;
-                std::string str = (i ? Buttons[menuPage][i - 1] : (menuPage == 1
-                    ? "Options" : "Paused"));
-                if(i)
-                {
-                    if(highlight)
-                    {
-                        str = "->" + str;
-                    }
-                    else
-                    {
-                        str = "> " + str;
-                    }
-                }
-                for(auto n : str)
-                {
-                    if(n == ' ')
-                    {
-                        ++col;
-                    }
-                    else if(n == '\t')
-                    {
-                        col = (col/4 + 1)*4;
-                    }
-                    else if(n >= '!' && n <= '~')
-                    {
-                        highlightAttr.push_back(highlight);
-                        characterAttr.push_back(n - '!');
-                        colAttr.push_back(col);
-                        rowAttr.push_back(startRow - row);
-                        ++col;
-                    }
-                }
-                ++row;
-                col = 0;
-            }
-
-            menuChars.addAttribute(1, highlightAttr);
-            menuChars.addAttribute(1, characterAttr);
-            menuChars.addAttribute(1, colAttr);
-            menuChars.addAttribute(1, rowAttr);
+            pauseMenu.update();
 
             _textPass.begin({LoadAction::Load});
-            _textPass.read("font", _font);
+            _textPass.read("font", pauseMenu.font().tex());
             _textPass.uniform("width", Window::ViewportWidth());
             _textPass.uniform("height", Window::ViewportHeight());
-            _textPass.uniform("charWidth", CharWidth);
-            _textPass.uniform("baseWidth", _font.width());
-            _textPass.uniform("baseHeight", _font.height());
-            _textPass.uniform("scale", scale);
-            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, menuChars);
+            _textPass.uniform("charWidth", pauseMenu.font().charWidth());
+            _textPass.uniform("baseWidth", pauseMenu.font().tex().width());
+            _textPass.uniform("baseHeight", pauseMenu.font().tex().height());
+            _textPass.uniform("scale", pauseMenu.font().curScale());
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
+                pauseMenu.chars());
             _textPass.end();
         }
 

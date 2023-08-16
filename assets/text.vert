@@ -1,7 +1,7 @@
 uniform int charWidth;
 uniform int baseWidth;
 uniform int baseHeight;
-uniform float scale;
+uniform int scale;
 uniform int height;
 uniform int width;
 layout(location = 0) in vec2 position;
@@ -17,8 +17,8 @@ void main()
     uv = 0.5*position.xy + 0.5;
     gl_Position = vec4
     (
-        (uv.x + a + float(col)*(1. + a))*scale*float(charWidth)*2./float(width) - 1.,
-        (uv.y + float(row))*scale*float(baseHeight)*2./float(height) - 1.,
+        (uv.x + a + float(col)*(1. + a))*float(scale)*float(charWidth)*2./float(width) - 1.,
+        (uv.y + float(row))*float(scale)*float(baseHeight)*2./float(height) - 1.,
         0,
         1
     );
