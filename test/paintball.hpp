@@ -6,7 +6,7 @@
 
 class Paintball : public paz::Object
 {
-    const Object* _parent;
+    paz::ObjectPtr _parent;
     double _relX, _relY, _relZ;
 
 public:

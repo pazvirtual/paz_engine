@@ -126,6 +126,30 @@ namespace paz
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
     };
 
+    class ObjectPtr
+    {
+        friend std::ostream& operator<<(std::ostream&, const ObjectPtr&);
+
+        bool _set;
+        std::uintptr_t _id;
+
+    public:
+        ObjectPtr();
+        ObjectPtr(const Object& o);
+        ObjectPtr(std::nullptr_t);
+        ObjectPtr& operator=(std::nullptr_t);
+        const Object& operator*() const;
+        Object& operator*();
+        const Object* operator->() const;
+        Object* operator->();
+        operator bool() const;
+        void reset() noexcept;
+        void reset(const Object& o) noexcept;
+        void swap(ObjectPtr& p) noexcept;
+    };
+
+    std::ostream& operator<<(std::ostream& stream, const ObjectPtr& p);
+
     enum class ConsoleMode
     {
         Disable, ShowAll, CurrentFrame

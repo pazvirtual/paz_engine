@@ -23,7 +23,7 @@ static const paz::AudioTrack SoundEffect = []()
     return paz::AudioTrack(moreSamples);
 }();
 
-Paintball::Paintball() : paz::Object(), _parent(nullptr)
+Paintball::Paintball() : paz::Object()
 {
     collisionRadius() = 0.05;
     model() = Model;
@@ -48,7 +48,7 @@ void Paintball::update()
 void Paintball::launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
     dir)
 {
-    _parent = nullptr;
+    _parent.reset();
     collisionType() = paz::CollisionType::Default;
     gravityType() = paz::GravityType::Default;
     x() = pos(0);
@@ -61,7 +61,7 @@ void Paintball::launch(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec&
 
 void Paintball::onCollide(const Object& o)
 {
-    _parent = &o;
+    _parent.reset(o);
     _relX = x() - o.x();
     _relY = y() - o.y();
     _relZ = z() - o.z();

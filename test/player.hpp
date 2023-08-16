@@ -14,7 +14,7 @@ class Player : public paz::Object
 
     static constexpr double LowAltitude = 10.;
 
-    const Object* _parent;
+    paz::ObjectPtr _parent;
     double _relX, _relY, _relZ;
     bool _moving = false;
 

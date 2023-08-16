@@ -61,10 +61,10 @@ static paz::Texture _defaultDiffTex;
 
 static paz::Texture _cursor;
 
-static const paz::Object* _cameraObject; //TEMP - vector realloc breaks ptrs
-static const paz::Object* _micObject; //TEMP - vector realloc breaks ptrs
+static paz::ObjectPtr _cameraObject;
+static paz::ObjectPtr _micObject;
 
-static const paz::Object* _soundSrc; //TEMP - vector realloc breaks ptrs
+static paz::ObjectPtr _soundSrc;
 
 static bool _paused;
 
@@ -376,8 +376,7 @@ void paz::App::Run()
             pauseMenu.setState(0, 0);
         }
 
-        if(_micObject && !_paused && objects().count(reinterpret_cast<std::
-            uintptr_t>(_soundSrc)))
+        if(!_paused && _micObject && _soundSrc)
         {
             const Vec relPos{{_soundSrc->x() - _micObject->x(), _soundSrc->y() -
                 _micObject->y(), _soundSrc->z() - _micObject->z()}};
@@ -849,12 +848,12 @@ void paz::App::Run()
 
 void paz::App::AttachCamera(const Object& o)
 {
-    _cameraObject = &o;
+    _cameraObject.reset(o);
 }
 
 void paz::App::AttachMic(const Object& o)
 {
-    _micObject = &o;
+    _micObject.reset(o);
 }
 
 std::stringstream& paz::App::MsgStream()
@@ -884,7 +883,7 @@ void paz::App::SetGravity(double acc)
 
 void paz::App::SetSound(const Object& o, const AudioTrack& sound, bool loop)
 {
-    _soundSrc = &o;
+    _soundSrc.reset(o);
     AudioEngine::Play(sound, loop);
 }
 

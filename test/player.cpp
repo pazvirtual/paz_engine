@@ -5,7 +5,7 @@
 
 static constexpr double CosMaxAngle = 0.8;
 
-Player::Player() : _parent(nullptr)
+Player::Player()
 {
     _head.collisionType() = paz::CollisionType::None;
     _head.gravityType() = paz::GravityType::None;
@@ -339,7 +339,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
 
 void Player::onCollide(const paz::Object& o)
 {
-    _parent = &o;
+    _parent.reset(o);
     _relX = x() - _parent->x();
     _relY = y() - _parent->y();
     _relZ = z() - _parent->z();
