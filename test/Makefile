@@ -22,7 +22,7 @@ endif
 CXXFLAGS += -I..
 LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
 ifeq ($(OSPRETTY), macOS)
-    LDLIBS += -framework MetalKit -framework Metal -framework Cocoa
+    LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit
 else
     LDLIBS += $(LIBPATH)/libglfw3.a
     ifeq ($(OSPRETTY), Linux)
