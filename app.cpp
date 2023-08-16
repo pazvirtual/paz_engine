@@ -15,7 +15,7 @@ static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 static constexpr std::size_t MaxConsoleLines = 1000;
-static constexpr float FontScale = 1.f;
+static constexpr float FontScale = 1.5f;
 static constexpr int CharWidth = 5;
 
 static paz::Framebuffer _geometryBuffer;
