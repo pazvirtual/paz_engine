@@ -1,0 +1,18 @@
+#ifndef PAZ_ENGINE_TEST_NPC_HPP
+#define PAZ_ENGINE_TEST_NPC_HPP
+
+#include "PAZ_Engine"
+
+class Npc : public paz::Object
+{
+    double _destYaw;
+    double _walkTime;
+
+public:
+    paz::Object _head;
+    Npc();
+    void update() override;
+    void onCollide(const Object&) override;
+};
+
+#endif

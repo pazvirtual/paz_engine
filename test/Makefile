@@ -33,9 +33,12 @@ else
 endif
 
 ASSETS := $(wildcard assets/*)
+SRC := $(wildcard *.cpp)
+OBJ := build/assets.o $(SRC:%.cpp=build/%.o)
 
-.PHONY: test.cpp
-test: test.cpp build/assets.o
+#.PHONY: $(SRC)
+test: build $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDLIBS)
 
 build/assets.o: build/assets.paz
 ifeq ($(OSPRETTY), macOS)
@@ -45,8 +48,11 @@ else
 	cd build && ld -r -b binary -o assets.o assets.paz
 endif
 
-build/assets.paz: $(ASSETS) build
+build/assets.paz: $(ASSETS)
 	paz-archive assets build/assets.paz
+
+build/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 build:
 	mkdir -p $@
