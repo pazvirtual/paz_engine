@@ -14,7 +14,7 @@ paz::Model::Model(const std::string& path, int idx)
     std::vector<std::string> materialNames;
     std::vector<std::string> materialLibs;
     std::vector<std::vector<unsigned int>> indices;
-    parse_obj(getAsset(path).str(), names, positions, uvs, normals, materials,
+    parse_obj(get_asset(path).str(), names, positions, uvs, normals, materials,
         materialNames, materialLibs, indices);
     _t = std::make_shared<std::vector<Triangle>>();
     _t->reserve(indices[idx].size()/3);

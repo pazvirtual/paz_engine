@@ -407,7 +407,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     const VertexFunction textVert(TextVertSrc);
     const VertexFunction plotVert(PlotVertSrc);
     const FragmentFunction geometryFrag(GeometryFragSrc);
-    const FragmentFunction sceneFrag(getAsset(sceneShaderPath).str());
+    const FragmentFunction sceneFrag(get_asset(sceneShaderPath).str());
 #ifdef DO_FXAA
     const FragmentFunction lumFrag(LumFragSrc);
     const FragmentFunction fxaaFrag(FxaaFragSrc);
@@ -430,7 +430,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
     _quadVertices.attribute(2, QuadPos);
 
-    _font = Texture(parse_pbm(getAsset(fontPath)));
+    _font = Texture(parse_pbm(get_asset(fontPath)));
 
     Window::SetCursorMode(CursorMode::Disable);
 }

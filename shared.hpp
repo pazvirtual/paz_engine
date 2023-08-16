@@ -5,7 +5,7 @@
 
 namespace paz
 {
-    paz::Bytes getAsset(const std::string& path);
+    paz::Bytes get_asset(const std::string& path);
 }
 
 #endif
