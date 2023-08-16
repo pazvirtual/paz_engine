@@ -25,9 +25,9 @@ LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazaudio.a
 ifeq ($(OSPRETTY), macOS)
     LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit -framework CoreAudio -framework AudioUnit
 else
-    LDLIBS += $(LIBPATH)/libglfw3.a $(LIBPATH)/libportaudio.a
+    LDLIBS += $(LIBPATH)/libportaudio.a
     ifeq ($(OSPRETTY), Linux)
-        LDLIBS += -lGL -lX11 -ldl -lasound
+        LDLIBS += $(LIBPATH)/libglfw3.a -lGL -lX11 -ldl -lasound
     else
         LDLIBS += -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
     endif
