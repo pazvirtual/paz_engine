@@ -3,7 +3,7 @@
 #include <limits>
 #include <cmath>
 
-static constexpr std::size_t NumSteps = 10;
+static constexpr std::size_t NumSteps = 100;
 
 paz::Model::Model(const std::string& path, int idx)
 {
