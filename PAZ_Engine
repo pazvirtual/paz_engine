@@ -14,6 +14,11 @@ namespace paz
         Default, None, World
     };
 
+    enum class GravityType
+    {
+        Default, None
+    };
+
     class Triangle;
     class Model
     {
@@ -42,7 +47,6 @@ namespace paz
         friend class App;
 
         const std::uintptr_t _id;
-        bool _moved = false;
 
         void setLocalNorX(double n);
         void setLocalNorY(double n);
@@ -62,7 +66,6 @@ namespace paz
         Object();
         Object(const Object& o);
         Object& operator=(const Object& o);
-        Object(Object&& o);
         virtual ~Object();
         void notify(Object& o, const Bytes& data) const;
         void notifyTagged(const std::string& tag, const Bytes& data) const;
@@ -94,6 +97,8 @@ namespace paz
         const Model& model() const;
         CollisionType& collisionType();
         const CollisionType& collisionType() const;
+        GravityType& gravityType();
+        const GravityType& gravityType() const;
         double localNorX() const;
         double localNorY() const;
         double localNorZ() const;
@@ -106,6 +111,7 @@ namespace paz
         double yDown() const;
         double zDown() const;
         void addTag(const std::string& tag);
+        bool isTagged(const std::string& tag) const;
     };
 
     class App

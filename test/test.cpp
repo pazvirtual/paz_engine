@@ -20,13 +20,13 @@ public:
         x() = pos(0);
         y() = pos(1);
         z() = pos(2);
-        xVel() = vel(0) + 10.*dir(0);
-        yVel() = vel(1) + 10.*dir(1);
-        zVel() = vel(2) + 10.*dir(2);
+        xVel() = vel(0) + 15.*dir(0);
+        yVel() = vel(1) + 15.*dir(1);
+        zVel() = vel(2) + 15.*dir(2);
         collisionRadius() = 0.01;
         model() = PaintballModel;
     }
-    void update() final
+    void update() override
     {
         if(altitude() < 0.01)
         {
@@ -34,6 +34,67 @@ public:
             yVel() = 0.;
             zVel() = 0.;
             collisionType() = paz::CollisionType::None;
+            gravityType() = paz::GravityType::None;
+        }
+    }
+};
+
+class Droplet : public Paintball
+{
+public:
+    Droplet(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir) :
+        Paintball(pos, vel, dir)
+    {
+        collisionType() = paz::CollisionType::None;
+    }
+    void update() override
+    {
+        if(x()*x() + y()*y() + z()*z() < Radius*Radius)//altitude() < 0.)
+        {
+            addTag("done");
+        }
+    }
+};
+
+class Fountain : public paz::Object
+{
+    double _timer = 0.;
+    std::vector<Droplet> _droplets;
+
+public:
+    Fountain()
+    {
+        collisionType() = paz::CollisionType::None;
+        gravityType() = paz::GravityType::None;
+    }
+    void update() final
+    {
+        _timer += paz::Window::FrameTime();
+        if(_timer > 0.05)
+        {
+            for(int i = 0; i < 3; ++i)
+            {
+                const paz::Vec pos{{x(), y(), z()}};
+                const paz::Vec vel{{xVel(), yVel(), zVel()}};
+                const paz::Vec dir = paz::Vec{{0.01*paz::randn(), 0.01*paz::
+                    randn(), 1. + 0.01*paz::randn()}}.normalized();
+                _droplets.emplace_back(pos + paz::uniform(0.05, 0.8)*dir, vel,
+                    dir);
+            }
+            _timer = 0.;
+        }
+        std::size_t i = 0;
+        while(i < _droplets.size())
+        {
+            if(_droplets[i].isTagged("done"))
+            {
+                std::swap(_droplets[i], _droplets.back());
+                _droplets.pop_back();
+            }
+            else
+            {
+                ++i;
+            }
         }
     }
 };
@@ -56,6 +117,7 @@ public:
     Player()
     {
         _head.collisionType() = paz::CollisionType::None;
+        _head.gravityType() = paz::GravityType::None;
     }
     void update() final
     {
@@ -374,6 +436,7 @@ public:
     Npc()
     {
         _head.collisionType() = paz::CollisionType::None;
+        _head.gravityType() = paz::GravityType::None;
         _head.model() = Head;
         model() = Body;
     }
@@ -438,6 +501,7 @@ public:
     {
         model() = Sphere50;
         collisionType() = paz::CollisionType::World;
+        gravityType() = paz::GravityType::None; //TEMP
     }
 };
 
@@ -466,6 +530,15 @@ int main()
     Npc npc3;
     npc3 = npc0;
     npc3.x() += 4.;
+    std::array<Fountain, 5> f;
+    for(auto& n : f)
+    {
+        n.z() = Radius;
+    }
+    f[1].x() = -Radius;
+    f[2].x() = Radius;
+    f[3].y() = -Radius;
+    f[4].y() = Radius;
     paz::App::AttachCamera(player.head());
     paz::App::Run();
 }

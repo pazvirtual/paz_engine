@@ -30,6 +30,7 @@ static std::vector<double> YAngRate;
 static std::vector<double> ZAngRate;
 static std::vector<paz::Model> Mod;
 static std::vector<paz::CollisionType> CType;
+static std::vector<paz::GravityType> GType;
 static std::vector<double> LocalNorX;
 static std::vector<double> LocalNorY;
 static std::vector<double> LocalNorZ;
@@ -41,7 +42,7 @@ static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
 static std::vector<double> ZDown;
-static std::unordered_map<std::string, std::unordered_set<paz::Object*>>
+static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
     ObjectsByTag;
 
 static void grav_ode(double x, double y, double z, double u, double v, double w,
@@ -75,7 +76,7 @@ void paz::physics()
     const std::size_t n = X.size();
     for(std::size_t i = 0; i < n; ++i)
     {
-        if(CType[i] == CollisionType::Default)
+        if(GType[i] == GravityType::Default)
         {
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
@@ -180,6 +181,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     ZAngRate.push_back(0.);
     Mod.emplace_back();
     CType.push_back(CollisionType::Default);
+    GType.push_back(GravityType::Default);
     LocalNorX.push_back(0.);
     LocalNorY.push_back(0.);
     LocalNorZ.push_back(1.);
@@ -210,6 +212,7 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(ZAngRate)
     PUSH_COPY(Mod)
     PUSH_COPY(CType)
+    PUSH_COPY(GType)
     PUSH_COPY(LocalNorX)
     PUSH_COPY(LocalNorY)
     PUSH_COPY(LocalNorZ)
@@ -218,6 +221,13 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(XDown)
     PUSH_COPY(YDown)
     PUSH_COPY(ZDown)
+    for(auto& m : ObjectsByTag) //TEMP - inefficient
+    {
+        if(m.second.count(o._id))
+        {
+            m.second.insert(_id);
+        }
+    }
 }
 
 paz::Object& paz::Object::operator=(const Object& o)
@@ -238,6 +248,7 @@ paz::Object& paz::Object::operator=(const Object& o)
     COPY(ZAngRate)
     COPY(Mod)
     COPY(CType)
+    COPY(GType)
     COPY(LocalNorX)
     COPY(LocalNorY)
     COPY(LocalNorZ)
@@ -246,24 +257,22 @@ paz::Object& paz::Object::operator=(const Object& o)
     COPY(XDown)
     COPY(YDown)
     COPY(ZDown)
+    for(auto& m : ObjectsByTag) //TEMP - inefficient
+    {
+        if(m.second.count(o._id))
+        {
+            m.second.insert(_id);
+        }
+        else if(m.second.count(_id))
+        {
+            m.second.erase(_id);
+        }
+    }
     return *this;
-}
-
-paz::Object::Object(Object&& o) : _id(reinterpret_cast<std::uintptr_t>(this))
-{
-    const std::size_t idx = objects().at(o._id);
-    objects().erase(o._id);
-    objects()[_id] = idx;
-    Ids[idx] = _id;
-    o._moved = true;
 }
 
 paz::Object::~Object()
 {
-    if(_moved)
-    {
-        return;
-    }
     const std::size_t idx = objects().at(_id);
     if(Ids.size() > 1)
     {
@@ -285,6 +294,7 @@ paz::Object::~Object()
     SWAP_AND_POP(ZAngRate)
     SWAP_AND_POP(Mod)
     SWAP_AND_POP(CType)
+    SWAP_AND_POP(GType)
     SWAP_AND_POP(LocalNorX)
     SWAP_AND_POP(LocalNorY)
     SWAP_AND_POP(LocalNorZ)
@@ -293,10 +303,10 @@ paz::Object::~Object()
     SWAP_AND_POP(XDown)
     SWAP_AND_POP(YDown)
     SWAP_AND_POP(ZDown)
-//    for(auto& n : ObjectsByTag)
-//    {
-//        n.second.erase(this);
-//    }
+    for(auto& n : ObjectsByTag)
+    {
+        n.second.erase(_id);
+    }
 }
 
 void paz::Object::update() {}
@@ -318,9 +328,9 @@ void paz::Object::notifyTagged(const std::string& tag, const Bytes& data) const
     {
         return;
     }
-    for(auto& n : ObjectsByTag.at(tag))
+    for(auto n : ObjectsByTag.at(tag))
     {
-        n->onNotify(*this, data);
+        reinterpret_cast<Object*>(n)->onNotify(*this, data);
     }
 }
 
@@ -464,6 +474,16 @@ const paz::CollisionType& paz::Object::collisionType() const
     return CType[objects().at(_id)];
 }
 
+paz::GravityType& paz::Object::gravityType()
+{
+    return GType[objects().at(_id)];
+}
+
+const paz::GravityType& paz::Object::gravityType() const
+{
+    return GType[objects().at(_id)];
+}
+
 void paz::Object::setLocalNorX(double n)
 {
     LocalNorX[objects().at(_id)] = n;
@@ -546,6 +566,10 @@ double paz::Object::zDown() const
 
 void paz::Object::addTag(const std::string& tag)
 {
-    throw std::logic_error("NOT IMPLEMENTED");
-//    ObjectsByTag[tag].insert(this);
+    ObjectsByTag[tag].insert(_id);
+}
+
+bool paz::Object::isTagged(const std::string& tag) const
+{
+    return ObjectsByTag.count(tag) && ObjectsByTag.at(tag).count(_id);
 }

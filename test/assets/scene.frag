@@ -21,5 +21,5 @@ void main()
     if(sin(100.*lat) > 0.95) color.r = 1.;
     if(sin(100.*lon) > 0.95 || coord.y > 0.9 || coord.y < 0.1) color.g = 1.;
     uint mtl = texture(materialMap, uv).r;
-    color.rgb = mix(vec3(0, 0.8, 0.9), color.rgb, float(mtl > 0u));
+    color.rgb = mix(vec3(0, 0.1, 0.1), color.rgb, float(mtl > 0u));
 }
