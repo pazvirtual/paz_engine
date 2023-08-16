@@ -502,8 +502,16 @@ if(tempDone[j]){ continue; }
                         a[j]->x() = xNew + bX[n][i];
                         a[j]->y() = yNew + bY[n][i];
                         a[j]->z() = zNew + bZ[n][i];
+                        // Rewind world object to time of collison.
+                        b[n]->x() = bX[n][i];
+                        b[n]->y() = bY[n][i];
+                        b[n]->z() = bZ[n][i];
                         a[j]->onCollide(*b[n]);
                         b[n]->onCollide(*a[j]);
+                        // Fast forward both objects.
+                        b[n]->x() = bX[n].back();
+                        b[n]->y() = bY[n].back();
+                        b[n]->z() = bZ[n].back();
                         const double extraTime = PhysTime()*(times.back() -
                             times[i]);
                         a[j]->x() += extraTime*a[j]->xVel();
