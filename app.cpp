@@ -566,7 +566,6 @@ tempDone[j] = true;
         // Prepare for rendering.
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
         std::vector<const Object*> invisibleObjects;
-        std::vector<const Object*> transparentObjects;
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
@@ -579,10 +578,6 @@ tempDone[j] = true;
                 // Address held to by `paz::Model::_t` identifies all copies of
                 // the same model.
                 objectsByModel[o->model()._t.get()].push_back(o);
-            }
-            if(!o->transp().empty())
-            {
-                transparentObjects.push_back(o);
             }
         }
         for(const auto& n : objectsByModel)
@@ -742,60 +737,32 @@ tempDone[j] = true;
             _sphereIndices);
         _renderPass1.end();
 
-        // Render transparent objects.
-        bool cleared = false;
-        for(const auto& m : transparentObjects)
+        // Render transparent objects. //TEMP - skip if possible
+        unsigned int numLights = lightsData0.size()/4;
+        if(numLights > 16)
         {
-            for(const auto& n : m->transp())
-            {
-                std::vector<float> pos(12);
-                for(std::size_t i = 0; i < 3; ++i)
-                {
-                    for(std::size_t j = 0; j < 3; ++j)
-                    {
-                        pos[4*i + j] = n[3*i + j];
-                    }
-                    pos[4*i + 3] = 1.;
-                }
-                const Vec tempNor = Vec{{pos[4] - pos[0], pos[5] - pos[1], pos[
-                    6] - pos[2]}}.cross(Vec{{pos[8] - pos[0], pos[9] - pos[1],
-                    pos[10] - pos[2]}}).normalized();
-                std::vector<float> nor(12);
-                nor[0] = tempNor(0);
-                nor[1] = tempNor(1);
-                nor[2] = tempNor(2);
-                nor[3] = 0.;
-                std::copy(nor.begin(), nor.begin() + 4, nor.begin() + 4);
-                std::copy(nor.begin(), nor.begin() + 4, nor.begin() + 8);
-                VertexBuffer v; //TEMP - don't do this mid-render
-                v.addAttribute(4, pos);
-                v.addAttribute(4, nor);
-
-                if(cleared)
-                {
-                    _oitAccumPass.begin({LoadAction::Load, LoadAction::Load}, LoadAction::Load);
-                }
-                else
-                {
-                    _oitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::Load);
-                    cleared = true;
-                }
-                _oitAccumPass.depth(DepthTestMode::LessNoMask);
-                _oitAccumPass.uniform("numLights", static_cast<unsigned int>(lightsData0.size()/4));
-                _oitAccumPass.uniform("light0", lightsData0);
-                _oitAccumPass.uniform("light1", lightsData1);
-                _oitAccumPass.uniform("projection", projection);
-                _oitAccumPass.uniform("invProjection", convert_mat(convert_mat(
+            throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 16).");
+        }
+        _oitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::Load);
+        _oitAccumPass.depth(DepthTestMode::LessNoMask);
+        _oitAccumPass.uniform("numLights", numLights);
+        _oitAccumPass.uniform("light0", lightsData0);
+        _oitAccumPass.uniform("light1", lightsData1);
+        _oitAccumPass.uniform("projection", projection);
+        _oitAccumPass.uniform("invProjection", convert_mat(convert_mat(
                     projection).inv())); //TEMP - precompute - used elsewhere
-                _oitAccumPass.uniform("sunDir", convert_vec(view*_sunDir)); //TEMP - precompute
-                _oitAccumPass.uniform("sunIll", _sunIll);
-                _oitAccumPass.uniform("view", convert_mat(view));
-                _oitAccumPass.uniform("model0", static_cast<float>(m->xAtt()), static_cast<float>(m->yAtt()), static_cast<float>(m->zAtt()), static_cast<float>(m->x() - cameraPos(0)));
-                _oitAccumPass.uniform("model1", static_cast<float>(m->y() - cameraPos(1)), static_cast<float>(m->z() - cameraPos(2)));
-                _oitAccumPass.draw(PrimitiveType::Triangles, v);
-                _oitAccumPass.end();
+        _oitAccumPass.uniform("sunDir", convert_vec(view*_sunDir)); //TEMP - precompute
+        _oitAccumPass.uniform("sunIll", _sunIll);
+        _oitAccumPass.uniform("view", convert_mat(view));
+        for(const auto& n : objectsByModel)
+        {
+            if(!n.second.back()->model()._transp.empty())
+            {
+                _oitAccumPass.draw(PrimitiveType::Triangles, n.second.back()->
+                    model()._transp, _instances.at(n.first));
             }
         }
+        _oitAccumPass.end();
 
         _oitCompositePass.begin({LoadAction::Load});
         _oitCompositePass.read("accumTex", _oitAccumTex);

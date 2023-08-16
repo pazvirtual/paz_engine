@@ -32,6 +32,7 @@ namespace paz
         IndexBuffer _i;
         Texture _diffTex;
         std::array<float, 3> _emiss;
+        VertexBuffer _transp;
 
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
@@ -47,7 +48,8 @@ namespace paz
         Model() = default;
         Model(const std::string& path, int idx = 0, double zOffset = 0., double
             scale = 1., const std::string& diffTexPath = "", const std::array<
-            float, 3>& emiss = {});
+            float, 3>& emiss = {}, const std::vector<std::array<double, 9>>&
+            transp = {});
         Model(const std::vector<float>& positions, const std::vector<float>&
             uvs, const std::string& diffTexPath = "", const std::array<float,
             3>& emiss = {});
@@ -101,8 +103,6 @@ namespace paz
         double zAngRate() const;
         Model& model();
         const Model& model() const;
-        std::vector<std::array<double, 9>>& transp(); // xyz1 xyz2 xyz3
-        const std::vector<std::array<double, 9>>& transp() const;
         CollisionType& collisionType();
         const CollisionType& collisionType() const;
         GravityType& gravityType();

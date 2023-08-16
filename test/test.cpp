@@ -63,14 +63,14 @@ public:
 int main()
 {
     paz::App::Init("PAZ Engine Test Program");
-    Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp");
+    Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp", {},
+        {{10., 5., Radius, 0., 0., Radius + 10., -10., -5., Radius}});
     Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10., "moon.bmp");
     FancyBox = paz::Model("fancybox.obj");
     Player player;
+    player.y() = 1.;
     player.z() = Radius + 10.;
     World w;
-    w.transp().push_back({10., 5., Radius, 0., 0., Radius + 10., -10., -5.,
-        Radius});
     std::array<World1, 4> w1;
     w1[0].x() = 0.9*Radius;
     w1[1].x() = -0.9*Radius;
