@@ -37,7 +37,8 @@ static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagF
 static std::unordered_map<void*, paz::InstanceBuffer> _instances;
 
 static paz::RenderPass _geometryPass;
-static paz::RenderPass _renderPass;
+static paz::RenderPass _renderPass0;
+static paz::RenderPass _renderPass1;
 static paz::RenderPass _postPass;
 #ifdef DO_FXAA
 static paz::RenderPass _lumPass;
@@ -99,8 +100,9 @@ static std::array<float, 4> convert_vec(const paz::Vec& v)
 
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
-void paz::App::Init(const std::string& sceneShaderPath, const std::string&
-    fontPath, const UiDescriptor& startMenu)
+void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
+    sceneShaderPath1, const std::string& fontPath, const UiDescriptor&
+    startMenu)
 {
     _startMenu = startMenu;
 
@@ -121,10 +123,12 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
     const VertexFunction geometryVert(get_builtin("geometry.vert").str());
     const VertexFunction quadVert(get_builtin("quad.vert").str());
-    const VertexFunction sceneVert(get_builtin("scene.vert").str());
+    const VertexFunction sceneVert0(get_builtin("scene0.vert").str());
+    const VertexFunction sceneVert1(get_builtin("scene1.vert").str());
     const VertexFunction textVert(get_builtin("text.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
-    const FragmentFunction sceneFrag(get_asset(sceneShaderPath).str());
+    const FragmentFunction sceneFrag0(get_asset(sceneShaderPath0).str());
+    const FragmentFunction sceneFrag1(get_asset(sceneShaderPath1).str());
 #ifdef DO_FXAA
     const FragmentFunction lumFrag(get_builtin("lum.frag").str());
     const FragmentFunction fxaaFrag(get_builtin("fxaa.frag").str());
@@ -134,7 +138,9 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     const FragmentFunction textFrag(get_builtin("text.frag").str());
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
-    _renderPass = RenderPass(_renderBuffer, sceneVert, sceneFrag, BlendMode::Additive);
+    _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
+    _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1, BlendMode::
+        Additive);
 #ifdef DO_FXAA
     _postPass = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
@@ -702,20 +708,31 @@ tempDone[j] = true;
         _geometryPass.end();
 
         // Render in HDR.
-        _renderPass.begin({LoadAction::Clear}, LoadAction::Load);
-        _renderPass.cull(CullMode::Front);
-//        _renderPass.depth(DepthTestMode::GreaterNoMask);
-        _renderPass.read("diffuseMap", _diffuseMap);
+        _renderPass0.begin({LoadAction::Clear});//, LoadAction::Load);
+        _renderPass0.read("diffuseMap", _diffuseMap);
         // ...
-        _renderPass.read("emissMap", _emissMap);
-        _renderPass.read("normalMap", _normalMap);
-        _renderPass.read("depthMap", _depthMap);
-        _renderPass.uniform("projection", projection);
-        _renderPass.uniform("invProjection", convert_mat(convert_mat(
+        _renderPass0.read("emissMap", _emissMap);
+        _renderPass0.read("normalMap", _normalMap);
+        _renderPass0.read("depthMap", _depthMap);
+        _renderPass0.uniform("invProjection", convert_mat(convert_mat(
             projection).inv()));
-        _renderPass.draw(PrimitiveType::Triangles, _sphereVertices, lights,
+        _renderPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
+        _renderPass0.end();
+
+        _renderPass1.begin({LoadAction::Load});//, LoadAction::Load);
+        _renderPass1.cull(CullMode::Front);
+//        _renderPass1.depth(DepthTestMode::GreaterNoMask);
+        _renderPass1.read("diffuseMap", _diffuseMap);
+        // ...
+        _renderPass1.read("emissMap", _emissMap);
+        _renderPass1.read("normalMap", _normalMap);
+        _renderPass1.read("depthMap", _depthMap);
+        _renderPass1.uniform("projection", projection);
+        _renderPass1.uniform("invProjection", convert_mat(convert_mat(
+            projection).inv()));
+        _renderPass1.draw(PrimitiveType::Triangles, _sphereVertices, lights,
             _sphereIndices);
-        _renderPass.end();
+        _renderPass1.end();
 
         // Tonemap to linear LDR.
         _postPass.begin();

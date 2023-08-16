@@ -5,6 +5,7 @@ uniform mat4 projection;
 out vec3 lightPos;
 out vec3 intens;
 out float falloff;
+out vec3 loc;
 const float minIll = 1e-4;
 void main()
 {
@@ -14,4 +15,5 @@ void main()
     float totalIntens = dot(intens, vec3(0.2126, 0.7152, 0.0722));
     float r = log(totalIntens/minIll)/falloff;
     gl_Position = mul(projection, vec4(r*position.xyz + lightPos, 1.));
+    loc = gl_Position.xyw;
 }
