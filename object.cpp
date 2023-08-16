@@ -213,10 +213,9 @@ void paz::collisions()
         c[i].reserve(b.size());
         for(std::size_t j = 0; j < b.size(); ++j)
         {
-            if(reinterpret_cast<Object*>(Ids[b[j]])->model().sweepVol(XPrev[a[
-                i]], YPrev[a[i]], ZPrev[a[i]], X[a[i]], Y[a[i]], Z[a[i]], XPrev[
-                b[j]], YPrev[b[j]], ZPrev[b[j]], X[b[j]], Y[b[j]], Z[b[j]],
-                CRadius[a[i]]))
+            if(Mod[b[j]].sweepVol(XPrev[a[i]], YPrev[a[i]], ZPrev[a[i]], X[a[
+                i]], Y[a[i]], Z[a[i]], XPrev[b[j]], YPrev[b[j]], ZPrev[b[j]], X[
+                b[j]], Y[b[j]], Z[b[j]], CRadius[a[i]]))
             {
                 c[i].push_back(j);
             }
@@ -272,12 +271,10 @@ if(tempDone[j]){ continue; }
                 z = relPos(2);
 
                 double xNew, yNew, zNew, xNor, yNor, zNor;
-                Object* bObj = reinterpret_cast<Object*>(Ids[b[n]]);
-                const double dist = bObj->model().collide(x, y, z, CRadius[a[
-                    j]], xNew, yNew, zNew, xNor, yNor, zNor);
+                const double dist = Mod[b[n]].collide(x, y, z, CRadius[a[j]],
+                    xNew, yNew, zNew, xNor, yNor, zNor);
                 if(dist < CRadius[a[j]])
                 {
-                    Object* aObj = reinterpret_cast<Object*>(Ids[a[j]]);
                     const Vec nor = bRot[n].trans()*Vec{{xNor, yNor, zNor}};
                     xNor = nor(0);
                     yNor = nor(1);
@@ -310,6 +307,8 @@ if(tempDone[j]){ continue; }
                     X[b[n]] = bX[n][i];
                     Y[b[n]] = bY[n][i];
                     Z[b[n]] = bZ[n][i];
+                    Object* aObj = reinterpret_cast<Object*>(Ids[a[j]]);
+                    Object* bObj = reinterpret_cast<Object*>(Ids[b[n]]);
                     aObj->onCollide(*bObj);
                     bObj->onCollide(*aObj);
                     // Fast forward both objects.
