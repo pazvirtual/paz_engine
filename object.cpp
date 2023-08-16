@@ -31,7 +31,6 @@ static std::vector<double> XPrev;
 static std::vector<double> YPrev;
 static std::vector<double> ZPrev;
 static std::vector<char> Grounded;
-static std::vector<double> CHeight;
 static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
@@ -182,7 +181,6 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     LocalNorY.push_back(0.);
     LocalNorZ.push_back(1.);
     Grounded.push_back(false);
-    CHeight.push_back(0.);
     CRadius.push_back(0.2);
     XDown.push_back(0.);
     YDown.push_back(0.);
@@ -211,7 +209,6 @@ paz::Object::~Object()
     SWAP_AND_POP(LocalNorY);
     SWAP_AND_POP(LocalNorZ);
     SWAP_AND_POP(Grounded);
-    SWAP_AND_POP(CHeight);
     SWAP_AND_POP(CRadius);
     SWAP_AND_POP(XDown);
     SWAP_AND_POP(YDown);
@@ -417,16 +414,6 @@ void paz::Object::setGrounded(bool status)
 bool paz::Object::grounded() const
 {
     return Grounded[objects().at(_id)];
-}
-
-double& paz::Object::collisionHeight()
-{
-    return CHeight[objects().at(_id)];
-}
-
-double paz::Object::collisionHeight() const
-{
-    return CHeight[objects().at(_id)];
 }
 
 double& paz::Object::collisionRadius()

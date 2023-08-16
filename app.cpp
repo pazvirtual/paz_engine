@@ -480,31 +480,6 @@ void paz::App::Run()
             }
         }
 
-        std::vector<double> offsetX(a.size(), 0.);
-        std::vector<double> offsetY(a.size(), 0.);
-        std::vector<double> offsetZ(a.size(), 0.);
-        for(std::size_t i = 0; i < a.size(); ++i)
-        {
-            const double h = a[i]->collisionRadius() - a[i]->collisionHeight();
-            if(h > -1e-6)
-            {
-                continue;
-            }
-            const double q0 = a[i]->xAtt();
-            const double q1 = a[i]->yAtt();
-            const double q2 = a[i]->zAtt();
-            const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
-            const auto xx = q0*q0;
-            const auto yy = q1*q1;
-            const auto xz = q0*q2;
-            const auto yw = q1*q3;
-            const auto yz = q1*q2;
-            const auto xw = q0*q3;
-            offsetX[i] = h*2.*(xz - yw);
-            offsetY[i] = h*2.*(yz + xw);
-            offsetZ[i] = h*(1. - 2.*(xx + yy));
-        }
-
         std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
             NumSteps));
         std::vector<std::vector<double>> bY(b.size(), std::vector<double>(
@@ -535,12 +510,12 @@ std::vector<bool> tempDone(a.size(), false);
 if(tempDone[j]){ continue; }
                 for(std::size_t k = 0; k < b.size(); ++k)
                 {
-                    const double x = offsetX[j] + a[j]->xPrev() + (i + 1)*(a[
-                        j]->x() - a[j]->xPrev())/NumSteps - bX[k][i];
-                    const double y = offsetY[j] + a[j]->yPrev() + (i + 1)*(a[
-                        j]->y() - a[j]->yPrev())/NumSteps - bY[k][i];
-                    const double z = offsetZ[j] + a[j]->zPrev() + (i + 1)*(a[
-                        j]->z() - a[j]->zPrev())/NumSteps - bZ[k][i];
+                    const double x = a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->
+                        xPrev())/NumSteps - bX[k][i];
+                    const double y = a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->
+                        yPrev())/NumSteps - bY[k][i];
+                    const double z = a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->
+                        zPrev())/NumSteps - bZ[k][i];
 
                     double xNew, yNew, zNew, xNor, yNor, zNor;
                     const double c = b[k]->model().collide(x, y, z, a[j]->
@@ -564,12 +539,12 @@ if(tempDone[j]){ continue; }
                             a[j]->zVel() = b[k]->zVel();
 #endif
                         }
-                        a[j]->x() = xNew - offsetX[j] + bX[k][i] + (NumSteps - i
-                            - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
-                        a[j]->y() = yNew - offsetY[j] + bY[k][i] + (NumSteps - i
-                            - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
-                        a[j]->z() = zNew - offsetZ[j] + bZ[k][i] + (NumSteps - i
-                            - 1)*a[j]->zVel()/NumSteps*Window::FrameTime();
+                        a[j]->x() = xNew + bX[k][i] + (NumSteps - i - 1)*a[j]->
+                            xVel()/NumSteps*Window::FrameTime();
+                        a[j]->y() = yNew + bY[k][i] + (NumSteps - i - 1)*a[j]->
+                            yVel()/NumSteps*Window::FrameTime();
+                        a[j]->z() = zNew + bZ[k][i] + (NumSteps - i - 1)*a[j]->
+                            zVel()/NumSteps*Window::FrameTime();
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
@@ -590,9 +565,9 @@ tempDone[j] = true;
             {
                 continue;
             }
-            const double x = a[i]->x() + offsetX[i];
-            const double y = a[i]->y() + offsetY[i];
-            const double z = a[i]->z() + offsetZ[i];
+            const double x = a[i]->x();
+            const double y = a[i]->y();
+            const double z = a[i]->z();
             const double radius = a[i]->collisionRadius();
             for(std::size_t j = 0; j < b.size(); ++j)
             {
@@ -648,7 +623,7 @@ rHist.push_back(r);
 latHist.pop_front();
 latHist.push_back(lat);
 _msgStream << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
-_msgStream << 1./std::sqrt(avgFrameTimeSq) << std::endl;
+_msgStream << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
 }
 
         update();

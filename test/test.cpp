@@ -25,57 +25,51 @@ public:
     Player()
     {
         _head.collisionType() = paz::CollisionType::None;
-        /*collisionHeight()*/collisionRadius() = 1.5;
     }
     void update()
     {
-        _head.x() = x();
-        _head.y() = y();
-        _head.z() = z();
-
         const double wAtt = std::sqrt(1. - xAtt()*xAtt() - yAtt()*yAtt() -
             zAtt()*zAtt());
-        paz::Vec cameraAtt{{xAtt(), yAtt(), zAtt(), wAtt}};
+        paz::Vec att{{xAtt(), yAtt(), zAtt(), wAtt}};
 
         // Get basis vectors (rows of rotation matrix).
-        paz::Mat cameraRot = paz::to_mat(cameraAtt);
-        paz::Vec cameraForward = cameraRot.row(1).trans();
+        paz::Mat rot = paz::to_mat(att);
+        paz::Vec forward = rot.row(1).trans();
         const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
-        paz::Vec cameraRight = gravDir.cross(cameraForward).normalized();
+        paz::Vec right = gravDir.cross(forward).normalized();
 
         yAngRate() = 0.;
 
         // Want to keep `gravPitch + _pitch` (head pitch wrt gravity)
         // constant as much as possible when grounded.
-        const paz::Vec baseForward = cameraRight.cross(gravDir).normalized();
+        const paz::Vec baseForward = right.cross(gravDir).normalized();
         const double gravPitch = std::acos(std::max(0., std::min(1.,
-            baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) > 0. ?
-            -1. : 1.);
+            baseForward.dot(forward))))*(forward.dot(gravDir) > 0. ? -1. : 1.);
 paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (gravPitch + _pitch)*180./M_PI << std::endl;
         if(grounded())
         {
             _mousePos = paz::Vec::Zero(2);
             xAngRate() = 0.;
             zAngRate() = -0.1*paz::Window::MousePos().first;
-            cameraRot.setRow(0, cameraRight.trans());
-            cameraRot.setRow(1, baseForward.trans());
-            cameraRot.setRow(2, -gravDir.trans());
-            paz::Vec cameraBaseAtt = paz::to_quat(cameraRot);
-            if(cameraAtt.dot(cameraBaseAtt) < 0.)
+            rot.setRow(0, right.trans());
+            rot.setRow(1, baseForward.trans());
+            rot.setRow(2, -gravDir.trans());
+            paz::Vec baseAtt = paz::to_quat(rot);
+            if(att.dot(baseAtt) < 0.)
             {
-                cameraBaseAtt = -cameraBaseAtt;
+                baseAtt = -baseAtt;
             }
-            if((cameraBaseAtt - cameraAtt).normSq() > 1e-6)
+            if((baseAtt - att).normSq() > 1e-6)
             {
-                cameraBaseAtt = (0.9*cameraAtt + 0.1*cameraBaseAtt).
-                    normalized();
-                if(cameraBaseAtt(3) < 0.)
+                baseAtt = (0.9*att + 0.1*baseAtt).normalized();
+                if(baseAtt(3) < 0.)
                 {
-                    cameraBaseAtt = -cameraBaseAtt;
+                    baseAtt = -baseAtt;
                 }
-                xAtt() = cameraBaseAtt(0);
-                yAtt() = cameraBaseAtt(1);
-                zAtt() = cameraBaseAtt(2);
+                xAtt() = baseAtt(0);
+                yAtt() = baseAtt(1);
+                zAtt() = baseAtt(2);
+                rot = paz::to_mat(baseAtt);
             }
 
             const double deltaGravPitch = gravPitch - _prevGravPitch;
@@ -88,12 +82,12 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             if(std::abs(_pitch) > 1e-6)
             {
-                cameraAtt = paz::qmult(axis_angle(paz::Vec{{1, 0, 0}}, 0.1*
-                    _pitch), cameraAtt);
-                xAtt() = cameraAtt(0);
-                yAtt() = cameraAtt(1);
-                zAtt() = cameraAtt(2);
-                cameraRot = paz::to_mat(cameraAtt);
+                att = paz::qmult(paz::axis_angle(paz::Vec{{1, 0, 0}}, 0.1*
+                    _pitch), att);
+                xAtt() = att(0);
+                yAtt() = att(1);
+                zAtt() = att(2);
+                rot = paz::to_mat(att);
                 _pitch *= 0.9;
             }
 
@@ -116,8 +110,17 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             zAngRate() = -0.006*_mousePos(0);
         }
         _prevGravPitch = gravPitch;
-        cameraAtt = paz::qmult(axis_angle(paz::Vec{{1, 0, 0}}, _pitch + 0.5*
-            M_PI), cameraAtt);
+
+        right = rot.row(0).trans();
+        forward = rot.row(1).trans();
+        const paz::Vec up = rot.row(2).trans();
+
+        const double h = 1.5 - collisionRadius();
+        _head.x() = x() + h*up(0);
+        _head.y() = y() + h*up(1);
+        _head.z() = z() + h*up(2);
+        paz::Vec cameraAtt = paz::qmult(paz::axis_angle(paz::Vec{{1, 0, 0}},
+            _pitch + 0.5*M_PI), att);
         if(cameraAtt(3) < 0.)
         {
             cameraAtt = -cameraAtt;
@@ -126,10 +129,6 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         _head.yAtt() = cameraAtt(1);
         _head.zAtt() = cameraAtt(2);
 
-        cameraRight = cameraRot.row(0).trans();
-        cameraForward = cameraRot.row(1).trans();
-        const paz::Vec cameraUp = cameraRot.row(2).trans();
-
         if(grounded())
         {
             double u = 0.;
@@ -137,27 +136,27 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             double w = 0.;
             if(paz::Window::KeyDown(paz::Key::A))
             {
-                u -= cameraRight(0);
-                v -= cameraRight(1);
-                w -= cameraRight(2);
+                u -= right(0);
+                v -= right(1);
+                w -= right(2);
             }
             if(paz::Window::KeyDown(paz::Key::D))
             {
-                u += cameraRight(0);
-                v += cameraRight(1);
-                w += cameraRight(2);
+                u += right(0);
+                v += right(1);
+                w += right(2);
             }
             if(paz::Window::KeyDown(paz::Key::S))
             {
-                u -= cameraForward(0);
-                v -= cameraForward(1);
-                w -= cameraForward(2);
+                u -= forward(0);
+                v -= forward(1);
+                w -= forward(2);
             }
             if(paz::Window::KeyDown(paz::Key::W))
             {
-                u += cameraForward(0);
-                v += cameraForward(1);
-                w += cameraForward(2);
+                u += forward(0);
+                v += forward(1);
+                w += forward(2);
             }
             const double norm = std::sqrt(u*u + v*v + w*w);
             if(norm)
@@ -180,40 +179,40 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             if(paz::Window::KeyDown(paz::Key::A))
             {
-                xVel() -= 12.*cameraRight(0)*paz::Window::FrameTime();
-                yVel() -= 12.*cameraRight(1)*paz::Window::FrameTime();
-                zVel() -= 12.*cameraRight(2)*paz::Window::FrameTime();
+                xVel() -= 12.*right(0)*paz::Window::FrameTime();
+                yVel() -= 12.*right(1)*paz::Window::FrameTime();
+                zVel() -= 12.*right(2)*paz::Window::FrameTime();
             }
             if(paz::Window::KeyDown(paz::Key::D))
             {
-                xVel() += 12.*cameraRight(0)*paz::Window::FrameTime();
-                yVel() += 12.*cameraRight(1)*paz::Window::FrameTime();
-                zVel() += 12.*cameraRight(2)*paz::Window::FrameTime();
+                xVel() += 12.*right(0)*paz::Window::FrameTime();
+                yVel() += 12.*right(1)*paz::Window::FrameTime();
+                zVel() += 12.*right(2)*paz::Window::FrameTime();
             }
             if(paz::Window::KeyDown(paz::Key::W))
             {
-                xVel() += 12.*cameraForward(0)*paz::Window::FrameTime();
-                yVel() += 12.*cameraForward(1)*paz::Window::FrameTime();
-                zVel() += 12.*cameraForward(2)*paz::Window::FrameTime();
+                xVel() += 12.*forward(0)*paz::Window::FrameTime();
+                yVel() += 12.*forward(1)*paz::Window::FrameTime();
+                zVel() += 12.*forward(2)*paz::Window::FrameTime();
             }
             if(paz::Window::KeyDown(paz::Key::S))
             {
-                xVel() -= 12.*cameraForward(0)*paz::Window::FrameTime();
-                yVel() -= 12.*cameraForward(1)*paz::Window::FrameTime();
-                zVel() -= 12.*cameraForward(2)*paz::Window::FrameTime();
+                xVel() -= 12.*forward(0)*paz::Window::FrameTime();
+                yVel() -= 12.*forward(1)*paz::Window::FrameTime();
+                zVel() -= 12.*forward(2)*paz::Window::FrameTime();
             }
         }
         if(paz::Window::KeyDown(paz::Key::LeftShift))
         {
-            xVel() += 12.*cameraUp(0)*paz::Window::FrameTime();
-            yVel() += 12.*cameraUp(1)*paz::Window::FrameTime();
-            zVel() += 12.*cameraUp(2)*paz::Window::FrameTime();
+            xVel() += 12.*up(0)*paz::Window::FrameTime();
+            yVel() += 12.*up(1)*paz::Window::FrameTime();
+            zVel() += 12.*up(2)*paz::Window::FrameTime();
         }
         if(paz::Window::KeyDown(paz::Key::LeftControl))
         {
-            xVel() -= 12.*cameraUp(0)*paz::Window::FrameTime();
-            yVel() -= 12.*cameraUp(1)*paz::Window::FrameTime();
-            zVel() -= 12.*cameraUp(2)*paz::Window::FrameTime();
+            xVel() -= 12.*up(0)*paz::Window::FrameTime();
+            yVel() -= 12.*up(1)*paz::Window::FrameTime();
+            zVel() -= 12.*up(2)*paz::Window::FrameTime();
         }
     }
     const paz::Object& head() const
@@ -237,7 +236,7 @@ public:
     }
     void update() override
     {
-        const paz::Vec up = paz::Vec{{x(), y(), z()}}.normalized();
+        const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}}.normalized();
         const paz::Vec initialAtt{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()
             *xAtt() - yAtt()*yAtt() - zAtt()*zAtt())}};
         const paz::Vec initialRight = paz::to_mat(paz::qinv(initialAtt)).col(0);
@@ -295,7 +294,6 @@ public:
     Ball()
     {
         model() = Sphere;
-        collisionHeight() = 1.;
         collisionRadius() = 1.;
     }
     void onInteract(const Object& o) override
