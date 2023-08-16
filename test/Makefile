@@ -9,11 +9,11 @@ else
     endif
     LIBPATH := /usr/local/lib
 endif
-CXXVER := 14
+CXXVER := 17
 CXXFLAGS := -std=c++$(CXXVER) -O3 -Wall -Wextra -Wno-missing-braces -Wold-style-cast
 MINMACOSVER := 10.11
 ifeq ($(OSPRETTY), macOS)
-    CXXFLAGS += -mmacosx-version-min=$(MINMACOSVER) -Wunguarded-availability
+    CXXFLAGS += -mmacosx-version-min=$(MINMACOSVER) -Wunguarded-availability -Wno-string-plus-int
 else
     ifeq ($(OSPRETTY), Windows)
         CXXFLAGS += -Wno-deprecated-copy -static -mwindows
@@ -43,7 +43,7 @@ test: build $(OBJ)
 
 build/assets.o: build/assets.pazarchive
 ifeq ($(OSPRETTY), macOS)
-	@printf ".section assets, "rd"\n.global _binary_assets_pazarchive_start\n.global _binary_assets_pazarchive_end\n_binary_assets_pazarchive_start: .incbin \"build/assets.pazarchive\"\n_binary_assets_pazarchive_end:" > build/include-assets.s
+	@printf ".section assets, \"rd\"\n.global _binary_assets_pazarchive_start\n.global _binary_assets_pazarchive_end\n_binary_assets_pazarchive_start: .incbin \"build/assets.pazarchive\"\n_binary_assets_pazarchive_end:" > build/include-assets.s
 	as -mmacosx-version-min=$(MINMACOSVER) build/include-assets.s -o build/assets.o
 else
 	cd build && ld -r -b binary -o assets.o assets.pazarchive
