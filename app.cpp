@@ -757,8 +757,9 @@ tempDone[j] = true;
                     }
                     pos[4*i + 3] = 1.;
                 }
-                const Vec tempNor = Vec{{pos[0], pos[1], pos[2]}}.cross(Vec{{
-                    pos[4], pos[5], pos[6]}}).normalized();
+                const Vec tempNor = Vec{{pos[4] - pos[0], pos[5] - pos[1], pos[
+                    6] - pos[2]}}.cross(Vec{{pos[8] - pos[0], pos[9] - pos[1],
+                    pos[10] - pos[2]}}).normalized();
                 std::vector<float> nor(12);
                 nor[0] = tempNor(0);
                 nor[1] = tempNor(1);
