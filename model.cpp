@@ -1,4 +1,5 @@
 #include "PAZ_Engine"
+#include "triangle.hpp"
 
 paz::Model::Model() {}
 

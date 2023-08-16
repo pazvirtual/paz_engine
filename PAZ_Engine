@@ -1,7 +1,6 @@
 #ifndef PAZ_ENGINE
 #define PAZ_ENGINE
 
-#include <PAZ_Physics>
 #include <PAZ_Graphics>
 #include <PAZ_IO>
 #include <unordered_set>
@@ -13,6 +12,7 @@ namespace paz
         Default, None, World
     };
 
+    class Triangle;
     class Model
     {
         friend class App;
