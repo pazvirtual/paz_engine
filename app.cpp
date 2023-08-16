@@ -534,11 +534,16 @@ void paz::App::Run()
             }
         }
 
-        std::vector<double> offsetX(a.size());
-        std::vector<double> offsetY(a.size());
-        std::vector<double> offsetZ(a.size());
+        std::vector<double> offsetX(a.size(), 0.);
+        std::vector<double> offsetY(a.size(), 0.);
+        std::vector<double> offsetZ(a.size(), 0.);
         for(std::size_t i = 0; i < a.size(); ++i)
         {
+            const double h = a[i]->collisionRadius() - a[i]->height();
+            if(h > -1e-6)
+            {
+                continue;
+            }
             const double q0 = a[i]->xAtt();
             const double q1 = a[i]->yAtt();
             const double q2 = a[i]->zAtt();
@@ -549,9 +554,8 @@ void paz::App::Run()
             const auto yw = q1*q3;
             const auto yz = q1*q2;
             const auto xw = q0*q3;
-            const double h = a[i]->height();// - a[i]->collisionRadius();
-            offsetX[i] = h*2.*(xz + yw);
-            offsetY[i] = h*2.*(yz - xw);
+            offsetX[i] = h*2.*(xz - yw);
+            offsetY[i] = h*2.*(yz + xw);
             offsetZ[i] = h*(1. - 2.*(xx + yy));
         }
 
