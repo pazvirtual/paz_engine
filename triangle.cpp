@@ -34,11 +34,17 @@ inline std::array<double, 3> normalize(const std::array<double, 3>& v)
     return {v[0]/norm, v[1]/norm, v[2]/norm};
 }
 
+inline bool approx(double a, double b)
+{
+    return std::abs(a - b) < 1e-6;
+}
+
 paz::Triangle::Triangle(double x0, double y0, double z0, double x1, double y1,
     double z1, double x2, double y2, double z2) : x0(x0), y0(y0), z0(z0),
-    _degenerate((x0 == x1 && y0 == y1 && z0 == z1) || (x0 == x2 && y0 == y2 &&
-    z0 == z2) || (x1 == x2 && y1 == y2 && z1 == z2)), _centroid({(x0 + x1 + x2)/
-    3., (y0 + y1 + y2)/3., (z0 + z1 + z2)/3.})
+    _degenerate((approx(x0, x1) && approx(y0, y1) && approx(z0, z1)) || (approx(
+    x0, x2) && approx(y0, y2) && approx(z0, z2)) || (approx(x1, x2) && approx(
+    y1, y2) && approx(z1, z2))), _centroid({(x0 + x1 + x2)/3., (y0 + y1 + y2)/
+    3., (z0 + z1 + z2)/3.})
 {
     x1 -= x0;
     y1 -= y0;
@@ -89,39 +95,42 @@ double paz::Triangle::dist_transformed(double xt, double yt, double zt, double&
     // Check interior.
     const double slopeLeft = y2t/z2t;
     const double yLeft = slopeLeft*zt;
-    if(z2t == z1t)
+    if(approx(z2t, z1t))
     {
         if(zt < z1t && yt < yLeft)
         {
             return absXt;
         }
     }
-    const double slopeRight = y2t/(z2t - z1t);
-    const double yRight = slopeRight*(zt - z1t);
-    if(!z2t)
+    else
     {
-        if(zt > 0. && yt < yRight)
+        const double slopeRight = y2t/(z2t - z1t);
+        const double yRight = slopeRight*(zt - z1t);
+        if(!z2t)
+        {
+            if(zt > 0. && yt < yRight)
+            {
+                return absXt;
+            }
+        }
+        if(slopeLeft < 0.)
+        {
+            if(yt > yLeft && yt < yRight)
+            {
+                return absXt;
+            }
+        }
+        if(slopeRight > 0.)
+        {
+            if(yt < yLeft && yt > yRight)
+            {
+                return absXt;
+            }
+        }
+        if(yt < yLeft && yt < yRight)
         {
             return absXt;
         }
-    }
-    if(slopeLeft < 0.)
-    {
-        if(yt > yLeft && yt < yRight)
-        {
-            return absXt;
-        }
-    }
-    if(slopeRight > 0.)
-    {
-        if(yt < yLeft && yt > yRight)
-        {
-            return absXt;
-        }
-    }
-    if(yt < yLeft && yt < yRight)
-    {
-        return absXt;
     }
 
     // Check remaining edges.
