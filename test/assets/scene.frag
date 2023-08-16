@@ -9,7 +9,7 @@ layout(location = 0) out vec4 color;
 void main()
 {
     vec3 dir = normalize((invProjection*vec4(2.*uv - 1., 1., 1.)).xyz);
-    vec3 nor = texture(normalMap, uv).rgb;
+    vec3 nor = normalize(texture(normalMap, uv).rgb);
     vec2 coord = texture(coordMap, uv).rg;
     float lat = (coord.y - 0.5)*3.14159;
     float lon = (coord.x - 0.5)*2.*3.14159;

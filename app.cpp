@@ -430,7 +430,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 
     _quadVertices.attribute(2, QuadPos);
 
-    _font = Texture(parse_pbm(getAsset(fontPath).str()));
+    _font = Texture(parse_pbm(getAsset(fontPath)));
 
     Window::SetCursorMode(CursorMode::Disable);
 }
