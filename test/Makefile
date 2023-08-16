@@ -30,7 +30,8 @@ else
     ifeq ($(OSPRETTY), Linux)
         LDLIBS += $(LIBPATH)/libglfw3.a -lGL -lX11 -ldl -lasound
     else
-        LDLIBS += -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
+        LDLIBS += $(LIBPATH)/libpthread.a -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
+        LDFLAGS += -static-libgcc -static-libstdc++
     endif
 endif
 
@@ -51,14 +52,14 @@ test: build/test_arm64 build/test_x86_64
 	lipo -create -output $@ $^
 
 build/test_arm64: build $(ARMOBJ)
-	$(CXX) -arch arm64 $(CXXFLAGS) -o $@ $(ARMOBJ) $(LDLIBS)
+	$(CXX) -arch arm64 $(CXXFLAGS) -o $@ $(ARMOBJ) $(LDFLAGS) $(LDLIBS)
 
 build/test_x86_64: build $(INTOBJ)
-	$(CXX) -arch x86_64 $(CXXFLAGS) -o $@ $(INTOBJ) $(LDLIBS)
+	$(CXX) -arch x86_64 $(CXXFLAGS) -o $@ $(INTOBJ) $(LDFLAGS) $(LDLIBS)
 else
 .PHONY: test
 test: build $(OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LDLIBS)
 endif
 
 build/assets.o: build/assets.pazarchive
