@@ -40,27 +40,33 @@ paz::Model::Model(const std::string& path)
 }
 
 double paz::Model::collide(double x, double y, double z, double& gx, double& gy,
-    double& gz, double radius, double xPrev, double yPrev, double zPrev) const
+    double& gz, double radius, double xPrev, double yPrev, double zPrev, double&
+    nx, double& ny, double& nz) const
 {
     double minDist = std::numeric_limits<double>::infinity();
     gx = 0.;
     gy = 0.;
     gz = 0.;
+    nx = 0.;
+    ny = 0.;
+    nz = 0.;
     for(const auto& n : *_t)
     {
-        double nx, ny, nz, d;
-        n.collide(x, y, z, radius, xPrev, yPrev, zPrev, nx, ny, nz, d);
-        if(d < minDist)
+        double nxTemp, nyTemp, nzTemp, d;
+        n.collide(x, y, z, radius, xPrev, yPrev, zPrev, nxTemp, nyTemp, nzTemp,
+            d);
+        if(d < radius)
         {
-            if(d < radius + 1e-6) //TEMP
+            const double a = radius + d;
+            gx += a*nx;
+            gy += a*ny;
+            gz += a*nz;
+            if(d < minDist)
             {
                 minDist = d;
-                if(d < radius)
-                {
-                    gx += nx;
-                    gy += ny;
-                    gz += nz;
-                }
+                nx = nxTemp;
+                ny = nyTemp;
+                nz = nzTemp;
             }
         }
     }

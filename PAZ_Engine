@@ -22,8 +22,8 @@ namespace paz
         IndexBuffer _i;
 
         double collide(double x, double y, double z, double& gx, double& gy,
-            double& gz, double radius, double xPrev, double yPrev, double zPrev)
-            const;
+            double& gz, double radius, double xPrev, double yPrev, double zPrev,
+            double& nx, double& ny, double& nz) const;
 
     public:
         Model();

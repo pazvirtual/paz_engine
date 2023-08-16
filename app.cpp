@@ -476,7 +476,10 @@ for(auto& a0 : objects())
     double minDist = std::numeric_limits<double>::infinity();
     double gx = 0.;
     double gy = 0.;
-    double gz = 1.; //TEMP
+    double gz = 0.;
+    double nx = 0.;
+    double ny = 0.;
+    double nz = 0.;
 
     Object* collidedWith = nullptr;
     for(auto& b0 : objects())
@@ -496,48 +499,44 @@ for(auto& a0 : objects())
         const double zPrev = a->zPrev() - b->zPrev() + a->collisionRadius();
 
         double hx, hy, hz;
+        double nxTemp, nyTemp, nzTemp;
         const double c = b->model().collide(x, y, z, hx, hy, hz, a->
-            collisionRadius(), xPrev, yPrev, zPrev);
-        if(c < minDist)
+            collisionRadius(), xPrev, yPrev, zPrev, nxTemp, nyTemp, nzTemp);
+        if(c < a->collisionRadius())
         {
             collided = true;
-            minDist = c;
-            gx = hx;
-            gy = hy;
-            gz = hz;
-            collidedWith = b;
+            gx += hx;
+            gy += hy;
+            gz += hz;
+            if(c < minDist)
+            {
+                minDist = c;
+                collidedWith = b;
+                nx = nxTemp;
+                ny = nyTemp;
+                nz = nzTemp;
+            }
         }
     }
 
     if(collided)
     {
-        const double normNormal = std::sqrt(gx*gx + gy*gy + gz*gz);
-        if(normNormal)
-        {
-            a->localNorX() = gx/normNormal;
-            a->localNorY() = gy/normNormal;
-            a->localNorZ() = gz/normNormal;
-            a->x() += gx;
-            a->y() += gy;
-            a->z() += gz;
-        }
-        else
-        {
-            a->localNorX() = 0.;
-            a->localNorY() = 0.;
-            a->localNorZ() = 1.; //TEMP
-        }
+        a->localNorX() = nx;
+        a->localNorY() = ny;
+        a->localNorZ() = nz;
+        a->x() += gx;
+        a->y() += gy;
+        a->z() += gz;
 
         const double xVel = a->xVel() - collidedWith->xVel();
         const double yVel = a->yVel() - collidedWith->yVel();
         const double zVel = a->zVel() - collidedWith->zVel();
-        const double norVel = xVel*a->localNorX() + yVel*a->localNorY() + zVel*
-            a->localNorZ();
+        const double norVel = xVel*nx + yVel*ny + zVel*nz;
         if(norVel < 0.)
         {
-            a->xVel() -= norVel*a->localNorX();
-            a->yVel() -= norVel*a->localNorY();
-            a->zVel() -= norVel*a->localNorZ();
+            a->xVel() -= norVel*nx;
+            a->yVel() -= norVel*ny;
+            a->zVel() -= norVel*nz;
             // friction here ...
         }
 

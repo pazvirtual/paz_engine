@@ -200,10 +200,9 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
         return;
     }
 
-//TEMP - not optimal for edge contact (causes floating just off edges)
-    const double a = radius + xt;
-    nx = -a*basisX[0];
-    ny = -a*basisX[1];
-    nz = -a*basisX[2];
+//TEMP - incorrect for edge contact (causes bouncing)
+    nx = -basisX[0];
+    ny = -basisX[1];
+    nz = -basisX[2];
 //TEMP
 }
