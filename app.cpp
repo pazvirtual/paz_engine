@@ -94,8 +94,8 @@ layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
 layout(location = 2) in uint material;
 layout(location = 3) in vec2 coord;
-layout(location = 4) in vec4 model0;
-layout(location = 5) in vec2 model1;
+layout(location = 4) in vec4 model0 [[instance]];
+layout(location = 5) in vec2 model1 [[instance]];
 uniform mat4 projection;
 uniform mat4 view;
 flat out uint mtl;
@@ -105,7 +105,6 @@ out vec2 uv;
 void main()
 {
     vec4 att = vec4(model0.xyz, sqrt(1. - dot(model0.xyz, model0.xyz)));
-    vec3 pos = vec3(model0.w, model1);
     float xx = att.x*att.x;
     float yy = att.y*att.y;
     float zz = att.z*att.z;
@@ -118,7 +117,7 @@ void main()
     mat4 model = mat4(1. - 2.*(yy + zz), 2.*(xy + zw), 2.*(xz - yw), 0.,
                       2.*(xy - zw), 1. - 2.*(xx + zz), 2.*(yz + xw), 0.,
                       2.*(xz + yw), 2.*(yz - xw), 1. - 2.*(xx + yy), 0.,
-                      pos, 1.);
+                      model0.w, model1.x, model1.y, 1.);
     mat4 mv = view*model;
     mtl = material;
     posCs = mv*position;
@@ -690,7 +689,7 @@ Timer timer1;
 timeSum[1] += timer1.getAndRestart();
             const VertexBuffer verts = m.second.back()->model()._v;
             const IndexBuffer inds = m.second.back()->model()._i;
-            paz::VertexBuffer buf;
+            paz::InstanceBuffer buf;
             buf.attribute(4, modelMatData[0]);
             buf.attribute(2, modelMatData[1]);
 timeSum[2] += timer1.getAndRestart();
