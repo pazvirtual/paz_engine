@@ -2,7 +2,7 @@
 #include <cmath>
 #include <limits>
 
-static constexpr std::size_t NumSteps = 10;
+static constexpr std::size_t NumSteps = 20;
 
 inline double segment_dist_sq(double x, double y, double x0, double y0, double
     x1, double y1)
@@ -31,10 +31,16 @@ inline std::array<double, 3> normalize(const std::array<double, 3>& v)
     return {v[0]/norm, v[1]/norm, v[2]/norm};
 }
 
+inline double square(double x)
+{
+    return x*x;
+}
+
 paz::Triangle::Triangle(double x0, double y0, double z0, double x1, double y1,
     double z1, double x2, double y2, double z2) : x0(x0), y0(y0), z0(z0),
     _degenerate((x0 == x1 && y0 == y1 && z0 == z1) || (x0 == x2 && y0 == y2 &&
-    z0 == z2) || (x1 == x2 && y1 == y2 && z1 == z2))
+    z0 == z2) || (x1 == x2 && y1 == y2 && z1 == z2)), _centroid({(x0 + x1 + x2)/
+    3., (y0 + y1 + y2)/3., (z0 + z1 + z2)/3.})
 {
     x1 -= x0;
     y1 -= y0;
@@ -54,6 +60,14 @@ paz::Triangle::Triangle(double x0, double y0, double z0, double x1, double y1,
 
     y2t = basisY[0]*x2 + basisY[1]*y2 + basisY[2]*z2;
     z2t = basisZ[0]*x2 + basisZ[1]*y2 + basisZ[2]*z2;
+
+    _radius = square(x0 - _centroid[0]) + square(y0 - _centroid[1]) + square(z0
+        - _centroid[2]);
+    _radius = std::min(_radius, square(x1 - _centroid[0]) + square(y1 -
+        _centroid[1]) + square(z1 - _centroid[2]));
+    _radius = std::min(_radius, square(x2 - _centroid[0]) + square(y2 -
+        _centroid[1]) + square(z2 - _centroid[2]));
+    _radius = std::sqrt(_radius);
 }
 
 double paz::Triangle::dist_transformed(double xt, double yt, double zt) const
@@ -132,6 +146,13 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
         return; //TEMP
     }
 
+    // The sphere is too far from the triangle
+    if(square(x - _centroid[0]) + square(y - _centroid[1]) + square(z -
+        _centroid[2]) > square(_radius + radius))
+    {
+        return;
+    }
+
     x -= x0;
     xPrev -= x0;
     const double xt = basisX[0]*x + basisX[1]*y + basisX[2]*z;
@@ -179,7 +200,7 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
         return;
     }
 
-//TEMP - not optimal (minimum change in position) for edge contact
+//TEMP - not optimal for edge contact (causes floating just off edges)
     const double a = radius + xt;
     nx = -a*basisX[0];
     ny = -a*basisX[1];

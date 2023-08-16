@@ -13,6 +13,8 @@ namespace paz
         std::array<double, 3> basisY;
         std::array<double, 3> basisZ;
         double z1t, y2t, z2t;
+        const std::array<double, 3> _centroid;
+        double _radius;
         double dist_transformed(double xt, double yt, double zt) const;
 
     public:

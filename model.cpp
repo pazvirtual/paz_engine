@@ -50,12 +50,18 @@ double paz::Model::collide(double x, double y, double z, double& gx, double& gy,
     {
         double nx, ny, nz, d;
         n.collide(x, y, z, radius, xPrev, yPrev, zPrev, nx, ny, nz, d);
-        if(d < radius && d < minDist)
+        if(d < minDist)
         {
-            minDist = d;
-            gx += nx;
-            gy += ny;
-            gz += nz;
+            if(d < radius + 1e-6) //TEMP
+            {
+                minDist = d;
+                if(d < radius)
+                {
+                    gx += nx;
+                    gy += ny;
+                    gz += nz;
+                }
+            }
         }
     }
     return minDist;
