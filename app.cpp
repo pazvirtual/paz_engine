@@ -14,13 +14,12 @@ static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 
-////
 static paz::Framebuffer _geometryBuffer;
 static paz::Framebuffer _renderBuffer;
 static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
 
-//static paz::RenderTarget _materialMap(1, paz::TextureFormat::R8UInt);
+static paz::RenderTarget _materialMap(1, paz::TextureFormat::R8UInt);
 static paz::RenderTarget _normalMap(1, paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _depthMap(1, paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(1, paz::TextureFormat::RGBA16Float);
@@ -40,7 +39,6 @@ static double _cameraPitch = 0.;
 static /*const*/ paz::Object* _cameraObject = nullptr;
 
 static paz::Vec _mousePos = paz::Vec::Zero(2);
-////
 
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
@@ -84,17 +82,17 @@ void main()
 static const std::string GeometryVertSrc = 1 + R"====(
 layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
-//layout(location = 2) in uint material;
+layout(location = 2) in uint material;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
-//flat out uint mtl;
+flat out uint mtl;
 out vec4 posCs;
 out vec4 norCs;
 void main()
 {
     mat4 mv = view*model;
-//    mtl = material;
+    mtl = material;
     posCs = mv*position;
     norCs = mv*normal;
     gl_Position = projection*posCs;
@@ -102,14 +100,14 @@ void main()
 )====";
 
 static const std::string GeometryFragSrc = 1 + R"====(
-//flat in uint mtl;
+flat in uint mtl;
 in vec4 posCs;
 in vec4 norCs;
-//layout(location = 0) out uint material;
-layout(location = 0/*1*/) out vec4 normal;
+layout(location = 0) out uint material;
+layout(location = 1) out vec4 normal;
 void main()
 {
-//    material = mtl;
+    material = mtl;
     normal = vec4(normalize(norCs.xyz), 0.);
 }
 )====";
@@ -286,7 +284,7 @@ static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
 void paz::App::Init(const std::string& sceneShaderPath)
 {
-//    _geometryBuffer.attach(_materialMap);
+    _geometryBuffer.attach(_materialMap);
     _geometryBuffer.attach(_normalMap);
     _geometryBuffer.attach(_depthMap);
 
@@ -320,155 +318,7 @@ void paz::App::Run()
     while(!Window::Done())
     {
         physics();
-//const Vec gravDir = -_cameraBasePos.normalized();
-const Vec gravDir{{0., 0., -1.}};
-
-        Vec cameraAtt = _cameraAtt;
-
-        // Get basis vectors (rows of rotation matrix).
-        Mat cameraRot = to_mat(cameraAtt);
-        Vec cameraForward = cameraRot.row(1).trans();
-        Vec cameraRight = gravDir.cross(cameraForward);
-        cameraRight /= cameraRight.norm();
-
-        _cameraObject->yAngRate() = 0.;
-        if(_cameraGrounded)
-        {
-            _mousePos = Vec::Zero(2);
-            _cameraObject->xAngRate() = 0.;
-            _cameraObject->zAngRate() = -0.1*Window::MousePos().first;
-            Vec baseForward = cameraRight.cross(gravDir);
-            baseForward /= baseForward.norm();
-            const double deltaPitch = std::acos(std::max(0., std::min(1.,
-                baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) >
-                0. ? -1. : 1.) + 0.1*Window::MousePos().second*Window::
-                FrameTime();
-            if(std::abs(deltaPitch) > 1e-6)
-            {
-                _cameraPitch = std::max(-0.45*M_PI, std::min(0.45*
-                    M_PI, _cameraPitch + deltaPitch));
-            }
-            cameraRot.setRow(0, cameraRight.trans());
-            cameraRot.setRow(1, baseForward.trans());
-            cameraRot.setRow(2, -gravDir.trans());
-            Vec cameraBaseAtt = to_quat(cameraRot);
-            if(cameraBaseAtt(3) < 0.)
-            {
-                cameraBaseAtt = -cameraBaseAtt;
-            }
-            _cameraObject->xAtt() = cameraBaseAtt(0);
-            _cameraObject->yAtt() = cameraBaseAtt(1);
-            _cameraObject->zAtt() = cameraBaseAtt(2);
-            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch + 0.5*
-                M_PI), _cameraAtt);
-        }
-        else
-        {
-            if(_cameraPitch)
-            {
-                cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch),
-                    cameraAtt);
-                _cameraObject->xAtt() = cameraAtt(0);
-                _cameraObject->yAtt() = cameraAtt(1);
-                _cameraObject->zAtt() = cameraAtt(2);
-                cameraRot = to_mat(_cameraAtt);
-                _cameraPitch = 0.;
-            }
-            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, 0.5*M_PI), cameraAtt);
-            _mousePos(0) += Window::MousePos().first;
-            _mousePos(1) += Window::MousePos().second;
-            const double norm = _mousePos.norm();
-            if(norm > 100.)
-            {
-                _mousePos *= 100./norm;
-            }
-            else if(norm > 0.1)
-            {
-                _mousePos -= 50.0/norm*Window::FrameTime()*_mousePos;
-            }
-            else
-            {
-                _mousePos = Vec::Zero(2);
-            }
-            _cameraObject->xAngRate() = 0.006*_mousePos(1);
-            _cameraObject->zAngRate() = -0.006*_mousePos(0);
-        }
-
-        cameraRight = cameraRot.row(0).trans();
-        cameraForward = cameraRot.row(1).trans();
-        const Vec cameraUp = cameraRot.row(2).trans();
-
-        if(_cameraGrounded)
-        {
-            _cameraObject->xVel() = 0.;
-            _cameraObject->yVel() = 0.;
-            _cameraObject->zVel() = 0.;
-            if(Window::KeyDown(Key::A))
-            {
-                _cameraObject->xVel() -= 3.*cameraRight(0);
-                _cameraObject->yVel() -= 3.*cameraRight(1);
-                _cameraObject->zVel() -= 3.*cameraRight(2);
-            }
-            if(Window::KeyDown(Key::D))
-            {
-                _cameraObject->xVel() += 3.*cameraRight(0);
-                _cameraObject->yVel() += 3.*cameraRight(1);
-                _cameraObject->zVel() += 3.*cameraRight(2);
-            }
-            if(Window::KeyDown(Key::W))
-            {
-                _cameraObject->xVel() += 3.*cameraForward(0);
-                _cameraObject->yVel() += 3.*cameraForward(1);
-                _cameraObject->zVel() += 3.*cameraForward(2);
-            }
-            if(Window::KeyDown(Key::S))
-            {
-                _cameraObject->xVel() -= 3.*cameraForward(0);
-                _cameraObject->yVel() -= 3.*cameraForward(1);
-                _cameraObject->zVel() -= 3.*cameraForward(2);
-            }
-        }
-
-        /*if(Window::KeyPressed(Key::E))
-        {
-            for(const auto& n : objects())
-            {
-                Object* o = reinterpret_cast<Object*>(n.first);
-                const double relX = o->x() - _cameraX;
-                const double relY = o->y() - _cameraY;
-                const double relZ = o->z() - _cameraZ;
-                const double distSq = relX*relX + relY*relY + relZ*relZ;
-                const double dotProd = -sinYaw*relX + cosYaw*relY;
-                if((distSq < InteractRangeBehindSq || (distSq <
-                    InteractRangeInFrontSq && dotProd > 0.)))
-                {
-
-                    o->onInteract(*_cameraObject);
-                }
-            }
-        }*/
-
-        const auto projection = perspective(1., Window::AspectRatio(), 0.1,
-            100.);
-        Mat view = Mat::Zero(4);
-        view(3, 3) = 1.;
-        view.setBlock(0, 0, 3, 3, to_mat(cameraAtt));
-
-        for(const auto& n : objects())
-        {
-            Object* o = reinterpret_cast<Object*>(n.first);
-            if(o->collisionType() == CollisionType::Default)
-            {
-                o->xVel() += 9.81*Window::FrameTime()*gravDir(0);//TEMP - needs to be per-object
-                o->yVel() += 9.81*Window::FrameTime()*gravDir(1);
-                o->zVel() += 9.81*Window::FrameTime()*gravDir(2);
-            }
-        }
-
-        for(const auto& n : objects())
-        {
-            reinterpret_cast<Object*>(n.first)->update();
-        }
+        gravity();
 
 ////////
 for(auto& a0 : objects())
@@ -561,19 +411,195 @@ for(auto& a0 : objects())
         const double norVel = xVel*nx + yVel*ny + zVel*nz;
         if(norVel < 0.)
         {
-            a->xVel() -= norVel*nx;
-            a->yVel() -= norVel*ny;
-            a->zVel() -= norVel*nz;
+//            a->xVel() -= norVel*nx;
+//            a->yVel() -= norVel*ny;
+//            a->zVel() -= norVel*nz;
             // friction here ...
+a->xVel() = a->yVel() = a->zVel() = 0.;
         }
 
         a->onCollide(*collidedWith);
         collidedWith->onCollide(*a);
     }
 
-    a->grounded() = collided && a->localNorZ() > CosMaxAngle;
+    a->grounded() = collided;// && a->localNorZ() > CosMaxAngle;
+    if(a->grounded())
+    {
+//        a->xVel() = 0.; //TEMP - need friction
+//        a->yVel() = 0.;
+//        a->zVel() = 0.;
+    }
 }
 ////////
+
+        update();
+
+        const Vec gravDir = -_cameraBasePos.normalized();
+
+        Vec cameraAtt = _cameraAtt;
+
+        // Get basis vectors (rows of rotation matrix).
+        Mat cameraRot = to_mat(cameraAtt);
+        Vec cameraForward = cameraRot.row(1).trans();
+        Vec cameraRight = gravDir.cross(cameraForward).normalized();
+
+        _cameraObject->yAngRate() = 0.;
+        if(_cameraGrounded)
+        {
+            _mousePos = Vec::Zero(2);
+            _cameraObject->xAngRate() = 0.;
+            _cameraObject->zAngRate() = -0.1*Window::MousePos().first;
+            const Vec baseForward = cameraRight.cross(gravDir).normalized();
+            const double deltaPitch = std::acos(std::max(0., std::min(1.,
+                baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) >
+                0. ? -1. : 1.) + 0.1*Window::MousePos().second*Window::
+                FrameTime();
+            if(std::abs(deltaPitch) > 1e-6)
+            {
+                _cameraPitch = std::max(-0.45*M_PI, std::min(0.45*
+                    M_PI, _cameraPitch + deltaPitch));
+            }
+            cameraRot.setRow(0, cameraRight.trans());
+            cameraRot.setRow(1, baseForward.trans());
+            cameraRot.setRow(2, -gravDir.trans());
+            Vec cameraBaseAtt = to_quat(cameraRot);
+            if(cameraBaseAtt(3) < 0.)
+            {
+                cameraBaseAtt = -cameraBaseAtt;
+            }
+            _cameraObject->xAtt() = cameraBaseAtt(0);
+            _cameraObject->yAtt() = cameraBaseAtt(1);
+            _cameraObject->zAtt() = cameraBaseAtt(2);
+            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch + 0.5*
+                M_PI), _cameraAtt);
+        }
+        else
+        {
+            if(_cameraPitch)
+            {
+                cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch),
+                    cameraAtt);
+                _cameraObject->xAtt() = cameraAtt(0);
+                _cameraObject->yAtt() = cameraAtt(1);
+                _cameraObject->zAtt() = cameraAtt(2);
+                cameraRot = to_mat(_cameraAtt);
+                _cameraPitch = 0.;
+            }
+            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, 0.5*M_PI), cameraAtt);
+            _mousePos(0) += Window::MousePos().first;
+            _mousePos(1) += Window::MousePos().second;
+            const double norm = _mousePos.norm();
+            if(norm > 100.)
+            {
+                _mousePos *= 100./norm;
+            }
+            else if(norm > 0.1)
+            {
+                _mousePos -= 50.0/norm*Window::FrameTime()*_mousePos;
+            }
+            else
+            {
+                _mousePos = Vec::Zero(2);
+            }
+            _cameraObject->xAngRate() = 0.006*_mousePos(1);
+            _cameraObject->zAngRate() = -0.006*_mousePos(0);
+        }
+
+        cameraRight = cameraRot.row(0).trans();
+        cameraForward = cameraRot.row(1).trans();
+        const Vec cameraUp = cameraRot.row(2).trans();
+
+        if(_cameraGrounded)
+        {
+            if(Window::KeyDown(Key::A))
+            {
+                _cameraObject->xVel() -= 3.*cameraRight(0);
+                _cameraObject->yVel() -= 3.*cameraRight(1);
+                _cameraObject->zVel() -= 3.*cameraRight(2);
+            }
+            if(Window::KeyDown(Key::D))
+            {
+                _cameraObject->xVel() += 3.*cameraRight(0);
+                _cameraObject->yVel() += 3.*cameraRight(1);
+                _cameraObject->zVel() += 3.*cameraRight(2);
+            }
+            if(Window::KeyDown(Key::W))
+            {
+                _cameraObject->xVel() += 3.*cameraForward(0);
+                _cameraObject->yVel() += 3.*cameraForward(1);
+                _cameraObject->zVel() += 3.*cameraForward(2);
+            }
+            if(Window::KeyDown(Key::S))
+            {
+                _cameraObject->xVel() -= 3.*cameraForward(0);
+                _cameraObject->yVel() -= 3.*cameraForward(1);
+                _cameraObject->zVel() -= 3.*cameraForward(2);
+            }
+        }
+        else
+        {
+            if(Window::KeyDown(Key::A))
+            {
+                _cameraObject->xVel() -= 12.*cameraRight(0)*Window::FrameTime();
+                _cameraObject->yVel() -= 12.*cameraRight(1)*Window::FrameTime();
+                _cameraObject->zVel() -= 12.*cameraRight(2)*Window::FrameTime();
+            }
+            if(Window::KeyDown(Key::D))
+            {
+                _cameraObject->xVel() += 12.*cameraRight(0)*Window::FrameTime();
+                _cameraObject->yVel() += 12.*cameraRight(1)*Window::FrameTime();
+                _cameraObject->zVel() += 12.*cameraRight(2)*Window::FrameTime();
+            }
+            if(Window::KeyDown(Key::W))
+            {
+                _cameraObject->xVel() += 12.*cameraForward(0)*Window::FrameTime();
+                _cameraObject->yVel() += 12.*cameraForward(1)*Window::FrameTime();
+                _cameraObject->zVel() += 12.*cameraForward(2)*Window::FrameTime();
+            }
+            if(Window::KeyDown(Key::S))
+            {
+                _cameraObject->xVel() -= 12.*cameraForward(0)*Window::FrameTime();
+                _cameraObject->yVel() -= 12.*cameraForward(1)*Window::FrameTime();
+                _cameraObject->zVel() -= 12.*cameraForward(2)*Window::FrameTime();
+            }
+        }
+        if(Window::KeyDown(Key::LeftShift))
+        {
+            _cameraObject->xVel() += 12.*cameraUp(0)*Window::FrameTime();
+            _cameraObject->yVel() += 12.*cameraUp(1)*Window::FrameTime();
+            _cameraObject->zVel() += 12.*cameraUp(2)*Window::FrameTime();
+        }
+        if(Window::KeyDown(Key::LeftControl))
+        {
+            _cameraObject->xVel() -= 12.*cameraUp(0)*Window::FrameTime();
+            _cameraObject->yVel() -= 12.*cameraUp(1)*Window::FrameTime();
+            _cameraObject->zVel() -= 12.*cameraUp(2)*Window::FrameTime();
+        }
+
+        /*if(Window::KeyPressed(Key::E))
+        {
+            for(const auto& n : objects())
+            {
+                Object* o = reinterpret_cast<Object*>(n.first);
+                const double relX = o->x() - _cameraX;
+                const double relY = o->y() - _cameraY;
+                const double relZ = o->z() - _cameraZ;
+                const double distSq = relX*relX + relY*relY + relZ*relZ;
+                const double dotProd = -sinYaw*relX + cosYaw*relY;
+                if((distSq < InteractRangeBehindSq || (distSq <
+                    InteractRangeInFrontSq && dotProd > 0.)))
+                {
+
+                    o->onInteract(*_cameraObject);
+                }
+            }
+        }*/
+
+        const auto projection = perspective(1., Window::AspectRatio(), 0.1,
+            1e3);
+        Mat view = Mat::Zero(4);
+        view(3, 3) = 1.;
+        view.setBlock(0, 0, 3, 3, to_mat(cameraAtt));
 
         // Get geometry map.
         _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
@@ -601,12 +627,12 @@ for(auto& a0 : objects())
                 const auto upX = 2.*(xz + yw);
                 const auto upY = 2.*(yz - xw);
                 const auto upZ = 1. - 2.*(xx + yy);
-                _geometryPass.uniform("model", convert_mat(Mat{
-{1, 0, 0, o->x() + o->height()*upX - _cameraObject->x() - _cameraObject->height()*cameraUp(0)},
-{0, 1, 0, o->y() + o->height()*upY - _cameraObject->y() - _cameraObject->height()*cameraUp(1)},
-{0, 0, 1, o->z() + o->height()*upZ - _cameraObject->z() - _cameraObject->height()*cameraUp(2)},
-{0, 0, 0, 1}
-                }));
+                Mat model = Mat::Identity(4);
+                model(0, 3) = o->x() + o->height()*upX - _cameraObject->x() - _cameraObject->height()*cameraUp(0);
+                model(1, 3) = o->y() + o->height()*upY - _cameraObject->y() - _cameraObject->height()*cameraUp(1);
+                model(2, 3) = o->z() + o->height()*upZ - _cameraObject->z() - _cameraObject->height()*cameraUp(2);
+                model.setBlock(0, 0, 3, 3, to_mat(Vec{{q0, q1, q2, q3}}));
+                _geometryPass.uniform("model", convert_mat(model));
                 _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
                     model()._i);
             }
@@ -615,7 +641,7 @@ for(auto& a0 : objects())
 
         // Render in HDR.
         _renderPass.begin();
-//        _renderPass.read("materialMap", _materialMap);
+        _renderPass.read("materialMap", _materialMap);
         _renderPass.read("normalMap", _normalMap);
         _renderPass.read("depthMap", _depthMap);
         _renderPass.uniform("invProjection", convert_mat(convert_mat(projection).inv()));

@@ -1,5 +1,5 @@
 in vec2 uv;
-//uniform usampler2D materialMap;
+uniform usampler2D materialMap;
 uniform sampler2D normalMap;
 uniform depthSampler2D depthMap;
 uniform mat4 invProjection;
@@ -13,5 +13,7 @@ void main()
     float diff = cosAngle;
     vec3 halfwayDir = normalize(sun.xyz - dir);
     float spec = cosAngle*pow(max(0., dot(nor, halfwayDir)), 32);
-    color = vec4(mix(diff, spec, 0.3) + 5e-3);
+    color.rgb = mix(diff, spec, 0.3)*vec3(0.8, 1, 0.5) + vec3(0.1, 0, 0);
+    uint mtl = texture(materialMap, uv).r;
+    color.rgb = mix(vec3(0, 1, 1), color.rgb, float(mtl > 0u));
 }

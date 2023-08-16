@@ -27,7 +27,7 @@ namespace paz
 
     public:
         Model();
-        Model(const std::string& path);
+        Model(const std::string& path, int idx = 0);
     };
 
     class Object

@@ -74,6 +74,30 @@ void paz::physics()
     }
 }
 
+void paz::gravity()
+{
+    const std::size_t n = X.size();
+    for(std::size_t i = 0; i < n; ++i)
+    {
+        if(CType[i] == CollisionType::Default)
+        {
+            const double radius = std::sqrt(X[i]*X[i] + Y[i]*Y[i] + Z[i]*Z[i]);
+            XVel[i] -= 9.81*Window::FrameTime()*X[i]/radius;
+            YVel[i] -= 9.81*Window::FrameTime()*Y[i]/radius;
+            ZVel[i] -= 9.81*Window::FrameTime()*Z[i]/radius;
+        }
+    }
+}
+
+void paz::update()
+{
+    for(const auto& n : objects())
+    {
+        reinterpret_cast<Object*>(n.first)->update();
+    }
+}
+
+
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
 {
     objects()[_id] = X.size();

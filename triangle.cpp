@@ -2,7 +2,7 @@
 #include <cmath>
 #include <limits>
 
-static constexpr std::size_t NumSteps = 20;
+static constexpr std::size_t NumSteps = 100'000;
 
 inline double square(double x)
 {
@@ -186,6 +186,7 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
     const double deltaXt = xt - xPrevt;
 
     // Find closest approach to the triangle.
+    double nearestXt = xt;
     double nearestYt = 0.;
     double nearestZt = 0.;
     if(deltaXt)
@@ -205,6 +206,7 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
             if(dNew < d)
             {
                 d = dNew;
+                nearestXt = xTempt;
                 nearestYt = nearestYTempt;
                 nearestZt = nearestZTempt;
             }
@@ -221,9 +223,12 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
         return;
     }
 
-    const double norm = std::sqrt(square(xt) + square(nearestYt) + square(
-        nearestZt));
-    const double dirX = xt/norm;
+    double norm = std::sqrt(square(xt) + square(nearestYt) + square(nearestZt));
+    if(nearestXt > 0.)
+    {
+        norm = -norm;
+    }
+    const double dirX = nearestXt/norm;
     const double dirY = nearestYt/norm;
     const double dirZ = nearestZt/norm;
     nx = basisX[0]*dirX + basisY[0]*dirY + basisZ[0]*dirZ;
