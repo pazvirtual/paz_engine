@@ -396,49 +396,150 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(ZDown)
     PUSH_COPY(StdGravParam)
     PUSH_COPY(Lights)
-    for(auto& m : ObjectsByTag) //TEMP - inefficient
+    for(auto& n : ObjectsByTag) //TEMP - inefficient
     {
-        if(m.second.count(o._id))
+        if(n.second.count(o._id))
         {
-            m.second.insert(_id);
+            n.second.insert(_id);
         }
     }
 }
 
 paz::Object& paz::Object::operator=(const Object& o)
 {
-    const auto idx = objects().at(_id);
+    // If destination is in a valid state, copy data, otherwise, copy construct.
     const auto otherIdx = objects().at(o._id);
-    COPY(X)
-    COPY(Y)
-    COPY(Z)
-    COPY(XVel)
-    COPY(YVel)
-    COPY(ZVel)
-    COPY(XAtt)
-    COPY(YAtt)
-    COPY(ZAtt)
-    COPY(XAngRate)
-    COPY(YAngRate)
-    COPY(ZAngRate)
-    COPY(Mod)
-    COPY(CType)
-    COPY(GType)
-    COPY(CRadius)
-    COPY(XDown)
-    COPY(YDown)
-    COPY(ZDown)
-    COPY(StdGravParam)
-    COPY(Lights)
-    for(auto& m : ObjectsByTag) //TEMP - inefficient
+    if(objects().count(_id))
     {
-        if(m.second.count(o._id))
+        const auto idx = objects().at(_id);
+        COPY(X)
+        COPY(Y)
+        COPY(Z)
+        COPY(XVel)
+        COPY(YVel)
+        COPY(ZVel)
+        COPY(XAtt)
+        COPY(YAtt)
+        COPY(ZAtt)
+        COPY(XAngRate)
+        COPY(YAngRate)
+        COPY(ZAngRate)
+        COPY(Mod)
+        COPY(CType)
+        COPY(GType)
+        COPY(CRadius)
+        COPY(XDown)
+        COPY(YDown)
+        COPY(ZDown)
+        COPY(StdGravParam)
+        COPY(Lights)
+        for(auto& n : ObjectsByTag) //TEMP - inefficient
         {
-            m.second.insert(_id);
+            if(n.second.count(o._id))
+            {
+                n.second.insert(_id);
+            }
+            else if(n.second.count(_id))
+            {
+                n.second.erase(_id);
+            }
         }
-        else if(m.second.count(_id))
+    }
+    else
+    {
+        objects()[_id] = X.size();
+        Ids.push_back(_id);
+        PUSH_COPY(X)
+        PUSH_COPY(Y)
+        PUSH_COPY(Z)
+        PUSH_COPY(XVel)
+        PUSH_COPY(YVel)
+        PUSH_COPY(ZVel)
+        PUSH_COPY(XAtt)
+        PUSH_COPY(YAtt)
+        PUSH_COPY(ZAtt)
+        PUSH_COPY(XAngRate)
+        PUSH_COPY(YAngRate)
+        PUSH_COPY(ZAngRate)
+        PUSH_COPY(Mod)
+        PUSH_COPY(CType)
+        PUSH_COPY(GType)
+        PUSH_COPY(CRadius)
+        PUSH_COPY(XDown)
+        PUSH_COPY(YDown)
+        PUSH_COPY(ZDown)
+        PUSH_COPY(StdGravParam)
+        PUSH_COPY(Lights)
+        for(auto& n : ObjectsByTag) //TEMP - inefficient
         {
-            m.second.erase(_id);
+            if(n.second.count(o._id))
+            {
+                n.second.insert(_id);
+            }
+        }
+    }
+    return *this;
+}
+
+paz::Object::Object(Object&& o) noexcept : _id(reinterpret_cast<std::uintptr_t>(
+    this))
+{
+    const auto idx = objects().at(o._id);
+    objects()[_id] = idx;
+    objects().erase(o._id);
+    Ids[idx] = _id;
+    for(auto& n : ObjectsByTag) //TEMP - inefficient
+    {
+        if(n.second.count(o._id))
+        {
+            n.second.erase(o._id);
+            n.second.insert(_id);
+        }
+    }
+}
+
+paz::Object& paz::Object::operator=(Object&& o) noexcept
+{
+    // If destination is in a valid state, just swap, otherwise, copy construct.
+    const auto otherIdx = objects().at(o._id);
+    if(objects().count(_id))
+    {
+        const auto idx = objects().at(_id);
+        objects().at(_id) = otherIdx;
+        objects().at(o._id) = idx;
+        std::swap(Ids[idx], Ids[otherIdx]);
+    }
+    else
+    {
+        objects()[_id] = X.size();
+        Ids.push_back(_id);
+        PUSH_COPY(X)
+        PUSH_COPY(Y)
+        PUSH_COPY(Z)
+        PUSH_COPY(XVel)
+        PUSH_COPY(YVel)
+        PUSH_COPY(ZVel)
+        PUSH_COPY(XAtt)
+        PUSH_COPY(YAtt)
+        PUSH_COPY(ZAtt)
+        PUSH_COPY(XAngRate)
+        PUSH_COPY(YAngRate)
+        PUSH_COPY(ZAngRate)
+        PUSH_COPY(Mod)
+        PUSH_COPY(CType)
+        PUSH_COPY(GType)
+        PUSH_COPY(CRadius)
+        PUSH_COPY(XDown)
+        PUSH_COPY(YDown)
+        PUSH_COPY(ZDown)
+        PUSH_COPY(StdGravParam)
+        PUSH_COPY(Lights)
+        for(auto& n : ObjectsByTag) //TEMP - inefficient
+        {
+            if(n.second.count(o._id))
+            {
+                n.second.insert(_id);
+            }
         }
     }
     return *this;
@@ -446,6 +547,11 @@ paz::Object& paz::Object::operator=(const Object& o)
 
 paz::Object::~Object()
 {
+    // If this object has been moved from, nothing to do.
+    if(!objects().count(_id))
+    {
+        return;
+    }
     const auto idx = objects().at(_id);
     if(Ids.size() > 1)
     {
@@ -474,7 +580,7 @@ paz::Object::~Object()
     SWAP_AND_POP(ZDown)
     SWAP_AND_POP(StdGravParam)
     SWAP_AND_POP(Lights)
-    for(auto& n : ObjectsByTag)
+    for(auto& n : ObjectsByTag) //TEMP - inefficient
     {
         n.second.erase(_id);
     }

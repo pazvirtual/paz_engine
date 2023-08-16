@@ -7,9 +7,9 @@ class Npc : public paz::Object
 {
     double _destYaw;
     double _walkTime;
+    paz::Object _head;
 
 public:
-    paz::Object _head;
     Npc();
     void update() override;
     void onCollide(const Object&, double, double, double) override;

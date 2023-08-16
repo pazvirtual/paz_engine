@@ -79,6 +79,8 @@ namespace paz
         Object();
         Object(const Object& o);
         Object& operator=(const Object& o);
+        Object(Object&& o) noexcept;
+        Object& operator=(Object&& o) noexcept;
         virtual ~Object();
         void notify(Object& o, const Bytes& data) const;
         void notifyTagged(const std::string& tag, const Bytes& data) const;
@@ -139,15 +141,17 @@ namespace paz
         ObjectPtr();
         ObjectPtr(const Object& o);
         ObjectPtr(std::nullptr_t);
+        void swap(ObjectPtr& p) noexcept;
         ObjectPtr& operator=(std::nullptr_t);
         const Object& operator*() const;
         Object& operator*();
         const Object* operator->() const;
         Object* operator->();
         operator bool() const;
+        bool operator==(const ObjectPtr& p) const;
+        bool operator!=(const ObjectPtr& p) const;
         void reset() noexcept;
         void reset(const Object& o) noexcept;
-        void swap(ObjectPtr& p) noexcept;
     };
 
     std::ostream& operator<<(std::ostream& stream, const ObjectPtr& p);
