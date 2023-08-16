@@ -374,7 +374,7 @@ void main()
 static const std::string TextFragSrc = 1 + R"===(
 uniform sampler2D font;
 in vec2 uv;
-in float h;
+flat in float h;
 layout(location = 0) out vec4 color;
 void main()
 {
