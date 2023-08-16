@@ -14,7 +14,7 @@ class Player : public paz::Object
 public:
     Player()
     {
-        height() = 1.5;
+        /*height*/collisionRadius() = 1.5;
     }
 };
 
@@ -169,7 +169,7 @@ public:
 
 int main()
 {
-    paz::App::Init("scene.frag");
+    paz::App::Init("scene.frag", "font.pbm");
     Ground = paz::Model("plane.obj");
     PlatformModel = paz::Model("platform.obj");
     Sphere = paz::Model("sphere50.obj");
@@ -179,7 +179,7 @@ int main()
 //    Ball b;
     World w;
 //    Platform p;
-    player.z() = Radius + 500*player.height();
+    player.z() = Radius + 10;
 //    Npc npc;
 //    npc.x() = 0.5;
 //    npc.z() = Radius;

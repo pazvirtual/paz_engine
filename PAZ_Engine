@@ -93,7 +93,8 @@ namespace paz
     {
     public:
         App() = delete;
-        static void Init(const std::string& sceneShaderPath);
+        static void Init(const std::string& sceneShaderPath, const std::
+            string& fontPath);
         static void Run();
         static void AttachCamera(/*const*/ Object& o);
         static double CameraYaw();

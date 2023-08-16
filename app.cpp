@@ -3,6 +3,8 @@
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
+#include <sstream>
+#include <iomanip>
 
 //#define DO_FXAA
 
@@ -39,8 +41,12 @@ static paz::RenderPass _postPass;
 static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
 #endif
+static paz::RenderPass _textPass;
 
 static paz::VertexBuffer _quadVertices;
+
+static paz::Texture _font;
+std::string _msg;
 
 static double _cameraPitch = 0.;
 
@@ -320,9 +326,94 @@ void main()
 )===";
 #endif
 
+static const std::string TextVertSrc = 1 + R"===(
+const int numChars = 42;
+uniform int baseSize;
+uniform float scale;
+uniform int height;
+uniform int width;
+uniform int character;
+uniform int col;
+uniform int row;
+layout(location = 0) in vec2 position;
+out vec2 uv;
+void main()
+{
+    uv = 0.5*position.xy + 0.5;
+    gl_Position = vec4((uv.x + float(col))*scale*float(baseSize)*2./float(width)
+        - 1., (uv.y - 1. - float(row))*scale*float(baseSize)*2./float(height) +
+        1., 0., 1.);
+    uv.x = (uv.x + float(character))/float(numChars);
+}
+)===";
+
+static const std::string TextFragSrc = 1 + R"===(
+uniform sampler2D font;
+uniform float highlight;
+in vec2 uv;
+layout(location = 0) out vec4 color;
+void main()
+{
+    float t = texture(font, uv).x;
+    float c = 1. - 0.8*highlight;
+    color = vec4(1., 1., c, t);
+}
+)===";
+
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
-void paz::App::Init(const std::string& sceneShaderPath)
+static int get_char(char c)
+{
+    switch(c)
+    {
+        case '0': return 0;
+        case '1': return 1;
+        case '2': return 2;
+        case '3': return 3;
+        case '4': return 4;
+        case '5': return 5;
+        case '6': return 6;
+        case '7': return 7;
+        case '8': return 8;
+        case '9': return 9;
+        case 'a': return 10;
+        case 'b': return 11;
+        case 'c': return 12;
+        case 'd': return 13;
+        case 'e': return 14;
+        case 'f': return 15;
+        case 'g': return 16;
+        case 'h': return 17;
+        case 'i': return 18;
+        case 'j': return 19;
+        case 'k': return 20;
+        case 'l': return 21;
+        case 'm': return 22;
+        case 'n': return 23;
+        case 'o': return 24;
+        case 'p': return 25;
+        case 'q': return 26;
+        case 'r': return 27;
+        case 's': return 28;
+        case 't': return 29;
+        case 'u': return 30;
+        case 'v': return 31;
+        case 'w': return 32;
+        case 'x': return 33;
+        case 'y': return 34;
+        case 'z': return 35;
+        case ':': return 36;
+        case '.': return 37;
+        case '|': return 38;
+        case '-': return 39;
+        case '/': return 40;
+        case '+': return 41;
+        default: return -1;
+    }
+}
+
+void paz::App::Init(const std::string& sceneShaderPath, const std::string&
+    fontPath)
 {
     _geometryBuffer.attach(_materialMap);
     _geometryBuffer.attach(_normalMap);
@@ -339,6 +430,7 @@ void paz::App::Init(const std::string& sceneShaderPath)
 
     const VertexFunction geometryVert(GeometryVertSrc);
     const VertexFunction quadVert(QuadVertSrc);
+    const VertexFunction textVert(TextVertSrc);
     const FragmentFunction geometryFrag(GeometryFragSrc);
     const FragmentFunction sceneFrag(getAsset(sceneShaderPath).str());
 #ifdef DO_FXAA
@@ -346,6 +438,7 @@ void paz::App::Init(const std::string& sceneShaderPath)
     const FragmentFunction fxaaFrag(FxaaFragSrc);
 #endif
     const FragmentFunction postFrag(PostFragSrc);
+    const FragmentFunction textFrag(TextFragSrc);
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass = RenderPass(_renderBuffer, quadVert, sceneFrag);
@@ -356,8 +449,11 @@ void paz::App::Init(const std::string& sceneShaderPath)
 #else
     _postPass = RenderPass(quadVert, postFrag);
 #endif
+    _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
 
     _quadVertices.attribute(2, QuadPos);
+
+    _font = Texture(parse_pbm(getAsset(fontPath).str()));
 
     Window::SetCursorMode(CursorMode::Disable);
 }
@@ -451,9 +547,9 @@ if(tempDone[j]){ continue; }
                             a[j]->yVel() = 0.5*a[j]->yVel() + 0.5*b[k]->yVel();
                             a[j]->zVel() = 0.5*a[j]->zVel() + 0.5*b[k]->zVel();
                         }
-                        a[j]->x() = xNew - offsetX[j] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*paz::Window::FrameTime();
-                        a[j]->y() = yNew - offsetY[j] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*paz::Window::FrameTime();
-                        a[j]->z() = zNew - offsetZ[j] + (NumSteps - i - 1)*a[j]->zVel()/NumSteps*paz::Window::FrameTime();
+                        a[j]->x() = xNew - offsetX[j] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
+                        a[j]->y() = yNew - offsetY[j] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
+                        a[j]->z() = zNew - offsetZ[j] + (NumSteps - i - 1)*a[j]->zVel()/NumSteps*Window::FrameTime();
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
@@ -470,7 +566,9 @@ tempDone[j] = true;
 const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
 const double lat = std::asin(_cameraObject->z()/r);
 const double lon = std::atan2(_cameraObject->y(), _cameraObject->x());
-std::cout << r << " " << lat*180./M_PI << " " << lon*180./M_PI << " | " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
+std::stringstream ss;
+ss << std::fixed << std::setprecision(4) << "\n" << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel());
+_msg = ss.str();
 }
 
 
@@ -713,6 +811,45 @@ std::cout << r << " " << lat*180./M_PI << " " << lon*180./M_PI << " | " << std::
         _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _fxaaPass.end();
 #endif
+
+        if(!_msg.empty())
+        {
+            _textPass.begin();
+            _textPass.read("font", _font);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("baseSize", _font.height());
+            bool highlight = false;
+            _textPass.uniform("scale", 3.f);
+            int row = 0;
+            int col = 0;
+            for(const auto& n : _msg)
+            {
+                if(n == '`')
+                {
+                    highlight = !highlight;
+                    continue;
+                }
+                if(n == '\n')
+                {
+                    ++row;
+                    col = 0;
+                    continue;
+                }
+                const char c = get_char(n);
+                if(c >= 0)
+                {
+                    _textPass.uniform("highlight", static_cast<float>(
+                        highlight));
+                    _textPass.uniform("row", row);
+                    _textPass.uniform("col", col);
+                    _textPass.uniform("character", c);
+                    _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+                }
+                ++col;
+            }
+            _textPass.end();
+        }
 
         Window::EndFrame();
     }
