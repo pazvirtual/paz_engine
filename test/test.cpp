@@ -64,7 +64,7 @@ public:
         {
             if(z() < 3.)
             {
-                zVel() = 1.;
+                zVel() = std::min(1., 1.7 - std::abs(z() - 1.5));
             }
             else
             {
@@ -77,7 +77,7 @@ public:
         {
             if(z() > 0.)
             {
-                zVel() = -1.;
+                zVel() = -std::min(1., 1.7 - std::abs(z() - 1.5));
             }
             else
             {

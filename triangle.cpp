@@ -155,6 +155,10 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
 
     x -= x0;
     xPrev -= x0;
+    y -= y0;
+    z -= z0;
+    yPrev -= y0;
+    zPrev -= z0;
     const double xt = basisX[0]*x + basisX[1]*y + basisX[2]*z;
     const double xPrevt = basisX[0]*xPrev + basisX[1]*yPrev + basisX[2]*zPrev;
 
@@ -164,10 +168,6 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
         return;
     }
 
-    y -= y0;
-    z -= z0;
-    yPrev -= y0;
-    zPrev -= z0;
     const double yt = basisY[0]*x + basisY[1]*y + basisY[2]*z;
     const double zt = basisZ[0]*x + basisZ[1]*y + basisZ[2]*z;
     const double yPrevt = basisY[0]*xPrev + basisY[1]*yPrev + basisY[2]*zPrev;

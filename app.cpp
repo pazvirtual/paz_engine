@@ -511,43 +511,29 @@ for(auto& a0 : objects())
 
     if(collided)
     {
-        a->onCollide(*collidedWith);
-        collidedWith->onCollide(*a);
-
         const double normNormal = std::sqrt(gx*gx + gy*gy + gz*gz);
         a->localNorX() = gx/normNormal;
         a->localNorY() = gy/normNormal;
         a->localNorZ() = gz/normNormal;
-#if 1
         a->x() += gx;
         a->y() += gy;
         a->z() += gz;
-#else
-        const double gDotV = gx*a->xVel() + gy*a->yVel() + gz*a->zVel();
-        if(gDotV < 0.)
-        {
-            const double normVel = std::sqrt(a->xVel()*a->xVel() + a->yVel()*a->
-                yVel() + a->zVel()*a->zVel());
-            x -= gDotV*a->xVel()/normVel/normVel;
-            y -= gDotV*a->yVel()/normVel/normVel;
-            z -= gDotV*a->zVel()/normVel/normVel;
-        }
-#endif
-        const double norVel = a->xVel()*a->localNorX() + a->yVel()*a->
-            localNorY() + a->zVel()*a->localNorZ();
+
+        const double xVel = a->xVel() - collidedWith->xVel();
+        const double yVel = a->yVel() - collidedWith->yVel();
+        const double zVel = a->zVel() - collidedWith->zVel();
+        const double norVel = xVel*a->localNorX() + yVel*a->localNorY() + zVel*
+            a->localNorZ();
         if(norVel < 0.)
         {
-#if 1
             a->xVel() -= norVel*a->localNorX();
             a->yVel() -= norVel*a->localNorY();
             a->zVel() -= norVel*a->localNorZ();
             // friction here ...
-#else
-            a->xVel() = 0.;
-            a->yVel() = 0.;
-            a->zVel() = 0.;
-#endif
         }
+
+        a->onCollide(*collidedWith);
+        collidedWith->onCollide(*a);
     }
 
     a->grounded() = collided && a->localNorZ() > CosMaxAngle;
