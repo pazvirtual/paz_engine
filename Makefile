@@ -13,7 +13,7 @@ else
     LIBPATH := /usr/local/lib
     INCLPATH := /usr/local/include
 endif
-CXXVER := 14
+CXXVER := 17
 OPTIM := fast
 ZIPNAME := $(PROJNAME)-$(OSPRETTY)
 CFLAGS := -O$(OPTIM) -Wall -Wextra -Wno-missing-braces

@@ -1,6 +1,7 @@
 #include "object.hpp"
 #include "ui.hpp"
 #include "shared.hpp"
+#include "io.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
@@ -74,8 +75,19 @@ static const std::vector<paz::Button> OptionsButtons =
     {
         [](){ return paz::Window::IsFullscreen() ? "Fullscreen: ON" :
             "Fullscreen: OFF"; },
-        [](paz::Menu&){ paz::Window::IsFullscreen() ? paz::Window::
-            MakeWindowed() : paz::Window::MakeFullscreen(); }
+        [](paz::Menu&)
+        {
+            if(paz::Window::IsFullscreen())
+            {
+                paz::Window::MakeWindowed();
+                paz::save_setting("fullscreen", "0");
+            }
+            else
+            {
+                paz::Window::MakeFullscreen();
+                paz::save_setting("fullscreen", "1");
+            }
+        }
     },
     {
         []()
@@ -94,14 +106,26 @@ static const std::vector<paz::Button> OptionsButtons =
         {
             if(paz::Window::HidpiSupported())
             {
-                paz::Window::HidpiEnabled() ? paz::Window::DisableHidpi() :
+                if(paz::Window::HidpiEnabled())
+                {
+                    paz::Window::DisableHidpi();
+                    paz::save_setting("hidpi", "0");
+                }
+                else
+                {
                     paz::Window::EnableHidpi();
+                    paz::save_setting("hidpi", "1");
+                }
             }
         }
     },
     {
         [](){ return _fxaaEnabled ? "FXAA:       ON" : "FXAA:       OFF"; },
-        [](paz::Menu&){ _fxaaEnabled = !_fxaaEnabled; }
+        [](paz::Menu&)
+        {
+            _fxaaEnabled = !_fxaaEnabled;
+            paz::save_setting("fxaa", _fxaaEnabled ? "1" : "0");
+        }
     },
     {"Back", [](paz::Menu& m){ m.setState(0, 1); }}
 };
@@ -141,6 +165,19 @@ static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     sceneShaderPath1, const std::string& fontPath, const std::string& title)
 {
+    if(load_setting("fullscreen") == "1")
+    {
+        Window::MakeFullscreen();
+    }
+    if(load_setting("hidpi") == "0")
+    {
+        Window::DisableHidpi();
+    }
+    if(load_setting("fxaa") == "0")
+    {
+        _fxaaEnabled = false;
+    }
+
     _title = title;
 
     _geometryBuffer.attach(_diffuseMap);
