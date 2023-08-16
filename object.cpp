@@ -34,34 +34,89 @@ static std::vector<char> Grounded;
 static std::vector<double> Height;
 static std::vector<double> CRadius;
 
+static void grav_ode(double x, double y, double z, double u, double v, double w, double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
+{
+    static constexpr double StdGravParam = 9.81*50.*50.;
+    const double radius = std::sqrt(x*x + y*y + z*z);
+    const double c = -StdGravParam/(radius*radius*radius);
+    dx = u;
+    dy = v;
+    dz = w;
+    du = c*x;
+    dv = c*y;
+    dw = c*z;
+}
+
 void paz::physics()
 {
+    XPrev = X;
+    YPrev = Y;
+    ZPrev = Z;
     const std::size_t n = X.size();
-    XPrev.resize(n);
-    YPrev.resize(n);
-    ZPrev.resize(n);
     for(std::size_t i = 0; i < n; ++i)
     {
-        XPrev[i] = X[i];
-        X[i] += Window::FrameTime()*XVel[i];
-    }
-    for(std::size_t i = 0; i < n; ++i)
-    {
-        YPrev[i] = Y[i];
-        Y[i] += Window::FrameTime()*YVel[i];
-    }
-    for(std::size_t i = 0; i < n; ++i)
-    {
-        ZPrev[i] = Z[i];
-        Z[i] += Window::FrameTime()*ZVel[i];
+        if(CType[i] == CollisionType::Default)
+        {
+            double dx, dy, dz, du, dv, dw;
+            grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
+                du, dv, dw);
+            const double k1_1 = Window::FrameTime()*dx;
+            const double k1_2 = Window::FrameTime()*dy;
+            const double k1_3 = Window::FrameTime()*dz;
+            const double k1_4 = Window::FrameTime()*du;
+            const double k1_5 = Window::FrameTime()*dv;
+            const double k1_6 = Window::FrameTime()*dw;
+            grav_ode(X[i] + 0.5*k1_1, Y[i] + 0.5*k1_2, Z[i] + 0.5*k1_3, XVel[i]
+                + 0.5*k1_4, YVel[i] + 0.5*k1_5, ZVel[i] + 0.5*k1_6, dx, dy, dz,
+                du, dv, dw);
+            const double k2_1 = Window::FrameTime()*dx;
+            const double k2_2 = Window::FrameTime()*dy;
+            const double k2_3 = Window::FrameTime()*dz;
+            const double k2_4 = Window::FrameTime()*du;
+            const double k2_5 = Window::FrameTime()*dv;
+            const double k2_6 = Window::FrameTime()*dw;
+            grav_ode(X[i] + 0.5*k2_1, Y[i] + 0.5*k2_2, Z[i] + 0.5*k2_3, XVel[i]
+                + 0.5*k2_4, YVel[i] + 0.5*k2_5, ZVel[i] + 0.5*k2_6, dx, dy, dz,
+                du, dv, dw);
+            const double k3_1 = Window::FrameTime()*dx;
+            const double k3_2 = Window::FrameTime()*dy;
+            const double k3_3 = Window::FrameTime()*dz;
+            const double k3_4 = Window::FrameTime()*du;
+            const double k3_5 = Window::FrameTime()*dv;
+            const double k3_6 = Window::FrameTime()*dw;
+            grav_ode(X[i] + k3_1, Y[i] + k3_2, Z[i] + k3_3, XVel[i] + k3_4,
+                YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw);
+            const double k4_1 = Window::FrameTime()*dx;
+            const double k4_2 = Window::FrameTime()*dy;
+            const double k4_3 = Window::FrameTime()*dz;
+            const double k4_4 = Window::FrameTime()*du;
+            const double k4_5 = Window::FrameTime()*dv;
+            const double k4_6 = Window::FrameTime()*dw;
+            static constexpr double c = 1./6.;
+            X[i] += c*(k1_1 + 2.*(k2_1 + k3_1) + k4_1);
+            Y[i] += c*(k1_2 + 2.*(k2_2 + k3_2) + k4_2);
+            Z[i] += c*(k1_3 + 2.*(k2_3 + k3_3) + k4_3);
+            XVel[i] += c*(k1_4 + 2.*(k2_4 + k3_4) + k4_4);
+            YVel[i] += c*(k1_5 + 2.*(k2_5 + k3_5) + k4_5);
+            ZVel[i] += c*(k1_6 + 2.*(k2_6 + k3_6) + k4_6);
+        }
+        else
+        {
+            X[i] += Window::FrameTime()*XVel[i];
+            Y[i] += Window::FrameTime()*YVel[i];
+            Z[i] += Window::FrameTime()*ZVel[i];
+        }
     }
     for(std::size_t i = 0; i < n; ++i)
     {
         double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[i]
             *ZAtt[i]);
-        const double deltaX = normalize_angle(0.5*Window::FrameTime()*XAngRate[i] + M_PI) - M_PI;
-        const double deltaY = normalize_angle(0.5*Window::FrameTime()*YAngRate[i] + M_PI) - M_PI;
-        const double deltaZ = normalize_angle(0.5*Window::FrameTime()*ZAngRate[i] + M_PI) - M_PI;
+        const double deltaX = normalize_angle(0.5*Window::FrameTime()*XAngRate[
+            i] + M_PI) - M_PI;
+        const double deltaY = normalize_angle(0.5*Window::FrameTime()*YAngRate[
+            i] + M_PI) - M_PI;
+        const double deltaZ = normalize_angle(0.5*Window::FrameTime()*ZAngRate[
+            i] + M_PI) - M_PI;
         XAtt[i] +=  WAtt   *deltaX - ZAtt[i]*deltaY + YAtt[i]*deltaZ;
         YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
         ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;
@@ -73,21 +128,6 @@ void paz::physics()
         ZAtt[i] /= signNorm;
     }
     std::fill(Grounded.begin(), Grounded.end(), false);
-}
-
-void paz::gravity()
-{
-    const std::size_t n = X.size();
-    for(std::size_t i = 0; i < n; ++i)
-    {
-        if(CType[i] == CollisionType::Default)
-        {
-            const double radius = std::sqrt(X[i]*X[i] + Y[i]*Y[i] + Z[i]*Z[i]);
-            XVel[i] -= 9.81*Window::FrameTime()*X[i]/radius;
-            YVel[i] -= 9.81*Window::FrameTime()*Y[i]/radius;
-            ZVel[i] -= 9.81*Window::FrameTime()*Z[i]/radius;
-        }
-    }
 }
 
 void paz::update()

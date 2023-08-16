@@ -468,7 +468,6 @@ void paz::App::Run()
     while(!Window::Done())
     {
         physics();
-        gravity();
 
         const Vec gravDir = -_cameraBasePos.normalized();
 
