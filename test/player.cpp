@@ -333,7 +333,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         zVel() += 12.*up(2)*net*input.timestep();
     }
 
-    if(input.mousePressed(0) || input.gamepadPressed(paz::GamepadButton::A))
+    if(input.mousePressed(paz::MouseButton::Left) || input.gamepadPressed(paz::
+        GamepadButton::A))
     {
         const paz::Vec dir = paz::to_mat(cameraAtt).row(1).trans();
         const paz::Vec pos{{_head.x(), _head.y(), _head.z()}};

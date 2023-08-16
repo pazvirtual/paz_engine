@@ -92,9 +92,9 @@ namespace paz
         bool keyDown(Key key) const;
         bool keyPressed(Key key) const;
         bool keyReleased(Key key) const;
-        bool mouseDown(int button) const;
-        bool mousePressed(int button) const;
-        bool mouseReleased(int button) const;
+        bool mouseDown(MouseButton button) const;
+        bool mousePressed(MouseButton button) const;
+        bool mouseReleased(MouseButton button) const;
         const std::pair<double, double>& mousePos() const;
         const std::pair<double, double>& scrollOffset() const;
         bool gamepadDown(GamepadButton button) const;

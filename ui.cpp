@@ -63,8 +63,8 @@ void paz::Menu::update()
         Window::SetCursorMode(CursorMode::Disable);
     }
 
-    if(_curButton >= 0 && (Window::MousePressed(0) || Window::KeyPressed(
-        Key::Space) || Window::KeyPressed(Key::Enter) || Window::
+    if(_curButton >= 0 && (Window::MousePressed(MouseButton::Left) || Window::
+        KeyPressed(Key::Space) || Window::KeyPressed(Key::Enter) || Window::
         KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
         GamepadButton::A)))
     {

@@ -14,9 +14,11 @@ void paz::InputData::copyEvents(double timestep, double sensitivity)
     }
     for(int i = 0; i < NumMouseButtons; ++i)
     {
-        _mouseDown[i] = Window::MouseDown(i);
-        _mousePressed[i] = _mousePressed[i] || Window::MousePressed(i);
-        _mouseReleased[i] = _mouseReleased[i] || Window::MouseReleased(i);
+        _mouseDown[i] = Window::MouseDown(static_cast<MouseButton>(i));
+        _mousePressed[i] = _mousePressed[i] || Window::MousePressed(static_cast<
+            MouseButton>(i));
+        _mouseReleased[i] = _mouseReleased[i] || Window::MouseReleased(
+            static_cast<MouseButton>(i));
     }
     _mousePos.first += sensitivity*Window::MousePos().first;
     _mousePos.second += sensitivity*Window::MousePos().second;
@@ -71,19 +73,19 @@ bool paz::InputData::keyReleased(Key key) const
     return _keyReleased.at(static_cast<int>(key));
 }
 
-bool paz::InputData::mouseDown(int button) const
+bool paz::InputData::mouseDown(MouseButton button) const
 {
-    return _mouseDown.at(button);
+    return _mouseDown.at(static_cast<int>(button));
 }
 
-bool paz::InputData::mousePressed(int button) const
+bool paz::InputData::mousePressed(MouseButton button) const
 {
-    return _mousePressed.at(button);
+    return _mousePressed.at(static_cast<int>(button));
 }
 
-bool paz::InputData::mouseReleased(int button) const
+bool paz::InputData::mouseReleased(MouseButton button) const
 {
-    return _mouseReleased.at(button);
+    return _mouseReleased.at(static_cast<int>(button));
 }
 
 const std::pair<double, double>& paz::InputData::mousePos() const
