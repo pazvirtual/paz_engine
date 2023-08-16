@@ -228,6 +228,7 @@ namespace paz
         static void SetSound(const Object& o, const AudioTrack& sound, bool
             loop);
         static void SetSun(const Vec& dir, const Vec& ill);
+        static void PushDialog(const std::string& msg, double time);
     };
 }
 

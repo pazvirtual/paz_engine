@@ -14,6 +14,11 @@ Npc::Npc() : _destYaw(paz::uniform(0., paz::TwoPi)), _walkTime(0.)
 
 void Npc::update(const paz::InputData& input)
 {
+    if(!_name.empty() && paz::uniform() < 5e-3)
+    {
+        paz::App::PushDialog("`" + _name + "`\nAsdfj asdf asdf asdf." + (paz::
+            uniform() < 0.5 ? "\nBLAHBjLAH blah." : ""), 1.);
+    }
     _walkTime += input.timestep();
     const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}}.normalized();
     const paz::Vec initialAtt{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()
@@ -65,4 +70,9 @@ void Npc::onCollide(const Object&, double, double, double, double, double,
         _walkTime = 0.;
         _destYaw = paz::uniform(0., paz::TwoPi);
     }
+}
+
+void Npc::setName(const std::string& name)
+{
+_name = name;
 }

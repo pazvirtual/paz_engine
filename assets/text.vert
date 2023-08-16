@@ -1,3 +1,5 @@
+uniform float u;
+uniform float v;
 uniform int charWidth;
 uniform int baseWidth;
 uniform int baseHeight;
@@ -15,10 +17,12 @@ void main()
 {
     float a = 1./float(charWidth);
     uv = 0.5*position.xy + 0.5;
+    float x = 2.*u - 1.;
+    float y = 2.*v - 1.;
     gl_Position = vec4
     (
-        (uv.x + a + float(col)*(1. + a))*float(scale)*float(charWidth)*2./float(width) - 1.,
-        (uv.y + float(row))*float(scale)*float(baseHeight)*2./float(height) - 1.,
+        x + (uv.x + a + float(col)*(1. + a))*float(scale)*float(charWidth)*2./float(width),
+        y + (uv.y + float(row))*float(scale)*float(baseHeight)*2./float(height),
         0,
         1
     );

@@ -38,7 +38,7 @@ namespace paz
         Threadpool();
         ~Threadpool();
         template<typename F>
-        LockedCv enqueue(const F& fun)
+        LockedCv pushTask(const F& fun)
         {
             LockedCv lcv;
             std::lock_guard lk(_mx);

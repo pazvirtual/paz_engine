@@ -99,6 +99,8 @@ int main()
         moreNpcs[i + 1] = moreNpcs[i];
         moreNpcs[i + 1].x() += 2.;
     }
+    npc0.setName("NPC 0");
+    npc1.setName("NPC 1");
     w.lights().push_back({ Radius + 5. + 10., 0., 0., 1., 0., 0., 0.1});
     w.lights().push_back({-Radius - 5. - 10., 0., 0., 1., 1., 0., 0.1});
     w.lights().push_back({0.,  Radius + 5. + 10., 0., 1., 1., 1., 0.1});

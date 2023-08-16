@@ -252,7 +252,7 @@ void paz::do_collisions(Threadpool& threads, double timestep)
     lcvs.reserve(a.size());
     for(std::size_t i = 0; i < a.size(); ++i)
     {
-        lcvs.push_back(threads.enqueue([=]()
+        lcvs.push_back(threads.pushTask([=]()
         {
             for(std::size_t j = 0; j < NumSteps; ++j)
             {

@@ -54,6 +54,9 @@ static paz::Texture FontTex;
 static std::stringstream MsgStream;
 static std::deque<std::string> Console;
 static paz::ConsoleMode CurConsoleMode = paz::ConsoleMode::Disable;
+static std::queue<std::pair<std::string, double>> Dialogs;
+static double DialogTime;
+static bool DialogSkipFrame;
 
 static std::string Title;
 
@@ -315,7 +318,7 @@ void paz::App::Init(const std::string& title)
 
 void paz::App::Run()
 {
-    Font menuFont(FontTex, 2*FontScale, CharWidth);
+    Font menuFont(FontTex, 2.*FontScale, CharWidth);
 
     {
         bool done = false;
@@ -341,6 +344,8 @@ void paz::App::Run()
 
             TextPass.begin({LoadAction::Clear});
             TextPass.read("font", startMenu.font().tex());
+            TextPass.uniform("u", 0.f);
+            TextPass.uniform("v", 0.f);
             TextPass.uniform("width", Window::ViewportWidth());
             TextPass.uniform("height", Window::ViewportHeight());
             TextPass.uniform("charWidth", startMenu.font().charWidth());
@@ -741,6 +746,107 @@ void paz::App::Run()
             PostPass1.end();
         }
 
+        InstanceBuffer dialogChars; //TEMP - needs wider scope because of MTLBuffer purge issue
+        if(!Dialogs.empty())
+        {
+            if(!DialogSkipFrame)
+            {
+                const float scale = std::round(2.*FontScale*Window::UiScale());
+
+                int maxCols = 0;
+                std::vector<float> highlightAttr;
+                std::vector<int> characterAttr;
+                std::vector<int> colAttr;
+                std::vector<int> rowAttr;
+                bool highlight = false;
+                int row = 0;
+                int col = 0;
+                for(auto n : Dialogs.front().first)
+                {
+                    if(n == '`')
+                    {
+                        highlight = !highlight;
+                    }
+                    else if(n == ' ')
+                    {
+                        ++col;
+                    }
+                    else if(n == '\t')
+                    {
+                        col = (col/4 + 1)*4;
+                    }
+                    else if(n >= '!' && n <= '~')
+                    {
+                        highlightAttr.push_back(highlight);
+                        characterAttr.push_back(n - '!');
+                        colAttr.push_back(col);
+                        rowAttr.push_back(row);
+                        ++col;
+                    }
+                    else if(n == '\n')
+                    {
+                        --row;
+                        col = 0;
+                    }
+                    maxCols = std::max(maxCols, col);;
+                }
+                const int maxRows = 1 - row;
+                const float dialogWidth = (1 + maxCols*(CharWidth + 1))*scale/
+                    Window::ViewportWidth();
+                const float dialogHeight = (maxRows + 1.f/FontTex.height())*
+                    scale*FontTex.height()/Window::ViewportHeight();
+                const float u = 0.5f - 0.5f*dialogWidth;
+                static constexpr float v = 0.1f;
+
+                ConsolePass.begin({LoadAction::Load});
+                ConsolePass.uniform("u", u);
+                ConsolePass.uniform("v", v);
+                ConsolePass.uniform("width", dialogWidth);
+                ConsolePass.uniform("height", dialogHeight);
+                ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
+                ConsolePass.end();
+
+                dialogChars.addAttribute(1, highlightAttr);
+                dialogChars.addAttribute(1, characterAttr);
+                dialogChars.addAttribute(1, colAttr);
+                dialogChars.addAttribute(1, rowAttr);
+
+                TextPass.begin({LoadAction::Load});
+                TextPass.read("font", FontTex);
+                TextPass.uniform("u", u);
+                const float v1 = v + (maxRows - 1)*scale*
+                    FontTex.height()/Window::ViewportHeight(); //TEMP - fix text/UI coords
+                TextPass.uniform("v", v1);
+                TextPass.uniform("width", Window::ViewportWidth());
+                TextPass.uniform("height", Window::ViewportHeight());
+                TextPass.uniform("charWidth", CharWidth);
+                TextPass.uniform("baseWidth", FontTex.width());
+                TextPass.uniform("baseHeight", FontTex.height());
+                TextPass.uniform("scale", static_cast<int>(scale));
+                TextPass.draw(PrimitiveType::TriangleStrip, QuadVertices,
+                    dialogChars);
+                TextPass.end();
+            }
+
+            if(!Paused)
+            {
+                DialogTime += Window::FrameTime();
+                if(Dialogs.front().second < DialogTime)
+                {
+                    if(DialogSkipFrame)
+                    {
+                        DialogSkipFrame = false;
+                        Dialogs.pop();
+                        DialogTime = 0.;
+                    }
+                    else
+                    {
+                        DialogSkipFrame = true;
+                    }
+                }
+            }
+        }
+
         std::string line;
         std::size_t numNewRows = 0;
         while(std::getline(::MsgStream, line))
@@ -787,6 +893,8 @@ void paz::App::Run()
                 1))*scale/Window::ViewportWidth());
 
             ConsolePass.begin({LoadAction::Load});
+            ConsolePass.uniform("u", 0.f);
+            ConsolePass.uniform("v", 0.f);
             ConsolePass.uniform("width", consoleWidth);
             ConsolePass.uniform("height", consoleHeight);
             ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
@@ -832,6 +940,8 @@ void paz::App::Run()
 
             TextPass.begin({LoadAction::Load});
             TextPass.read("font", FontTex);
+            TextPass.uniform("u", 0.f);
+            TextPass.uniform("v", 0.f);
             TextPass.uniform("width", Window::ViewportWidth());
             TextPass.uniform("height", Window::ViewportHeight());
             TextPass.uniform("charWidth", CharWidth);
@@ -847,6 +957,8 @@ void paz::App::Run()
         if(Paused)
         {
             ConsolePass.begin({LoadAction::Load});
+            ConsolePass.uniform("u", 0.f);
+            ConsolePass.uniform("v", 0.f);
             ConsolePass.uniform("width", 1.f);
             ConsolePass.uniform("height", 1.f);
             ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
@@ -870,6 +982,8 @@ void paz::App::Run()
 
             TextPass.begin({LoadAction::Load});
             TextPass.read("font", pauseMenu.font().tex());
+            TextPass.uniform("u", 0.f);
+            TextPass.uniform("v", 0.f);
             TextPass.uniform("width", Window::ViewportWidth());
             TextPass.uniform("height", Window::ViewportHeight());
             TextPass.uniform("charWidth", pauseMenu.font().charWidth());
@@ -943,4 +1057,9 @@ void paz::App::SetSun(const Vec& dir, const Vec& ill)
 {
     std::copy(dir.begin(), dir.end(), SunDir.begin());
     std::copy(ill.begin(), ill.end(), SunIll.begin());
+}
+
+void paz::App::PushDialog(const std::string& msg, double time)
+{
+    Dialogs.emplace(msg, time);
 }
