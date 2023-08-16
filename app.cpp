@@ -338,6 +338,8 @@ void paz::App::Run()
         }
     }
 
+    Window::SetCursorMode(CursorMode::Disable);
+
     while(!Window::Done())
     {
         if(!_paused)
@@ -347,7 +349,6 @@ void paz::App::Run()
                 _paused = true;
                 curButton = -1;
             }
-            Window::SetCursorMode(CursorMode::Disable);
         }
 
         if(_micObject && !_paused && objects().count(reinterpret_cast<std::
@@ -872,7 +873,7 @@ tempDone[j] = true;
             {
                 switch(curButton)
                 {
-                    case 0: _paused = false; break;
+                    case 0: _paused = false; Window::SetCursorMode(CursorMode::Disable); break;
                     case 1: Window::MakeFullscreen(); break;
                     case 2: Window::DisableHidpi(); break;
                     case 3: _fxaaEnabled = false; break;
