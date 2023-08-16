@@ -389,10 +389,10 @@ static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
 static paz::Texture get_asset_image(const std::string& path)
 {
-    static const std::regex bmp("\\.bmp", std::regex_constants::icase);
-    static const std::regex pbm("\\.pbm", std::regex_constants::icase);
-    //static const std::regex jpg("\\.jpe?g", std::regex_constants::icase);
-    //static const std::regex png("\\.jpe?g", std::regex_constants::icase);
+    static const std::regex bmp("bmp", std::regex_constants::icase);
+    static const std::regex pbm("pbm", std::regex_constants::icase);
+    //static const std::regex jpg("jpe?g", std::regex_constants::icase);
+    //static const std::regex png("png", std::regex_constants::icase);
     const std::string ext = paz::split_path(path)[2];
     if(std::regex_match(ext, bmp))
     {
