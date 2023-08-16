@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
+#define PUSH_COPY(x) x.push_back(x[otherIdx]);
 #define COPY(x) x[idx] = x[otherIdx];
 
 std::unordered_map<std::uintptr_t, std::size_t>& paz::objects()
@@ -14,6 +15,7 @@ std::unordered_map<std::uintptr_t, std::size_t>& paz::objects()
     return o;
 }
 
+static std::vector<std::uintptr_t> Ids;
 static std::vector<double> X;
 static std::vector<double> Y;
 static std::vector<double> Z;
@@ -163,6 +165,7 @@ void paz::physics()
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
 {
     objects()[_id] = X.size();
+    Ids.push_back(_id);
     X.push_back(0.);
     Y.push_back(0.);
     Z.push_back(0.);
@@ -185,6 +188,36 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     XDown.push_back(0.);
     YDown.push_back(0.);
     ZDown.push_back(0.);
+}
+
+paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
+    this))
+{
+    const std::size_t otherIdx = objects().at(o._id);
+    objects()[_id] = X.size();
+    Ids.push_back(_id);
+    PUSH_COPY(X)
+    PUSH_COPY(Y)
+    PUSH_COPY(Z)
+    PUSH_COPY(XVel)
+    PUSH_COPY(YVel)
+    PUSH_COPY(ZVel)
+    PUSH_COPY(XAtt)
+    PUSH_COPY(YAtt)
+    PUSH_COPY(ZAtt)
+    PUSH_COPY(XAngRate)
+    PUSH_COPY(YAngRate)
+    PUSH_COPY(ZAngRate)
+    PUSH_COPY(Mod)
+    PUSH_COPY(CType)
+    PUSH_COPY(LocalNorX)
+    PUSH_COPY(LocalNorY)
+    PUSH_COPY(LocalNorZ)
+    PUSH_COPY(Altitude)
+    PUSH_COPY(CRadius)
+    PUSH_COPY(XDown)
+    PUSH_COPY(YDown)
+    PUSH_COPY(ZDown)
 }
 
 paz::Object& paz::Object::operator=(const Object& o)
@@ -221,6 +254,7 @@ paz::Object::Object(Object&& o) : _id(reinterpret_cast<std::uintptr_t>(this))
     const std::size_t idx = objects().at(o._id);
     objects().erase(o._id);
     objects()[_id] = idx;
+    Ids[idx] = _id;
     o._moved = true;
 }
 
@@ -231,7 +265,12 @@ paz::Object::~Object()
         return;
     }
     const std::size_t idx = objects().at(_id);
+    if(Ids.size() > 1)
+    {
+        objects().at(Ids.back()) = idx;
+    }
     objects().erase(_id);
+    SWAP_AND_POP(Ids)
     SWAP_AND_POP(X)
     SWAP_AND_POP(Y)
     SWAP_AND_POP(Z)
@@ -254,10 +293,10 @@ paz::Object::~Object()
     SWAP_AND_POP(XDown)
     SWAP_AND_POP(YDown)
     SWAP_AND_POP(ZDown)
-    for(auto& n : ObjectsByTag)
-    {
-        n.second.erase(this);
-    }
+//    for(auto& n : ObjectsByTag)
+//    {
+//        n.second.erase(this);
+//    }
 }
 
 void paz::Object::update() {}
@@ -507,5 +546,6 @@ double paz::Object::zDown() const
 
 void paz::Object::addTag(const std::string& tag)
 {
-    ObjectsByTag[tag].insert(this);
+    throw std::logic_error("NOT IMPLEMENTED");
+//    ObjectsByTag[tag].insert(this);
 }

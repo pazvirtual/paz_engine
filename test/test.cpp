@@ -50,7 +50,7 @@ class Player : public paz::Object
     paz::Vec _mousePos = paz::Vec::Zero(2);
     paz::Object _head; // camera
 
-    std::vector<std::shared_ptr<Paintball>> _paintballs; //TEMP - should these really be owned by `this` ?
+    std::vector<Paintball> _paintballs; //TEMP - should these really be owned by `this` ?
 
 public:
     Player()
@@ -355,7 +355,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             const paz::Vec dir = paz::to_mat(cameraAtt).row(1).trans();
             const paz::Vec pos{{_head.x(), _head.y(), _head.z()}};
             const paz::Vec vel{{xVel(), yVel(), zVel()}};
-            _paintballs.push_back(std::make_shared<Paintball>(pos, vel, dir));
+            _paintballs.emplace_back(pos, vel, dir);
         }
     }
     const paz::Object& head() const
@@ -461,9 +461,11 @@ int main()
     Npc npc1;
     npc1.x() = 2.*Radius;
     npc1.z() = 10.;
-    Npc npc2;
-    npc2 = npc0;
+    Npc npc2 = npc0;
     npc2.x() += 2.;
+    Npc npc3;
+    npc3 = npc0;
+    npc3.x() += 4.;
     paz::App::AttachCamera(player.head());
     paz::App::Run();
 }
