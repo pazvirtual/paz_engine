@@ -24,8 +24,7 @@ void main()
     float cosViewAngle = abs(dot(nor, dir));
     float diff = cosLightAngle;
     vec3 halfwayDir = normalize(lightDir - dir);
-    float spec = max(0., sign(cosViewAngle))*cosLightAngle*pow(abs(dot(nor,
-        halfwayDir)), 32);
+    float spec = cosLightAngle*pow(abs(dot(nor, halfwayDir)), 32);
     vec3 ill = _intens*exp(-_falloff*lightDist); //TEMP
     vec3 color = (0.01 + ill*mix(diff, spec, 0.3))*diffCol;
     float alpha = max(0.01, mix((1. - cosViewAngle)*(1. - cosViewAngle), spec,
