@@ -1,0 +1,88 @@
+#include "object.hpp"
+#include "PAZ_Engine"
+
+std::unordered_map<std::uintptr_t, std::size_t> paz::Objects;
+
+static std::vector<double> X;
+static std::vector<double> Y;
+static std::vector<double> Z;
+static std::vector<paz::VertexBuffer> V;
+static std::vector<paz::IndexBuffer> I;
+
+paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
+{
+    Objects[_id] = X.size();
+    X.push_back(0);
+    Y.push_back(0);
+    Z.push_back(0);
+    V.emplace_back();
+    I.emplace_back();
+}
+
+paz::Object::~Object()
+{
+    const std::size_t idx = Objects.at(_id);
+    Objects.erase(_id);
+    std::swap(X[idx], X.back());
+    X.pop_back();
+    std::swap(Y[idx], Y.back());
+    Y.pop_back();
+    std::swap(Z[idx], Z.back());
+    Z.pop_back();
+    std::swap(V[idx], V.back());
+    V.pop_back();
+    std::swap(I[idx], I.back());
+    I.pop_back();
+}
+
+void paz::Object::update() {}
+
+double& paz::Object::x()
+{
+    return X[Objects.at(_id)];
+}
+
+double paz::Object::x() const
+{
+    return X[Objects.at(_id)];
+}
+
+double& paz::Object::y()
+{
+    return Y[Objects.at(_id)];
+}
+
+double paz::Object::y() const
+{
+    return Y[Objects.at(_id)];
+}
+
+double& paz::Object::z()
+{
+    return Z[Objects.at(_id)];
+}
+
+double paz::Object::z() const
+{
+    return Z[Objects.at(_id)];
+}
+
+paz::VertexBuffer paz::Object::v()
+{
+    return V[Objects.at(_id)];
+}
+
+const paz::VertexBuffer paz::Object::v() const
+{
+    return V[Objects.at(_id)];
+}
+
+paz::IndexBuffer paz::Object::i()
+{
+    return I[Objects.at(_id)];
+}
+
+const paz::IndexBuffer paz::Object::i() const
+{
+    return I[Objects.at(_id)];
+}

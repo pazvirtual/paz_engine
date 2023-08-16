@@ -1,0 +1,39 @@
+#ifndef PAZ_ENGINE
+#define PAZ_ENGINE
+
+#include <PAZ_Graphics>
+#include <PAZ_IO>
+
+namespace paz
+{
+    class Object
+    {
+        const std::uintptr_t _id;
+
+    public:
+        Object();
+        virtual ~Object();
+        virtual void update();
+        double& x();
+        double x() const;
+        double& y();
+        double y() const;
+        double& z();
+        double z() const;
+        VertexBuffer v();
+        const VertexBuffer v() const;
+        IndexBuffer i();
+        const IndexBuffer i() const;
+    };
+
+    class App
+    {
+    public:
+        static void Init(const std::string& sceneShaderPath, const std::unordered_set<std::string>& objPaths);
+        static void Run();
+        static void AttachCamera(const Object& o);
+        static double CameraYaw();
+    };
+}
+
+#endif
