@@ -5,6 +5,7 @@
 #include <limits>
 #include <sstream>
 #include <iomanip>
+#include <deque>
 
 //#define DO_FXAA
 
@@ -42,6 +43,7 @@ static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
 #endif
 static paz::RenderPass _textPass;
+static paz::RenderPass _plotPass;
 
 static paz::VertexBuffer _quadVertices;
 
@@ -360,6 +362,22 @@ void main()
 }
 )===";
 
+static const std::string PlotVertSrc = 1 + R"===(
+layout(location = 0) in vec2 pos;
+void main()
+{
+    gl_Position = vec4(pos, 0, 1);
+}
+)===";
+
+static const std::string PlotFragSrc = 1 + R"===(
+layout(location = 0) out vec4 color;
+void main()
+{
+    color = vec4(1.);
+}
+)===";
+
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
 static int get_char(char c)
@@ -431,6 +449,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     const VertexFunction geometryVert(GeometryVertSrc);
     const VertexFunction quadVert(QuadVertSrc);
     const VertexFunction textVert(TextVertSrc);
+    const VertexFunction plotVert(PlotVertSrc);
     const FragmentFunction geometryFrag(GeometryFragSrc);
     const FragmentFunction sceneFrag(getAsset(sceneShaderPath).str());
 #ifdef DO_FXAA
@@ -439,6 +458,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
 #endif
     const FragmentFunction postFrag(PostFragSrc);
     const FragmentFunction textFrag(TextFragSrc);
+    const FragmentFunction plotFrag(PlotFragSrc);
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass = RenderPass(_renderBuffer, quadVert, sceneFrag);
@@ -450,6 +470,7 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     _postPass = RenderPass(quadVert, postFrag);
 #endif
     _textPass = RenderPass(textVert, textFrag, BlendMode::Blend);
+    _plotPass = RenderPass(plotVert, plotFrag, BlendMode::Blend);
 
     _quadVertices.attribute(2, QuadPos);
 
@@ -562,10 +583,16 @@ tempDone[j] = true;
             }
         }
 //std::cout << static_cast<bool>(_cameraObject->grounded()) << " " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() +_cameraObject->yVel()*_cameraObject->yVel() +_cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
+static std::deque<double> rHist(60*30, 0.);
+static std::deque<double> latHist(60*30, 0.);
 {
 const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
 const double lat = std::asin(_cameraObject->z()/r);
 const double lon = std::atan2(_cameraObject->y(), _cameraObject->x());
+rHist.pop_front();
+rHist.push_back(r);
+latHist.pop_front();
+latHist.push_back(lat);
 std::stringstream ss;
 ss << std::fixed << std::setprecision(4) << "\n" << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel());
 _msg = ss.str();
@@ -850,6 +877,35 @@ _msg = ss.str();
             }
             _textPass.end();
         }
+
+        _plotPass.begin();
+        {
+            VertexBuffer plotData;
+            {
+                std::vector<float> v(2*60*30);
+                for(std::size_t i = 0; i < 60*30; ++i)
+                {
+                    v[2*i] = i*2./(60*30 - 1) - 1.;
+                    v[2*i + 1] = 0.3*std::log(rHist[i] - 50.) - 1.;
+                }
+                plotData.attribute(2, v);
+            }
+            _plotPass.draw(PrimitiveType::LineStrip, plotData);
+        }
+        {
+            VertexBuffer plotData;
+            {
+                std::vector<float> v(2*60*30);
+                for(std::size_t i = 0; i < 60*30; ++i)
+                {
+                    v[2*i] = i*2./(60*30 - 1) - 1.;
+                    v[2*i + 1] = 2.*latHist[i]/M_PI;
+                }
+                plotData.attribute(2, v);
+            }
+            _plotPass.draw(PrimitiveType::LineStrip, plotData);
+        }
+        _plotPass.end();
 
         Window::EndFrame();
     }
