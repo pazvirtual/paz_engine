@@ -13,6 +13,8 @@
 static constexpr double Radius = 0.2;
 static constexpr double CosMaxAngle = 0.6; // 53.13 deg
 static constexpr std::array<float, 4> SunVec = {0.57735, 0.57735, 0.57735, 0.};
+static constexpr double InteractRangeBehindSq = 4.;
+static constexpr double InteractRangeInFrontSq = 9.;
 
 ////
 static paz::Framebuffer _geometryBuffer;
@@ -403,11 +405,22 @@ void paz::App::Run()
             }
         }
 
-        if(Window::KeyPressed(Key::E)) //TEMP
+        if(Window::KeyPressed(Key::E))
         {
             for(const auto& n : objects())
             {
-                reinterpret_cast<Object*>(n.first)->onInteract(*_cameraObject);
+                Object* o = reinterpret_cast<Object*>(n.first);
+                const double relX = o->x() - _cameraX;
+                const double relY = o->y() - _cameraY;
+                const double relZ = o->z() - _cameraZ;
+                const double distSq = relX*relX + relY*relY + relZ*relZ;
+                const double dotProd = -sinYaw*relX + cosYaw*relY;
+                if((distSq < InteractRangeBehindSq || (distSq <
+                    InteractRangeInFrontSq && dotProd > 0.)))
+                {
+
+                    o->onInteract(*_cameraObject);
+                }
             }
         }
 
