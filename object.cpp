@@ -22,6 +22,7 @@ static std::vector<double> LocalNorY;
 static std::vector<double> LocalNorZ;
 static std::vector<char> Grounded;
 static std::vector<double> Height;
+static std::vector<double> CRadius;
 
 void paz::physics()
 {
@@ -56,6 +57,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     LocalNorZ.push_back(1);
     Grounded.push_back(false);
     Height.push_back(0.);
+    CRadius.push_back(0.2);
 }
 
 paz::Object::~Object()
@@ -75,6 +77,7 @@ paz::Object::~Object()
     SWAP_AND_POP(LocalNorZ);
     SWAP_AND_POP(Grounded);
     SWAP_AND_POP(Height);
+    SWAP_AND_POP(CRadius);
 }
 
 void paz::Object::update() {}
@@ -211,4 +214,14 @@ double& paz::Object::height()
 double paz::Object::height() const
 {
     return Height[objects().at(_id)];
+}
+
+double& paz::Object::collisionRadius()
+{
+    return CRadius[objects().at(_id)];
+}
+
+double paz::Object::collisionRadius() const
+{
+    return CRadius[objects().at(_id)];
 }

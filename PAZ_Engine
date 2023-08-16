@@ -68,6 +68,8 @@ namespace paz
         bool grounded() const;
         double& height();
         double height() const;
+        double& collisionRadius();
+        double collisionRadius() const;
     };
 
     class App

@@ -11,7 +11,6 @@
 #define _cameraYVel _cameraObject->yVel()
 //#define _cameraZVel _cameraObject->zVel()
 
-static constexpr double Radius = 0.2;
 static constexpr double CosMaxAngle = 0.6; // 53.13 deg
 static constexpr std::array<float, 4> SunVec = {0.57735, 0.57735, 0.57735, 0.};
 static constexpr double InteractRangeBehindSq = 4.;
@@ -490,10 +489,11 @@ for(auto& a0 : objects())
 
         double x = a->x() - b->x();
         double y = a->y() - b->y();
-        double z = a->z() - b->z() + Radius;
+        double z = a->z() - b->z() + a->collisionRadius();
 
         double hx, hy, hz;
-        const double c = b->model().collide(x, y, z, hx, hy, hz, Radius);
+        const double c = b->model().collide(x, y, z, hx, hy, hz, a->
+            collisionRadius());
         if(c < minDist)
         {
             collided = true;
@@ -567,8 +567,8 @@ for(auto& a0 : objects())
                     0, 1, 0, 0, 0, 0, 1, 0, static_cast<float>(o->x()),
                     static_cast<float>(o->y()), static_cast<float>(o->z() + o->
                     height()), 1});
-                _geometryPass.indexed(PrimitiveType::Triangles, o->model()._v,
-                    o->model()._i);
+                _geometryPass.draw(PrimitiveType::Triangles, o->model()._v, o->
+                    model()._i);
             }
         }
         _geometryPass.end();
@@ -580,27 +580,27 @@ for(auto& a0 : objects())
         _renderPass.read("depthMap", _depthMap);
         _renderPass.uniform("invProjection", mat_inv(projection));
         _renderPass.uniform("sun", mat_mult(view, SunVec));
-        _renderPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
+        _renderPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();
 
         // Tonemap to linear LDR.
         _postPass.begin();
         _postPass.read("hdrRender", _hdrRender);
         _postPass.uniform("whitePoint", 1.f);
-        _postPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
+        _postPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _postPass.end();
 
         // Get luminance map.
         _lumPass.begin();
         _lumPass.read("img", _finalRender);
-        _lumPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
+        _lumPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _lumPass.end();
 
         // Anti-alias and correct gamma.
         _fxaaPass.begin();
         _fxaaPass.read("img", _finalRender);
         _fxaaPass.read("lum", _finalLumMap);
-        _fxaaPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
+        _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _fxaaPass.end();
 
         Window::EndFrame();

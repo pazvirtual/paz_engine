@@ -43,7 +43,8 @@ paz::Triangle::Triangle(double x0, double y0, double z0, double x1, double y1,
     // Guarantees `x1t = y1t = x2t = 0`, `z1t > 0`, `y2t > 0`.
     basisZ = normalize({x1, y1, z1});
     basisX = normalize(cross(x2, y2, z2, basisZ[0], basisZ[1], basisZ[2]));
-    basisY = normalize(cross(basisZ[0], basisZ[1], basisZ[2], basisX[0], basisX[1], basisX[2]));
+    basisY = normalize(cross(basisZ[0], basisZ[1], basisZ[2], basisX[0], basisX[
+        1], basisX[2]));
 
     z1t = basisZ[0]*x1 + basisZ[1]*y1 + basisZ[2]*z1;
 

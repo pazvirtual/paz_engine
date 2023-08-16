@@ -21,6 +21,7 @@ public:
     {
         model() = Sphere;
         height() = 1.;
+        collisionRadius() = 1.;
     }
     void onInteract(const Object& o) override
     {
