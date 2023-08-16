@@ -105,9 +105,11 @@ namespace paz
         double xDown() const;
         double yDown() const;
         double zDown() const;
+        double& stdGravParam();
+        double stdGravParam() const;
         void addTag(const std::string& tag);
         bool isTagged(const std::string& tag) const;
-        void computeAltitude(double& alt, paz::Vec& nor) const;
+        void computeAltitude(double& alt, Vec& nor, Vec& vel) const;
     };
 
     class App

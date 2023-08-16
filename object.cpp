@@ -38,45 +38,55 @@ static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
 static std::vector<double> ZDown;
+static std::vector<double> StdGravParam;
 static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
     ObjectsByTag;
 
 static void grav_ode(double x, double y, double z, double u, double v, double w,
-    double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
+    double& dx, double& dy, double& dz, double& du, double& dv, double& dw,
+    const std::vector<std::size_t>& massiveIds)
 {
-    static constexpr double StdGravParam = 0.2*9.81*50.*50.;
-    const double radius0 = std::sqrt(x*x + y*y + z*z);
-    const double radius1 = std::sqrt((x - 50.)*(x - 50.) + y*y + z*z);
-    const double radius2 = std::sqrt((x + 50.)*(x + 50.) + y*y + z*z);
-    const double radius3 = std::sqrt(x*x + (y - 50.)*(y - 50.) + z*z);
-    const double radius4 = std::sqrt(x*x + (y + 50.)*(y + 50.) + z*z);
-    const double c0 = -StdGravParam/(radius0*radius0*radius0);
-    const double c1 = -StdGravParam/(radius1*radius1*radius1);
-    const double c2 = -StdGravParam/(radius2*radius2*radius2);
-    const double c3 = -StdGravParam/(radius3*radius3*radius3);
-    const double c4 = -StdGravParam/(radius4*radius4*radius4);
-    const double sum = c0 + c1 + c2 + c3 + c4;
     dx = u;
     dy = v;
     dz = w;
-    du = sum*x - c1*50. + c2*50.;
-    dv = sum*y - c3*50. + c4*50.;
-    dw = sum*z;
+    du = 0;
+    dv = 0;
+    dw = 0;
+    for(auto n : massiveIds)
+    {
+        const double deltaX = x - X[n];
+        const double deltaY = y - Y[n];
+        const double deltaZ = z - Z[n];
+        const double radius = std::sqrt(deltaX*deltaX + deltaY*deltaY + deltaZ*
+            deltaZ);
+        const double t0 = -StdGravParam[n]/(radius*radius*radius);
+        du += t0*deltaX;
+        dv += t0*deltaY;
+        dw += t0*deltaZ;
+    }
 }
 
 void paz::physics()
 {
+    std::vector<std::size_t> massiveIds;
+    const auto n = X.size();
+    for(std::size_t i = 0; i < n; ++i)
+    {
+        if(CType[i] == CollisionType::World && StdGravParam[i] > 0.) //TEMP - should go off of `GType[i]`
+        {
+            massiveIds.push_back(i);
+        }
+    }
     XPrev = X;
     YPrev = Y;
     ZPrev = Z;
-    const auto n = X.size();
     for(std::size_t i = 0; i < n; ++i)
     {
         if(GType[i] == GravityType::Default)
         {
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
-                du, dv, dw);
+                du, dv, dw, massiveIds);
             const double k1_1 = Window::FrameTime()*dx;
             const double k1_2 = Window::FrameTime()*dy;
             const double k1_3 = Window::FrameTime()*dz;
@@ -85,7 +95,7 @@ void paz::physics()
             const double k1_6 = Window::FrameTime()*dw;
             grav_ode(X[i] + 0.5*k1_1, Y[i] + 0.5*k1_2, Z[i] + 0.5*k1_3, XVel[i]
                 + 0.5*k1_4, YVel[i] + 0.5*k1_5, ZVel[i] + 0.5*k1_6, dx, dy, dz,
-                du, dv, dw);
+                du, dv, dw, massiveIds);
             const double k2_1 = Window::FrameTime()*dx;
             const double k2_2 = Window::FrameTime()*dy;
             const double k2_3 = Window::FrameTime()*dz;
@@ -94,7 +104,7 @@ void paz::physics()
             const double k2_6 = Window::FrameTime()*dw;
             grav_ode(X[i] + 0.5*k2_1, Y[i] + 0.5*k2_2, Z[i] + 0.5*k2_3, XVel[i]
                 + 0.5*k2_4, YVel[i] + 0.5*k2_5, ZVel[i] + 0.5*k2_6, dx, dy, dz,
-                du, dv, dw);
+                du, dv, dw, massiveIds);
             const double k3_1 = Window::FrameTime()*dx;
             const double k3_2 = Window::FrameTime()*dy;
             const double k3_3 = Window::FrameTime()*dz;
@@ -102,7 +112,8 @@ void paz::physics()
             const double k3_5 = Window::FrameTime()*dv;
             const double k3_6 = Window::FrameTime()*dw;
             grav_ode(X[i] + k3_1, Y[i] + k3_2, Z[i] + k3_3, XVel[i] + k3_4,
-                YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw);
+                YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw,
+                massiveIds);
             const double k4_1 = Window::FrameTime()*dx;
             const double k4_2 = Window::FrameTime()*dy;
             const double k4_3 = Window::FrameTime()*dz;
@@ -127,7 +138,7 @@ void paz::physics()
             Z[i] += Window::FrameTime()*ZVel[i];
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
-                du, dv, dw);
+                du, dv, dw, massiveIds);
             XDown[i] = du;
             YDown[i] = dv;
             ZDown[i] = dw;
@@ -186,6 +197,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     XDown.push_back(0.);
     YDown.push_back(0.);
     ZDown.push_back(0.);
+    StdGravParam.push_back(0.);
 }
 
 paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
@@ -213,6 +225,7 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(XDown)
     PUSH_COPY(YDown)
     PUSH_COPY(ZDown)
+    PUSH_COPY(StdGravParam)
     for(auto& m : ObjectsByTag) //TEMP - inefficient
     {
         if(m.second.count(o._id))
@@ -245,6 +258,7 @@ paz::Object& paz::Object::operator=(const Object& o)
     COPY(XDown)
     COPY(YDown)
     COPY(ZDown)
+    COPY(StdGravParam)
     for(auto& m : ObjectsByTag) //TEMP - inefficient
     {
         if(m.second.count(o._id))
@@ -287,6 +301,7 @@ paz::Object::~Object()
     SWAP_AND_POP(XDown)
     SWAP_AND_POP(YDown)
     SWAP_AND_POP(ZDown)
+    SWAP_AND_POP(StdGravParam)
     for(auto& n : ObjectsByTag)
     {
         n.second.erase(_id);
@@ -508,6 +523,16 @@ double paz::Object::zDown() const
     return ZDown[objects().at(_id)];
 }
 
+double& paz::Object::stdGravParam()
+{
+    return StdGravParam[objects().at(_id)];
+}
+
+double paz::Object::stdGravParam() const
+{
+    return StdGravParam[objects().at(_id)];
+}
+
 void paz::Object::addTag(const std::string& tag)
 {
     ObjectsByTag[tag].insert(_id);
@@ -518,9 +543,10 @@ bool paz::Object::isTagged(const std::string& tag) const
     return ObjectsByTag.count(tag) && ObjectsByTag.at(tag).count(_id);
 }
 
-void paz::Object::computeAltitude(double& alt, paz::Vec& nor) const
+void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
 {
-    nor = paz::Vec{{0., 0., 1.}};
+    nor = Vec{{0., 0., 1.}};
+    vel = Vec::Zero(3);
     const auto idx = objects().at(_id);
     alt = std::numeric_limits<double>::infinity();
     for(auto n : objects())
@@ -544,6 +570,9 @@ void paz::Object::computeAltitude(double& alt, paz::Vec& nor) const
         {
             alt = dist;
             nor = rot.trans()*tempNor;
+            vel(0) = XVel[n.second];
+            vel(1) = YVel[n.second];
+            vel(2) = ZVel[n.second];
         }
     }
     alt -= CRadius[idx];

@@ -464,7 +464,7 @@ void paz::App::Run()
     {
         physics();
 
-paz::Timer colTimer;
+paz::Timer timer;
         // Identify all objects that can collide and precompute as much as
         // possible.
         std::vector<Object*> a;
@@ -500,7 +500,7 @@ paz::Timer colTimer;
                 }
             }
         }
-const double colTime0 = colTimer.getAndRestart();
+const double colTime0 = timer.getAndRestart();
 
         std::vector<Mat> bRot(b.size());
         std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
@@ -592,7 +592,7 @@ tempDone[j] = true;
                 }
             }
         }
-const double colTime1 = colTimer.getAndRestart();
+const double colTime1 = timer.getAndRestart();
 static double avgColTime0Sq = 0.;
 avgColTime0Sq = 0.95*avgColTime0Sq + 0.05*colTime0*colTime0;
 static double avgColTime1Sq = 0.;
@@ -631,6 +631,7 @@ latHist.push_back(lat);
             0.}}*paz::to_mat(cameraAtt));
 
         // Get geometry map.
+timer.start();
         _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
             LoadAction::Clear);
         _geometryPass.cull(CullMode::Back);
@@ -658,6 +659,10 @@ latHist.push_back(lat);
             }
         }
         _geometryPass.end();
+const double gTime = timer.getAndRestart();
+static double avgGTimeSq = 0.;
+avgGTimeSq = 0.95*avgGTimeSq + 0.05*gTime*gTime;
+_msgStream << "Avg. G-pass time: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgGTimeSq) << std::endl;
 
         // Render in HDR.
         _renderPass.begin();

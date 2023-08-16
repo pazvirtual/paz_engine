@@ -5,6 +5,7 @@
 #define NO_FRICTION
 
 static paz::Model Sphere50;
+static paz::Model Sphere10;
 static paz::Model Body;
 static paz::Model Head;
 static paz::Model PaintballModel;
@@ -24,7 +25,7 @@ public:
         xVel() = vel(0) + 15.*dir(0);
         yVel() = vel(1) + 15.*dir(1);
         zVel() = vel(2) + 15.*dir(2);
-        collisionRadius() = 0.01;
+        collisionRadius() = 0.05;
         model() = PaintballModel;
     }
     void onCollide(const Object&) override
@@ -173,7 +174,8 @@ public:
         Regime reg = Regime::Floating;
         double alt;
         paz::Vec nor;
-        computeAltitude(alt, nor);
+        paz::Vec surfVel;
+        computeAltitude(alt, nor, surfVel);
         if(alt < LowAltitude)
         {
             reg = Regime::Low;
@@ -345,9 +347,9 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
                 }
             }
 #ifdef NO_FRICTION
-            xVel() = u;
-            yVel() = v;
-            zVel() = w;
+            xVel() = surfVel(0) + u;
+            yVel() = surfVel(1) + v;
+            zVel() = surfVel(2) + w;
 #else
             xVel() += u;
             yVel() += v;
@@ -546,6 +548,54 @@ public:
         model() = Sphere50;
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None; //TEMP
+        stdGravParam() = 0.6*9.81*Radius*Radius;
+    }
+};
+
+class World1 : public paz::Object
+{
+public:
+    World1()
+    {
+        model() = Sphere10;
+        collisionType() = paz::CollisionType::World;
+        gravityType() = paz::GravityType::None; //TEMP
+        stdGravParam() = 0.1*9.81*Radius*Radius;
+    }
+};
+
+class World2 : public paz::Object
+{
+    static constexpr double AngRate = 0.1;
+
+    double _angle;
+    Fountain _f;
+
+public:
+    World2(double initialAngle) : paz::Object(), _angle(initialAngle)
+    {
+        model() = Sphere10;
+        collisionType() = paz::CollisionType::World;
+        gravityType() = paz::GravityType::None; //TEMP
+        stdGravParam() = 9.81*10.*10.;
+        _f.z() = z() + 9.5;
+        _f.setDir(0., 0., 1.);
+    }
+    void update() override
+    {
+        _angle = paz::normalize_angle(_angle + AngRate*paz::Window::FrameTime());
+        x() = std::cos(_angle)*2.*Radius;
+        y() = std::sin(_angle)*2.*Radius;
+        z() = 0.;
+        xVel() = AngRate*-std::sin(_angle)*2.*Radius;
+        yVel() = AngRate*std::cos(_angle)*2.*Radius;
+        zVel() = 0.;
+        _f.x() = x();
+        _f.y() = y();
+        _f.z() = z() + 9.5;
+        _f.xVel() = xVel();
+        _f.yVel() = yVel();
+        _f.zVel() = zVel();
     }
 };
 
@@ -553,17 +603,20 @@ int main()
 {
     paz::App::Init("scene.frag", "font.pbm");
     Sphere50 = paz::Model("sphere50.obj");
+    Sphere10 = paz::Model("sphere50.obj", 0, 0., 10./Radius);
     Body = paz::Model("persontest.obj", 0, -0.2);
     Head = paz::Model("persontest.obj", 1, -0.1);
     PaintballModel = paz::Model("unitsphere.obj", 0, 0., 0.1);
     FancyBox = paz::Model("fancybox.obj");
     Player player;
     player.z() = Radius + 10.;
-    std::vector<World> w(5);
-    w[1].x() = Radius;
-    w[2].x() = -Radius;
-    w[3].y() = Radius;
-    w[4].y() = -Radius;
+    World w;
+    std::array<World1, 4> w1;
+    w1[0].x() = 0.9*Radius;
+    w1[1].x() = -0.9*Radius;
+    w1[2].y() = 0.9*Radius;
+    w1[3].y() = -0.9*Radius;
+    World2 w2(0.);
     Npc npc0;
     npc0.x() = 10.;
     npc0.z() = Radius;
