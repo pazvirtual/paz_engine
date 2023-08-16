@@ -16,15 +16,17 @@ static constexpr double Radius = 50.;
 class Paintball : public paz::Object
 {
 public:
+    static constexpr double LaunchSpeed = 15.;
+
     Paintball(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir) :
         paz::Object()
     {
         x() = pos(0);
         y() = pos(1);
         z() = pos(2);
-        xVel() = vel(0) + 15.*dir(0);
-        yVel() = vel(1) + 15.*dir(1);
-        zVel() = vel(2) + 15.*dir(2);
+        xVel() = vel(0) + LaunchSpeed*dir(0);
+        yVel() = vel(1) + LaunchSpeed*dir(1);
+        zVel() = vel(2) + LaunchSpeed*dir(2);
         collisionRadius() = 0.05;
         model() = PaintballModel;
     }
@@ -92,7 +94,8 @@ public:
                 paz::Vec dir = paz::to_mat(paz::qinv(att)).col(2);
                 dir += 0.01*paz::Vec{{paz::randn(), paz::randn(), paz::
                     randn()}};
-                const double offset = 1.3 + i*0.1*10./NumPerLaunch;
+                const double offset = 1.3 + i*0.1*Droplet::LaunchSpeed/
+                    NumPerLaunch;
                 _droplets.emplace_back(pos + offset*dir, vel, dir);
             }
             _timer = 0.;
