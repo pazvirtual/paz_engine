@@ -476,7 +476,7 @@ for(auto& a0 : objects())
     double minDist = std::numeric_limits<double>::infinity();
     double gx = 0.;
     double gy = 0.;
-    double gz = 1.;
+    double gz = 1.; //TEMP
 
     Object* collidedWith = nullptr;
     for(auto& b0 : objects())
@@ -512,12 +512,21 @@ for(auto& a0 : objects())
     if(collided)
     {
         const double normNormal = std::sqrt(gx*gx + gy*gy + gz*gz);
-        a->localNorX() = gx/normNormal;
-        a->localNorY() = gy/normNormal;
-        a->localNorZ() = gz/normNormal;
-        a->x() += gx;
-        a->y() += gy;
-        a->z() += gz;
+        if(normNormal)
+        {
+            a->localNorX() = gx/normNormal;
+            a->localNorY() = gy/normNormal;
+            a->localNorZ() = gz/normNormal;
+            a->x() += gx;
+            a->y() += gy;
+            a->z() += gz;
+        }
+        else
+        {
+            a->localNorX() = 0.;
+            a->localNorY() = 0.;
+            a->localNorZ() = 1.; //TEMP
+        }
 
         const double xVel = a->xVel() - collidedWith->xVel();
         const double yVel = a->yVel() - collidedWith->yVel();
