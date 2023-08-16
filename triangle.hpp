@@ -26,6 +26,8 @@ namespace paz
         double castRay(double x, double y, double z, double xDir, double yDir,
             double zDir) const;
         void getNormal(double& x, double& y, double& z) const;
+        const std::array<double, 3>& centroid() const;
+        double radius() const;
     };
 }
 

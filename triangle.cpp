@@ -272,3 +272,13 @@ void paz::Triangle::getNormal(double& xNor, double& yNor, double& zNor) const
     yNor = -basisX[1];
     zNor = -basisX[2];
 }
+
+const std::array<double, 3>& paz::Triangle::centroid() const
+{
+    return _centroid;
+}
+
+double paz::Triangle::radius() const
+{
+    return _radius;
+}

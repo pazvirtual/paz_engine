@@ -41,13 +41,12 @@ namespace paz
 
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
-            double& zNor) const;
+            double& zNor, const std::vector<std::size_t>& tris) const;
         void castRay(double x, double y, double z, double xDir, double yDir,
             double zDir, double& xNor, double& yNor, double& zNor, double& dist)
             const;
-        bool sweepVol(double xPrev0, double yPrev0, double zPrev0, double x0,
-            double y0, double z0, double xPrev1, double yPrev1, double zPrev1,
-            double x1, double y1, double z1, double radius) const;
+        std::vector<std::size_t> sweepVol(const Vec& relPosPrev, const Vec&
+            relPos, double radius) const;
 
     public:
         Model() = default;

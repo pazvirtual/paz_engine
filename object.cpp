@@ -191,32 +191,16 @@ void paz::do_collisions(Threadpool& threads, double timestep)
     std::vector<std::size_t> b;
     a.reserve(objects().size());
     b.reserve(objects().size());
-    for(auto& n : objects())
+    for(const auto& n : objects())
     {
         Object* o = reinterpret_cast<Object*>(n.first);
         if(o->collisionType() == CollisionType::Default)
         {
             a.push_back(n.second);
         }
-        if(o->collisionType() == CollisionType::World)
+        else if(o->collisionType() == CollisionType::World)
         {
             b.push_back(n.second);
-        }
-    }
-
-    // `a[i]` may collide with any `b[c[i][j]]`.
-    std::vector<std::vector<std::size_t>> c(a.size());
-    for(std::size_t i = 0; i < a.size(); ++i)
-    {
-        c[i].reserve(b.size());
-        for(std::size_t j = 0; j < b.size(); ++j)
-        {
-            if(Mod[b[j]].sweepVol(XPrev[a[i]], YPrev[a[i]], ZPrev[a[i]], X[a[
-                i]], Y[a[i]], Z[a[i]], XPrev[b[j]], YPrev[b[j]], ZPrev[b[j]], X[
-                b[j]], Y[b[j]], Z[b[j]], CRadius[a[i]]))
-            {
-                c[i].push_back(j);
-            }
         }
     }
 
@@ -254,6 +238,25 @@ void paz::do_collisions(Threadpool& threads, double timestep)
     {
         lcvs.push_back(threads.pushTask([=]()
         {
+            // `a[i]` may collide with any `b[c[j].first]`'s triangles in
+            // `c[j].second`.
+            std::unordered_map<std::size_t, std::vector<std::size_t>> c;
+            for(std::size_t j = 0; j < b.size(); ++j)
+            {
+                Vec relPosPrev{{XPrev[a[i]] - XPrev[b[j]], YPrev[a[i]] - YPrev[
+                    b[j]], ZPrev[a[i]] - ZPrev[b[j]]}};
+                relPosPrev = bRot[j]*relPosPrev;
+                Vec relPos{{X[a[i]] - X[b[j]], Y[a[i]] - Y[b[j]], Z[a[i]] - Z[b[
+                    j]]}};
+                relPos = bRot[j]*relPos;
+                const auto temp = Mod[b[j]].sweepVol(relPosPrev, relPos,
+                    CRadius[a[i]]);
+                if(!temp.empty())
+                {
+                    c[j] = std::move(temp);
+                }
+            }
+
             for(std::size_t j = 0; j < NumSteps; ++j)
             {
                 double x = XPrev[a[i]] + times[j]*(X[a[i]] - XPrev[a[i]]);
@@ -266,24 +269,25 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                 double zNor = 1.;
                 std::vector<std::pair<std::size_t, std::array<double, 3>>>
                     collisions;
-                for(auto n : c[i])
+                for(auto n : c)
                 {
-                    const double x1 = x - bX[n][j];
-                    const double y1 = y - bY[n][j];
-                    const double z1 = z - bZ[n][j];
-                    const Vec relPos = bRot[n]*Vec{{x1, y1, z1}};
+                    const double x1 = x - bX[n.first][j];
+                    const double y1 = y - bY[n.first][j];
+                    const double z1 = z - bZ[n.first][j];
+                    const Vec relPos = bRot[n.first]*Vec{{x1, y1, z1}};
                     const double x2 = relPos(0);
                     const double y2 = relPos(1);
                     const double z2 = relPos(2);
                     double xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp;
-                    const double dist = Mod[b[n]].collide(x2, y2, z2, CRadius[a[
-                        i]], xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp);
+                    const double dist = Mod[b[n.first]].collide(x2, y2, z2,
+                        CRadius[a[i]], xNew, yNew, zNew, xNorTemp, yNorTemp,
+                        zNorTemp, n.second);
                     if(dist < CRadius[a[i]] - 1e-9)
                     {
-                        collisions.emplace_back(n, std::array<double, 3>{
+                        collisions.emplace_back(n.first, std::array<double, 3>{
                             xNorTemp, yNorTemp, zNorTemp});
-                        const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew,
-                            zNew}};
+                        const Vec newPos = bRot[n.first].trans()*Vec{{xNew,
+                            yNew, zNew}};
                         xNew = newPos(0);
                         yNew = newPos(1);
                         zNew = newPos(2);
@@ -293,8 +297,8 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                         if(dist < minDist)
                         {
                             minDist = dist;
-                            idx = n;
-                            const Vec nor = bRot[n].trans()*Vec{{xNorTemp,
+                            idx = n.first;
+                            const Vec nor = bRot[n.first].trans()*Vec{{xNorTemp,
                                 yNorTemp, zNorTemp}};
                             xNor = nor(0);
                             yNor = nor(1);
