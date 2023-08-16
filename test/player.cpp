@@ -339,14 +339,22 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
 void Player::onCollide(const paz::Object& o)
 {
     _parent = &o;
-    _relX = x() - o.x();
-    _relY = y() - o.y();
-    _relZ = z() - o.z();
+    _relX = x() - _parent->x();
+    _relY = y() - _parent->y();
+    _relZ = z() - _parent->z();
     if(!_moving)
     {
-        xVel() = o.xVel();
-        yVel() = o.yVel();
-        zVel() = o.zVel();
+        const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
+        double alt;
+        paz::Vec nor;
+        paz::Vec surfVel;
+        computeAltitude(alt, nor, surfVel);
+        if(nor.dot(gravDir) < CosMaxAngle)
+        {
+            xVel() = _parent->xVel();
+            yVel() = _parent->yVel();
+            zVel() = _parent->zVel();
+        }
     }
     _collided = 2;
 }
