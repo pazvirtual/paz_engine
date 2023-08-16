@@ -6,6 +6,7 @@
 namespace paz
 {
     paz::Bytes get_asset(const std::string& path);
+    paz::Image get_asset_image(const std::string& path);
 }
 
 #endif

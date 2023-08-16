@@ -605,8 +605,8 @@ public:
 int main()
 {
     paz::App::Init("scene.frag", "font.pbm");
-    Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius);
-    Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10.);
+    Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp");
+    Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10., "moon.bmp");
     Body = paz::Model("persontest.obj", 0, -0.2);
     Head = paz::Model("persontest.obj", 1, -0.1);
     PaintballModel = paz::Model("icosphere2.obj", 0, 0., 0.1);

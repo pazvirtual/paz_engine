@@ -6,7 +6,6 @@
 #include <limits>
 #include <iomanip>
 #include <deque>
-#include <regex>
 
 //#define DO_FXAA
 #define NO_FRICTION
@@ -23,14 +22,14 @@ static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
 #endif
 
-static paz::RenderTarget _materialMap(1., paz::TextureFormat::R8UInt);
-static paz::RenderTarget _normalMap(1., paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget _coordMap(1., paz::TextureFormat::RG16Float);
-static paz::RenderTarget _depthMap(1., paz::TextureFormat::Depth32Float);
-static paz::RenderTarget _hdrRender(1., paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _diffuseMap(paz::TextureFormat::RGBA16Float);
+// ...
+static paz::RenderTarget _normalMap(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _depthMap(paz::TextureFormat::Depth32Float);
+static paz::RenderTarget _hdrRender(paz::TextureFormat::RGBA16Float);
 #ifdef DO_FXAA
-static paz::RenderTarget _finalRender(1., paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
-static paz::RenderTarget _finalLumMap(1., paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _finalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 #endif
 
 static std::unordered_map<void*, paz::InstanceBuffer> _instances;
@@ -49,6 +48,8 @@ static paz::VertexBuffer _quadVertices;
 
 static paz::Texture _font;
 static std::stringstream _msgStream;
+
+static paz::Texture _defaultTex;
 
 static const paz::Object* _cameraObject = nullptr;
 
@@ -94,13 +95,12 @@ void main()
 static const std::string GeometryVertSrc = 1 + R"====(
 layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
-layout(location = 2) in uint material;
+//layout(location = 2) in uint material;
 layout(location = 3) in vec2 coord;
 layout(location = 4) in vec4 model0 [[instance]];
 layout(location = 5) in vec2 model1 [[instance]];
 uniform mat4 projection;
 uniform mat4 view;
-flat out uint mtl;
 out vec4 posCs;
 out vec4 norCs;
 out vec2 uv;
@@ -121,7 +121,6 @@ void main()
                       2.*(xz + yw), 2.*(yz - xw), 1. - 2.*(xx + yy), 0.,
                       model0.w, model1.x, model1.y, 1.);
     mat4 mv = view*model;
-    mtl = material;
     posCs = mv*position;
     norCs = mv*normal;
     gl_Position = projection*posCs;
@@ -130,18 +129,18 @@ void main()
 )====";
 
 static const std::string GeometryFragSrc = 1 + R"====(
-flat in uint mtl;
 in vec4 posCs;
 in vec4 norCs;
 in vec2 uv;
-layout(location = 0) out uint material;
+uniform sampler2D tex;
+layout(location = 0) out vec4 diffuse;
+// ...
 layout(location = 1) out vec4 normal;
-layout(location = 2) out vec2 coord;
 void main()
 {
-    material = mtl;
+    diffuse = texture(tex, uv);
+    // ...
     normal = vec4(normalize(norCs.xyz), 0.);
-    coord = uv;
 }
 )====";
 
@@ -396,38 +395,12 @@ void main()
 
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
-static paz::Texture get_asset_image(const std::string& path)
-{
-    static const std::regex bmp("bmp", std::regex_constants::icase);
-    static const std::regex pbm("pbm", std::regex_constants::icase);
-    //static const std::regex jpg("jpe?g", std::regex_constants::icase);
-    //static const std::regex png("png", std::regex_constants::icase);
-    const std::string ext = paz::split_path(path)[2];
-    if(std::regex_match(ext, bmp))
-    {
-        return paz::Texture(paz::parse_bmp(paz::get_asset(path)));
-    }
-    if(std::regex_match(ext, pbm))
-    {
-        return paz::Texture(paz::parse_pbm(paz::get_asset(path)));
-    }
-    //if(std::regex_match(ext, jpg))
-    //{
-    //    return paz::Texture(paz::parse_jpg(paz::get_asset(path)));
-    //}
-    //if(std::regex_match(ext, png))
-    //{
-    //    return paz::Texture(paz::parse_png(paz::get_asset(path)));
-    //}
-    throw std::runtime_error("Unrecognized image extension \"" + ext + "\".");
-}
-
 void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     fontPath)
 {
-    _geometryBuffer.attach(_materialMap);
+    _geometryBuffer.attach(_diffuseMap);
+    // ...
     _geometryBuffer.attach(_normalMap);
-    _geometryBuffer.attach(_coordMap);
     _geometryBuffer.attach(_depthMap);
 
     _renderBuffer.attach(_hdrRender);
@@ -467,6 +440,30 @@ void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     _quadVertices.attribute(2, QuadPos);
 
     _font = Texture(get_asset_image(fontPath)); //TEMP - note that only red channel is used
+
+    std::vector<unsigned char> temp(4*512*512);
+    for(int i = 0; i < 512; ++i)
+    {
+        for(int j = 0; j < 512; ++j)
+        {
+            if((i*8/512)%2 == (j*8/512)%2)
+            {
+                temp[4*(512*i + j) + 0] = 0;
+                temp[4*(512*i + j) + 1] = 255;
+                temp[4*(512*i + j) + 2] = 255;
+            }
+            else
+            {
+                temp[4*(512*i + j) + 0] = 255;
+                temp[4*(512*i + j) + 1] = 0;
+                temp[4*(512*i + j) + 2] = 0;
+            }
+            temp[4*(512*i + j) + 3] = 255;
+        }
+    }
+    _defaultTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.data(),
+        MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::Linear,
+        WrapMode::Repeat, WrapMode::Repeat);
 
     Window::SetCursorMode(CursorMode::Disable);
 }
@@ -705,6 +702,14 @@ timeSum[1] += timer1.getAndRestart();
             _instances.at(n.first).subAttribute(0, modelMatData[0]);
             _instances.at(n.first).subAttribute(1, modelMatData[1]);
 timeSum[2] += timer1.getAndRestart();
+            if(n.second.back()->model()._tex.width())
+            {
+                _geometryPass.read("tex", n.second.back()->model()._tex);
+            }
+            else
+            {
+                _geometryPass.read("tex", _defaultTex);
+            }
             _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
                 model()._v, _instances.at(n.first), n.second.back()->model().
                 _i);
@@ -723,9 +728,9 @@ _msgStream << std::endl;
 
         // Render in HDR.
         _renderPass.begin();
-        _renderPass.read("materialMap", _materialMap);
+        _renderPass.read("diffuseMap", _diffuseMap);
+        // ...
         _renderPass.read("normalMap", _normalMap);
-        _renderPass.read("coordMap", _coordMap);
         _renderPass.read("depthMap", _depthMap);
         _renderPass.uniform("invProjection", convert_mat(convert_mat(
             projection).inv()));

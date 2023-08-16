@@ -5,7 +5,7 @@
 #include <cmath>
 
 paz::Model::Model(const std::string& path, int idx, double zOffset, double
-    scale)
+    scale, const std::string& texPath)
 {
     std::vector<std::string> names;
     std::vector<std::vector<float>> positions;
@@ -62,6 +62,11 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
     _v.attribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
     _v.attribute(2, uvs[idx]);
     _i = IndexBuffer(indices[idx]);
+    if(!texPath.empty())
+    {
+        _tex = Texture(get_asset_image(texPath), MinMagFilter::Linear,
+            MinMagFilter::Linear, MipmapFilter::Linear);
+    }
 }
 
 double paz::Model::collide(double x, double y, double z, double radius, double&

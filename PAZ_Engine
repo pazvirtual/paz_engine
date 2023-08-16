@@ -29,6 +29,7 @@ namespace paz
         double _radius = 0.;
         VertexBuffer _v;
         IndexBuffer _i;
+        Texture _tex;
 
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
@@ -43,7 +44,7 @@ namespace paz
     public:
         Model() = default;
         Model(const std::string& path, int idx = 0, double zOffset = 0., double
-            scale = 1.);
+            scale = 1., const std::string& texPath = "");
     };
 
     class Object
