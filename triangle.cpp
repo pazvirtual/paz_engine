@@ -127,9 +127,12 @@ double paz::Triangle::dist_transformed(double xt, double yt, double zt, double&
                 return absXt;
             }
         }
-        if(yt < yLeft && yt < yRight)
+        if(slopeLeft > 0. && slopeRight < 0.)
         {
-            return absXt;
+            if(yt < yLeft && yt < yRight)
+            {
+                return absXt;
+            }
         }
     }
 
