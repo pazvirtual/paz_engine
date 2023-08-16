@@ -98,7 +98,6 @@ void paz::update()
     }
 }
 
-
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
 {
     objects()[_id] = X.size();
