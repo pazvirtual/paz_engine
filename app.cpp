@@ -329,8 +329,9 @@ void main()
 #endif
 
 static const std::string TextVertSrc = 1 + R"===(
-const int numChars = 42;
-uniform int baseSize;
+const int charWidth = 5;
+uniform int baseWidth;
+uniform int baseHeight;
 uniform float scale;
 uniform int height;
 uniform int width;
@@ -342,10 +343,14 @@ out vec2 uv;
 void main()
 {
     uv = 0.5*position.xy + 0.5;
-    gl_Position = vec4((uv.x + float(col))*scale*float(baseSize)*2./float(width)
-        - 1., (uv.y - 1. - float(row))*scale*float(baseSize)*2./float(height) +
-        1., 0., 1.);
-    uv.x = (uv.x + float(character))/float(numChars);
+    gl_Position = vec4((uv.x +
+        0.2 + //TEMP
+        float(col)
+        *1.2 //TEMP
+        )*scale*float(charWidth)*2./float(width) - 1., (uv.y - 1.
+        - 0.1 //TEMP
+        - float(row))*scale*float(baseHeight)*2./float(height) + 1., 0, 1);
+    uv.x = (uv.x + float(character))*float(charWidth)/float(baseWidth);
 }
 )===";
 
@@ -379,56 +384,6 @@ void main()
 )===";
 
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
-
-static int get_char(char c)
-{
-    switch(c)
-    {
-        case '0': return 0;
-        case '1': return 1;
-        case '2': return 2;
-        case '3': return 3;
-        case '4': return 4;
-        case '5': return 5;
-        case '6': return 6;
-        case '7': return 7;
-        case '8': return 8;
-        case '9': return 9;
-        case 'a': return 10;
-        case 'b': return 11;
-        case 'c': return 12;
-        case 'd': return 13;
-        case 'e': return 14;
-        case 'f': return 15;
-        case 'g': return 16;
-        case 'h': return 17;
-        case 'i': return 18;
-        case 'j': return 19;
-        case 'k': return 20;
-        case 'l': return 21;
-        case 'm': return 22;
-        case 'n': return 23;
-        case 'o': return 24;
-        case 'p': return 25;
-        case 'q': return 26;
-        case 'r': return 27;
-        case 's': return 28;
-        case 't': return 29;
-        case 'u': return 30;
-        case 'v': return 31;
-        case 'w': return 32;
-        case 'x': return 33;
-        case 'y': return 34;
-        case 'z': return 35;
-        case ':': return 36;
-        case '.': return 37;
-        case '|': return 38;
-        case '-': return 39;
-        case '/': return 40;
-        case '+': return 41;
-        default: return -1;
-    }
-}
 
 void paz::App::Init(const std::string& sceneShaderPath, const std::string&
     fontPath)
@@ -574,7 +529,7 @@ if(tempDone[j]){ continue; }
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-                        a[j]->grounded() = true;// > CosMaxAngle;
+//                        a[j]->grounded() = true;// > CosMaxAngle;
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -594,7 +549,7 @@ rHist.push_back(r);
 latHist.pop_front();
 latHist.push_back(lat);
 std::stringstream ss;
-ss << std::fixed << std::setprecision(4) << "\n" << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel());
+ss << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel());
 _msg = ss.str();
 }
 
@@ -845,7 +800,8 @@ _msg = ss.str();
             _textPass.read("font", _font);
             _textPass.uniform("width", Window::ViewportWidth());
             _textPass.uniform("height", Window::ViewportHeight());
-            _textPass.uniform("baseSize", _font.height());
+            _textPass.uniform("baseWidth", _font.width());
+            _textPass.uniform("baseHeight", _font.height());
             bool highlight = false;
             _textPass.uniform("scale", 3.f);
             int row = 0;
@@ -863,14 +819,13 @@ _msg = ss.str();
                     col = 0;
                     continue;
                 }
-                const char c = get_char(n);
-                if(c >= 0)
+                if(n >= '!' && n <= '~')
                 {
                     _textPass.uniform("highlight", static_cast<float>(
                         highlight));
                     _textPass.uniform("row", row);
                     _textPass.uniform("col", col);
-                    _textPass.uniform("character", c);
+                    _textPass.uniform("character", static_cast<int>(n - '!'));
                     _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
                 }
                 ++col;
