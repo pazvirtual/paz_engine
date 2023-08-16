@@ -727,7 +727,7 @@ void paz::App::Run()
 
         // Render transparent objects. //TEMP - skip if possible
         unsigned int numLights = lightsData0.size()/4;
-        if(numLights > 16)
+        if(numLights > 100)
         {
             throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 16).");
         }
