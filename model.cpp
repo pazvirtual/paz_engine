@@ -3,6 +3,8 @@
 #include <limits>
 #include <cmath>
 
+static constexpr std::size_t NumSteps = 10;
+
 paz::Model::Model(const std::string& path, int idx)
 {
     std::vector<std::string> names;
@@ -35,50 +37,57 @@ paz::Model::Model(const std::string& path, int idx)
     }
     _v.attribute(4, positions[idx]);
     _v.attribute(4, normals[idx]);
-_v.attribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1));
+    _v.attribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
     _i = IndexBuffer(indices[idx]);
 }
 
-double paz::Model::collide(double x, double y, double z, double& gx, double& gy,
-    double& gz, double radius, double xPrev, double yPrev, double zPrev, double&
-    nx, double& ny, double& nz) const
+double paz::Model::collide(double x, double y, double z, double xPrev, double
+    yPrev, double zPrev, double radius, double& xNew, double& yNew, double&
+    zNew, double& xNor, double& yNor, double& zNor) const
 {
     double minDist = std::numeric_limits<double>::infinity();
-    gx = 0.;
-    gy = 0.;
-    gz = 0.;
-    nx = 0.;
-    ny = 0.;
-    nz = 0.;
-const double norm = std::sqrt(x*x + y*y + z*z);
-const double rx = x/norm;
-const double ry = y/norm;
-const double rz = z/norm;
+    xNew = x;
+    yNew = y;
+    zNew = z;
+    xNor = 0.;
+    yNor = 0.;
+    zNor = 1.;
+bool done = false;
+for(std::size_t i = 0; i < NumSteps; ++i)
+{
+double gx = 0.;
+double gz = 0.;
+double gy = 0.;
+    const double curX = xPrev + (i + 1)*(x - xPrev)/NumSteps;
+    const double curY = yPrev + (i + 1)*(y - yPrev)/NumSteps;
+    const double curZ = zPrev + (i + 1)*(z - zPrev)/NumSteps;
     for(const auto& n : *_t)
     {
-        double nxTemp, nyTemp, nzTemp, d;
-        n.collide(x, y, z, radius, xPrev, yPrev, zPrev, nxTemp, nyTemp, nzTemp,
-            d);
+        double xNorTemp, yNorTemp, zNorTemp, d;
+        n.collide(curX, curY, curZ, radius, xNorTemp, yNorTemp, zNorTemp, d);
         if(d < radius)
         {
             const double a = radius - d;
-            gx += a*nx;
-            gy += a*ny;
-            gz += a*nz;
+            gx += a*xNorTemp;
+            gy += a*yNorTemp;
+            gz += a*zNorTemp;
             if(d < minDist)
             {
+done = true;
                 minDist = d;
-                nx = nxTemp;
-                ny = nyTemp;
-                nz = nzTemp;
+                xNor = xNorTemp;
+                yNor = yNorTemp;
+                zNor = zNorTemp;
             }
         }
-    }
-const double offset = gx*rx + gy*ry + gz*rz;
-std::cout << offset << " " << norm << " " << minDist << std::endl;
-if(offset < 0.)
+if(done)
 {
-throw std::logic_error("NOPE");
+xNew = curX + gx;
+yNew = curY + gy;
+zNew = curZ + gz;
+return minDist;
+}
+    }
 }
     return minDist;
 }

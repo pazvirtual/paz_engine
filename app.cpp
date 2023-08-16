@@ -3,7 +3,6 @@
 #include "PAZ_Math"
 #include <limits>
 
-#define _cameraGrounded _cameraObject->grounded()
 #define _cameraBasePos Vec{{_cameraObject->x(), _cameraObject->y(), _cameraObject->z()}}
 #define _cameraVel Vec{{_cameraObject->xVel(), _cameraObject->yVel(), _cameraObject->zVel()}}
 #define _cameraAtt Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(), _cameraObject->zAtt(), std::sqrt(1. - _cameraObject->xAtt()*_cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() - _cameraObject->zAtt()*_cameraObject->zAtt())}}
@@ -329,17 +328,9 @@ for(auto& a0 : objects())
         continue;
     }
 
-    bool collided = false;
-
-    double minDist = std::numeric_limits<double>::infinity();
-    double gx = 0.;
-    double gy = 0.;
-    double gz = 0.;
-    double nx = 0.;
-    double ny = 0.;
-    double nz = 0.;
-
     Object* collidedWith = nullptr;
+    double xNew, yNew, zNew;
+    double xNor, yNor, zNor;
     for(auto& b0 : objects())
     {
         Object* b = reinterpret_cast<Object*>(b0.first);
@@ -375,40 +366,31 @@ for(auto& a0 : objects())
         const double yPrev = a->yPrev() + offsetY - b->yPrev();
         const double zPrev = a->zPrev() + offsetZ - b->zPrev();
 
-        double hx, hy, hz;
-        double nxTemp, nyTemp, nzTemp;
-        const double c = b->model().collide(x, y, z, hx, hy, hz, a->
-            collisionRadius(), xPrev, yPrev, zPrev, nxTemp, nyTemp, nzTemp);
+        const double c = b->model().collide(x, y, z, xPrev, yPrev, zPrev, a->
+            collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
         if(c < a->collisionRadius())
         {
-            collided = true;
-            gx += hx;
-            gy += hy;
-            gz += hz;
-            if(c < minDist)
-            {
-                minDist = c;
-                collidedWith = b;
-                nx = nxTemp;
-                ny = nyTemp;
-                nz = nzTemp;
-            }
+            collidedWith = b;
+            xNew -= offsetX;
+            yNew -= offsetY;
+            zNew -= offsetZ;
+            break; //TEMP
         }
     }
 
-    if(collided)
+    if(collidedWith)
     {
-        a->localNorX() = nx;
-        a->localNorY() = ny;
-        a->localNorZ() = nz;
-        a->x() += gx;
-        a->y() += gy;
-        a->z() += gz;
+        a->localNorX() = xNor;
+        a->localNorY() = yNor;
+        a->localNorZ() = zNor;
+        a->x() = xNew;
+        a->y() = yNew;
+        a->z() = zNew;
 
         const double xVel = a->xVel() - collidedWith->xVel();
         const double yVel = a->yVel() - collidedWith->yVel();
         const double zVel = a->zVel() - collidedWith->zVel();
-        const double norVel = xVel*nx + yVel*ny + zVel*nz;
+        const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
         if(norVel < 0.)
         {
 //            a->xVel() -= norVel*nx;
@@ -422,7 +404,7 @@ a->xVel() = a->yVel() = a->zVel() = 0.;
         collidedWith->onCollide(*a);
     }
 
-    a->grounded() = collided;// && a->localNorZ() > CosMaxAngle;
+    a->grounded() = static_cast<bool>(collidedWith);// && a->localNorZ() > CosMaxAngle;
     if(a->grounded())
     {
 //        a->xVel() = 0.; //TEMP - need friction
@@ -431,6 +413,7 @@ a->xVel() = a->yVel() = a->zVel() = 0.;
     }
 }
 ////////
+std::cout << _cameraObject->z() << " " << _cameraObject->localNorZ() << " " << _cameraObject->xAtt() << std::endl;
 
         update();
 
@@ -444,7 +427,7 @@ a->xVel() = a->yVel() = a->zVel() = 0.;
         Vec cameraRight = gravDir.cross(cameraForward).normalized();
 
         _cameraObject->yAngRate() = 0.;
-        if(_cameraGrounded)
+        if(_cameraObject->grounded())
         {
             _mousePos = Vec::Zero(2);
             _cameraObject->xAngRate() = 0.;
@@ -509,7 +492,7 @@ a->xVel() = a->yVel() = a->zVel() = 0.;
         cameraForward = cameraRot.row(1).trans();
         const Vec cameraUp = cameraRot.row(2).trans();
 
-        if(_cameraGrounded)
+        if(_cameraObject->grounded())
         {
             if(Window::KeyDown(Key::A))
             {

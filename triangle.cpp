@@ -2,8 +2,6 @@
 #include <cmath>
 #include <limits>
 
-static constexpr std::size_t NumSteps = 100'000;
-
 inline double square(double x)
 {
     return x*x;
@@ -141,9 +139,8 @@ double paz::Triangle::dist_transformed(double xt, double yt, double zt, double&
     return std::sqrt(dyzSq + xt*xt);
 }
 
-void paz::Triangle::collide(double x, double y, double z, double radius, double
-    xPrev, double yPrev, double zPrev, double& nx, double& ny, double& nz,
-    double& d) const
+void paz::Triangle::collide(double x, double y, double z, double radius, double&
+    nx, double& ny, double& nz, double& d) const
 {
     d = std::numeric_limits<double>::infinity();
     nx = 0.;
@@ -164,60 +161,26 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double
     }
 
     x -= x0;
-    xPrev -= x0;
     y -= y0;
     z -= z0;
-    yPrev -= y0;
-    zPrev -= z0;
     const double xt = basisX[0]*x + basisX[1]*y + basisX[2]*z;
-    const double xPrevt = basisX[0]*xPrev + basisX[1]*yPrev + basisX[2]*zPrev;
 
-    // The sphere has always been behind the triangle.
-    if(xPrevt > 0. && xt > 0.)
+    // The sphere is behind the triangle.
+    if(xt > 0.)
     {
         return;
     }
 
     const double yt = basisY[0]*x + basisY[1]*y + basisY[2]*z;
     const double zt = basisZ[0]*x + basisZ[1]*y + basisZ[2]*z;
-    const double yPrevt = basisY[0]*xPrev + basisY[1]*yPrev + basisY[2]*zPrev;
-    const double zPrevt = basisZ[0]*xPrev + basisZ[1]*yPrev + basisZ[2]*zPrev;
 
-    const double deltaXt = xt - xPrevt;
-
-    // Find closest approach to the triangle.
+    // Find distance from the triangle.
     double nearestXt = xt;
     double nearestYt = 0.;
     double nearestZt = 0.;
-    if(deltaXt)
-    {
-        const double ySlope = (yt - yPrevt)/deltaXt;
-        const double zSlope = (zt - zPrevt)/deltaXt;
-        for(std::size_t i = 0; i < NumSteps; ++i) //TEMP - analytical solution?
-        {
-            const double deltaXTempt = i*deltaXt/(NumSteps - 1);
-            const double xTempt = deltaXTempt + xPrevt;
-            const double yTempt = ySlope*deltaXTempt + yPrevt;
-            const double zTempt = zSlope*deltaXTempt + zPrevt;
-            double nearestYTempt = 0.;
-            double nearestZTempt = 0.;
-            const double dNew = dist_transformed(xTempt, yTempt, zTempt,
-                nearestYTempt, nearestZTempt);
-            if(dNew < d)
-            {
-                d = dNew;
-                nearestXt = xTempt;
-                nearestYt = nearestYTempt;
-                nearestZt = nearestZTempt;
-            }
-        }
-    }
-    else
-    {
-        d = dist_transformed(xt, yt, zt, nearestYt, nearestZt);
-    }
+    d = dist_transformed(xt, yt, zt, nearestYt, nearestZt);
 
-    // The sphere has never touched the triangle.
+    // The sphere is not touching the triangle.
     if(d > radius)
     {
         return;

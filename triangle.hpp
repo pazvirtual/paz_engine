@@ -21,9 +21,8 @@ namespace paz
     public:
         Triangle(double x0, double y0, double z0, double x1, double y1, double
             z1, double x2, double y2, double z2);
-        void collide(double x, double y, double z, double radius, double xPrev,
-            double yPrev, double zPrev, double& nx, double& ny, double& nz,
-            double& d) const;
+        void collide(double x, double y, double z, double radius, double& nx,
+            double& ny, double& nz, double& d) const;
     };
 }
 
