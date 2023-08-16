@@ -236,6 +236,7 @@ void paz::App::Run()
                         break;
                     //case UiAction::ToggleHidpi: Window::HidpiEnabled() ?
                     //    Window::DisableHidpi() : Window::EnableHidpi(); break;
+                    case UiAction::ToggleHidpi: Window::DisableHidpi(); break;
                     case UiAction::None: break;
                     default: throw std::logic_error("Unrecognized UI action.");
                 }

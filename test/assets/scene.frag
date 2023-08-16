@@ -12,8 +12,8 @@ const float zNear = 0.1; //TEMP
 const float zFar = 1e3; //TEMP
 void main()
 {
-    vec2 texSize = textureSize(diffuseMap, 0);
-    vec2 uv = gl_FragCoord/texSize;
+    ivec2 texSize = textureSize(diffuseMap, 0);
+    vec2 uv = gl_FragCoord.xy/vec2(texSize);
     uv.y = 1. - uv.y;
     vec3 diffCol = texture(diffuseMap, uv).rgb;
     vec3 emissCol = texture(emissMap, uv).rgb;
