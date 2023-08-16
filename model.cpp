@@ -108,6 +108,19 @@ void paz::Model::castRay(double x, double y, double z, double xDir, double yDir,
     double zDir, double& xNor, double& yNor, double& zNor, double& dist) const
 {
     dist = std::numeric_limits<double>::infinity();
+    xNor = 0.;
+    yNor = 0.;
+    zNor = 1.;
+    // The bounding sphere does not touch the ray.
+    const double t = std::max(0., -xDir*x - yDir*y - zDir*z);
+    const double deltaX = x + t*xDir;
+    const double deltaY = y + t*yDir;
+    const double deltaZ = z + t*zDir;
+    if(deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ > _radius*_radius)
+    {
+        return;
+    }
+    // Check each triangle.
     for(const auto& n : *_t)
     {
         const double d = n.castRay(x, y, z, xDir, yDir, zDir);
