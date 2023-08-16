@@ -43,7 +43,7 @@ void paz::Menu::update()
 {
     if(Window::MouseActive())
     {
-        Window::SetCursorMode(CursorMode::Normal);
+        Window::SetCursorMode(CursorMode::Hidden);
     }
     else
     {

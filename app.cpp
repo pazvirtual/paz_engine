@@ -305,8 +305,6 @@ void paz::App::Run()
         );
         while(!Window::Done() && !done)
         {
-            Window::SetCursorMode(CursorMode::Hidden);
-
             if(startMenu.curPage() == 1 && (Window::KeyPressed(Key::Escape) ||
                 Window::GamepadPressed(GamepadButton::Start)))
             {
@@ -379,11 +377,6 @@ void paz::App::Run()
             justPaused = true;
             _paused = true;
             pauseMenu.setState(0, 0);
-        }
-
-        if(_paused)
-        {
-            Window::SetCursorMode(CursorMode::Hidden);
         }
 
         if(_micObject && !_paused && objects().count(reinterpret_cast<std::
