@@ -388,6 +388,12 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     Mod.emplace_back();
     CType.push_back(CollisionType::Default);
     GType.push_back(GravityType::Default);
+    XPrev.push_back(std::nan(""));
+    YPrev.push_back(std::nan(""));
+    ZPrev.push_back(std::nan(""));
+    XAttPrev.push_back(std::nan(""));
+    YAttPrev.push_back(std::nan(""));
+    ZAttPrev.push_back(std::nan(""));
     CRadius.push_back(0.2);
     XDown.push_back(0.);
     YDown.push_back(0.);
@@ -417,6 +423,12 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(Mod)
     PUSH_COPY(CType)
     PUSH_COPY(GType)
+    PUSH_COPY(XPrev);
+    PUSH_COPY(YPrev);
+    PUSH_COPY(ZPrev);
+    PUSH_COPY(XAttPrev);
+    PUSH_COPY(YAttPrev);
+    PUSH_COPY(ZAttPrev);
     PUSH_COPY(CRadius)
     PUSH_COPY(XDown)
     PUSH_COPY(YDown)
@@ -460,6 +472,12 @@ paz::Object& paz::Object::operator=(const Object& o)
         COPY(Mod)
         COPY(CType)
         COPY(GType)
+        COPY(XPrev);
+        COPY(YPrev);
+        COPY(ZPrev);
+        COPY(XAttPrev);
+        COPY(YAttPrev);
+        COPY(ZAttPrev);
         COPY(CRadius)
         COPY(XDown)
         COPY(YDown)
@@ -497,6 +515,12 @@ paz::Object& paz::Object::operator=(const Object& o)
         PUSH_COPY(Mod)
         PUSH_COPY(CType)
         PUSH_COPY(GType)
+        PUSH_COPY(XPrev);
+        PUSH_COPY(YPrev);
+        PUSH_COPY(ZPrev);
+        PUSH_COPY(XAttPrev);
+        PUSH_COPY(YAttPrev);
+        PUSH_COPY(ZAttPrev);
         PUSH_COPY(CRadius)
         PUSH_COPY(XDown)
         PUSH_COPY(YDown)
@@ -561,6 +585,12 @@ paz::Object& paz::Object::operator=(Object&& o) noexcept
         PUSH_COPY(Mod)
         PUSH_COPY(CType)
         PUSH_COPY(GType)
+        PUSH_COPY(XPrev);
+        PUSH_COPY(YPrev);
+        PUSH_COPY(ZPrev);
+        PUSH_COPY(XAttPrev);
+        PUSH_COPY(YAttPrev);
+        PUSH_COPY(ZAttPrev);
         PUSH_COPY(CRadius)
         PUSH_COPY(XDown)
         PUSH_COPY(YDown)
@@ -607,6 +637,12 @@ paz::Object::~Object()
     SWAP_AND_POP(Mod)
     SWAP_AND_POP(CType)
     SWAP_AND_POP(GType)
+    SWAP_AND_POP(XPrev);
+    SWAP_AND_POP(YPrev);
+    SWAP_AND_POP(ZPrev);
+    SWAP_AND_POP(XAttPrev);
+    SWAP_AND_POP(YAttPrev);
+    SWAP_AND_POP(ZAttPrev);
     SWAP_AND_POP(CRadius)
     SWAP_AND_POP(XDown)
     SWAP_AND_POP(YDown)
