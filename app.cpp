@@ -221,7 +221,7 @@ void paz::App::Run()
         };
         const auto view = mat_mult(pitchMat, mat_mult(yawMat, transMat));
 
-        for(const auto& n : Objects)
+        for(const auto& n : objects())
         {
             reinterpret_cast<Object*>(n.first)->update();
         }

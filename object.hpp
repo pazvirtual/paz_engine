@@ -6,7 +6,7 @@
 
 namespace paz
 {
-    extern std::unordered_map<std::uintptr_t, std::size_t> Objects;
+    std::unordered_map<std::uintptr_t, std::size_t>& objects();
 }
 
 #endif
