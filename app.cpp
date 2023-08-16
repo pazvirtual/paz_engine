@@ -559,12 +559,26 @@ void paz::App::Run()
             modelMatData[1].resize(2*n.second.size());
             for(std::size_t i = 0; i < n.second.size(); ++i)
             {
-                modelMatData[0][4*i + 0] = n.second[i]->xAtt();
-                modelMatData[0][4*i + 1] = n.second[i]->yAtt();
-                modelMatData[0][4*i + 2] = n.second[i]->zAtt();
-                modelMatData[0][4*i + 3] = mix(n.second[i]->xPrev(), n.second[i]->x(), fac) - cameraPos(0);
-                modelMatData[1][2*i + 0] = mix(n.second[i]->yPrev(), n.second[i]->y(), fac) - cameraPos(1);
-                modelMatData[1][2*i + 1] = mix(n.second[i]->zPrev(), n.second[i]->z(), fac) - cameraPos(2);
+                const double wAttPrev = std::sqrt(1. - n.second[i]->xAttPrev()*
+                    n.second[i]->xAttPrev() - n.second[i]->yAttPrev()*n.second[
+                    i]->yAttPrev() - n.second[i]->zAttPrev()*n.second[i]->
+                    zAttPrev());
+                const double wAtt = std::sqrt(1. - n.second[i]->xAtt()*n.second[
+                    i]->xAtt() - n.second[i]->yAtt()*n.second[i]->yAtt() - n.
+                    second[i]->zAtt()*n.second[i]->zAtt());
+                const Vec att = nlerp(Vec{{n.second[i]->xAttPrev(), n.second[
+                    i]->yAttPrev(), n.second[i]->zAttPrev(), wAttPrev}}, Vec{{
+                    n.second[i]->xAtt(), n.second[i]->yAtt(), n.second[i]->
+                    zAtt(), wAtt}}, fac);
+                modelMatData[0][4*i + 0] = att(0);
+                modelMatData[0][4*i + 1] = att(1);
+                modelMatData[0][4*i + 2] = att(2);
+                modelMatData[0][4*i + 3] = mix(n.second[i]->xPrev(), n.second[
+                    i]->x(), fac) - cameraPos(0);
+                modelMatData[1][2*i + 0] = mix(n.second[i]->yPrev(), n.second[
+                    i]->y(), fac) - cameraPos(1);
+                modelMatData[1][2*i + 1] = mix(n.second[i]->zPrev(), n.second[
+                    i]->z(), fac) - cameraPos(2);
                 if(!n.second[i]->lights().empty())
                 {
                     const Vec model0{{modelMatData[0][4*i + 0], modelMatData[0][4*i + 1], modelMatData[0][4*i + 2], modelMatData[0][4*i + 3]}};
@@ -604,19 +618,23 @@ void paz::App::Run()
         {
             if(!n->lights().empty())
             {
-                const double xAtt = n->xAtt();
-                const double yAtt = n->yAtt();
-                const double zAtt = n->zAtt();
-                const double wAtt = std::sqrt(1. - xAtt*xAtt - yAtt*yAtt - zAtt*zAtt);
-                const double xx = xAtt*xAtt;
-                const double yy = yAtt*yAtt;
-                const double zz = zAtt*zAtt;
-                const double xy = xAtt*yAtt;
-                const double zw = zAtt*wAtt;
-                const double xz = xAtt*zAtt;
-                const double yw = yAtt*wAtt;
-                const double yz = yAtt*zAtt;
-                const double xw = xAtt*wAtt;
+                const double wAttPrev = std::sqrt(1. - n->xAttPrev()*n->
+                    xAttPrev() - n->yAttPrev()*n->yAttPrev() - n->zAttPrev()*n->
+                    zAttPrev());
+                const double wAtt = std::sqrt(1. - n->xAtt()*n->xAtt() - n->
+                    yAtt()*n->yAtt() - n->zAtt()*n->zAtt());
+                const Vec att = nlerp(Vec{{n->xAttPrev(), n->yAttPrev(), n->
+                    zAttPrev(), wAttPrev}}, Vec{{n->xAtt(), n->yAtt(), n->
+                    zAtt(), wAtt}}, fac);
+                const double xx = att(0)*att(0);
+                const double yy = att(1)*att(1);
+                const double zz = att(2)*att(2);
+                const double xy = att(0)*att(1);
+                const double zw = att(2)*att(3);
+                const double xz = att(0)*att(2);
+                const double yw = att(1)*att(3);
+                const double yz = att(1)*att(2);
+                const double xw = att(0)*att(3);
                 const Mat mv = view*Mat{{1. - 2.*(yy + zz), 2.*(xy - zw), 2.*(xz + yw), mix(n->xPrev(), n->x(), fac) - cameraPos(0)},
                                         {2.*(xy + zw), 1. - 2.*(xx + zz), 2.*(yz - xw), mix(n->yPrev(), n->y(), fac) - cameraPos(1)},
                                         {2.*(xz - yw), 2.*(yz + xw), 1. - 2.*(xx + yy), mix(n->zPrev(), n->z(), fac) - cameraPos(2)},
