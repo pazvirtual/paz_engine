@@ -24,6 +24,7 @@ static paz::Framebuffer _lumBuffer;
 
 static paz::RenderTarget _materialMap(1, paz::TextureFormat::R8UInt);
 static paz::RenderTarget _normalMap(1, paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _coordMap(1, paz::TextureFormat::RG16Float);
 static paz::RenderTarget _depthMap(1, paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(1, paz::TextureFormat::RGBA16Float);
 #ifdef DO_FXAA
@@ -90,12 +91,14 @@ static const std::string GeometryVertSrc = 1 + R"====(
 layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
 layout(location = 2) in uint material;
+layout(location = 3) in vec2 coord;
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 flat out uint mtl;
 out vec4 posCs;
 out vec4 norCs;
+out vec2 uv;
 void main()
 {
     mat4 mv = view*model;
@@ -103,6 +106,7 @@ void main()
     posCs = mv*position;
     norCs = mv*normal;
     gl_Position = projection*posCs;
+    uv = coord;
 }
 )====";
 
@@ -110,12 +114,15 @@ static const std::string GeometryFragSrc = 1 + R"====(
 flat in uint mtl;
 in vec4 posCs;
 in vec4 norCs;
+in vec2 uv;
 layout(location = 0) out uint material;
 layout(location = 1) out vec4 normal;
+layout(location = 2) out vec2 coord;
 void main()
 {
     material = mtl;
     normal = vec4(normalize(norCs.xyz), 0.);
+    coord = uv;
 }
 )====";
 
@@ -319,6 +326,7 @@ void paz::App::Init(const std::string& sceneShaderPath)
 {
     _geometryBuffer.attach(_materialMap);
     _geometryBuffer.attach(_normalMap);
+    _geometryBuffer.attach(_coordMap);
     _geometryBuffer.attach(_depthMap);
 
     _renderBuffer.attach(_hdrRender);
@@ -676,6 +684,7 @@ std::cout << lat*180./M_PI << " " << lon*180./M_PI << std::endl;
         _renderPass.begin();
         _renderPass.read("materialMap", _materialMap);
         _renderPass.read("normalMap", _normalMap);
+        _renderPass.read("coordMap", _coordMap);
         _renderPass.read("depthMap", _depthMap);
         _renderPass.uniform("invProjection", convert_mat(convert_mat(projection).inv()));
         _renderPass.uniform("sun", convert_vec(view*SunVec));

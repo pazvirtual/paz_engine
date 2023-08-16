@@ -34,9 +34,23 @@ paz::Model::Model(const std::string& path, int idx)
         const double t2z = positions[idx][i2 + 2];
         _t->emplace_back(t0x, t0y, t0z, t1x, t1y, t1z, t2x, t2y, t2z);
     }
+//TEMP - overwrite UVs b/c sphere50.obj's aren't right
+for(std::size_t i = 0; i < positions[idx].size()/4; ++i)
+{
+const double x = positions[idx][4*i];
+const double y = positions[idx][4*i + 1];
+const double z = positions[idx][4*i + 2];
+const double rad = std::sqrt(x*x + y*y + z*z);
+const double lat = std::asin(z/rad);
+const double lon = std::atan2(y, x);
+uvs[idx][2*i] = 0.5*lon/M_PI + 0.5;
+uvs[idx][2*i + 1] = lat/M_PI + 0.5;
+}
+//TEMP
     _v.attribute(4, positions[idx]);
     _v.attribute(4, normals[idx]);
     _v.attribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
+    _v.attribute(2, uvs[idx]);
     _i = IndexBuffer(indices[idx]);
 }
 
