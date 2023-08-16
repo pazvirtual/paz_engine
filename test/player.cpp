@@ -5,7 +5,7 @@
 
 static constexpr double CosMaxAngle = 0.8;
 
-Player::Player()
+Player::Player() : _parent(nullptr)
 {
     _head.collisionType() = paz::CollisionType::None;
     _head.gravityType() = paz::GravityType::None;
@@ -40,6 +40,15 @@ void Player::update()
     if(_collided)
     {
         --_collided;
+    }
+    if(reg == Regime::Grounded && !_moving)
+    {
+        x() = _relX + _parent->x();
+        y() = _relY + _parent->y();
+        z() = _relZ + _parent->z();
+        xVel() = _parent->xVel();
+        yVel() = _parent->yVel();
+        zVel() = _parent->zVel();
     }
 const double r = std::sqrt(x()*x() + y()*y() + z()*z());
 const double lat = std::asin(z()/r);
@@ -151,6 +160,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     _head.yAtt() = cameraAtt(1);
     _head.zAtt() = cameraAtt(2);
 
+    _moving = false;
+
     const paz::Vec groundRight = forward.cross(nor);
     const paz::Vec groundForward = nor.cross(right);
     if(reg == Regime::Grounded)
@@ -202,6 +213,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
                 w *= 3./norm;
             }
         }
+        _moving = u || v || w;
 #ifdef NO_FRICTION
         xVel() = surfVel(0) + u;
         yVel() = surfVel(1) + v;
@@ -289,28 +301,29 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             }
         }
     }
+    double net = 0.;
     if(paz::Window::GamepadActive())
     {
-        const double net = paz::Window::GamepadRightTrigger() - paz::Window::
+        net = paz::Window::GamepadRightTrigger() - paz::Window::
             GamepadLeftTrigger();
-        xVel() += 12.*up(0)*net*paz::App::PhysTime();
-        yVel() += 12.*up(1)*net*paz::App::PhysTime();
-        zVel() += 12.*up(2)*net*paz::App::PhysTime();
     }
     else
     {
         if(paz::Window::KeyDown(paz::Key::LeftShift))
         {
-            xVel() += 12.*up(0)*paz::App::PhysTime();
-            yVel() += 12.*up(1)*paz::App::PhysTime();
-            zVel() += 12.*up(2)*paz::App::PhysTime();
+            net += 1.;
         }
         if(paz::Window::KeyDown(paz::Key::LeftControl))
         {
-            xVel() -= 12.*up(0)*paz::App::PhysTime();
-            yVel() -= 12.*up(1)*paz::App::PhysTime();
-            zVel() -= 12.*up(2)*paz::App::PhysTime();
+            net -= 1.;
         }
+    }
+    if(net)
+    {
+        _moving = true;
+        xVel() += 12.*up(0)*net*paz::App::PhysTime();
+        yVel() += 12.*up(1)*net*paz::App::PhysTime();
+        zVel() += 12.*up(2)*net*paz::App::PhysTime();
     }
 
     if(paz::Window::MousePressed(0) || paz::Window::GamepadPressed(paz::
@@ -323,8 +336,18 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     }
 }
 
-void Player::onCollide(const paz::Object&)
+void Player::onCollide(const paz::Object& o)
 {
+    _parent = &o;
+    _relX = x() - o.x();
+    _relY = y() - o.y();
+    _relZ = z() - o.z();
+    if(!_moving)
+    {
+        xVel() = o.xVel();
+        yVel() = o.yVel();
+        zVel() = o.zVel();
+    }
     _collided = 2;
 }
 

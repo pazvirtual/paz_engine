@@ -14,6 +14,10 @@ class Player : public paz::Object
 
     static constexpr double LowAltitude = 10.;
 
+    const Object* _parent;
+    double _relX, _relY, _relZ;
+    bool _moving = false;
+
     double _pitch = 0.;
     double _prevGravPitch = 0.;
     paz::Vec _mousePos = paz::Vec::Zero(2);
@@ -25,7 +29,7 @@ class Player : public paz::Object
 public:
     Player();
     void update() final;
-    void onCollide(const paz::Object&) final;
+    void onCollide(const paz::Object& o) final;
     const paz::Object& head() const;
 };
 
