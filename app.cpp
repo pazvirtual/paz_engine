@@ -12,6 +12,7 @@
 
 static constexpr double Radius = 0.2;
 static constexpr double CosMaxAngle = 0.6; // 53.13 deg
+static constexpr std::array<float, 4> SunVec = {0.57735, 0.57735, 0.57735, 0.};
 
 ////
 static paz::Framebuffer _geometryBuffer;
@@ -21,7 +22,6 @@ static paz::Framebuffer _lumBuffer;
 
 //static paz::RenderTarget _materialMap(1, paz::TextureFormat::R8UInt);
 static paz::RenderTarget _normalMap(1, paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget _directionMap(1, paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _depthMap(1, paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(1, paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _finalRender(1, paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
@@ -53,6 +53,20 @@ static std::array<float, 16> mat_mult(const std::array<float, 16>& a, const
             {
                 m[4*j + i] += a[4*k + i]*b[4*j + k];
             }
+        }
+    }
+    return m;
+}
+
+static std::array<float, 4> mat_mult(const std::array<float, 16>& a, const std::
+    array<float, 4>& b)
+{
+    std::array<float, 4> m = {};
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        for(std::size_t j = 0; j < 4; ++j)
+        {
+            m[i] += a[4*j + i]*b[j];
         }
     }
     return m;
@@ -104,12 +118,10 @@ in vec4 posCs;
 in vec4 norCs;
 //layout(location = 0) out uint material;
 layout(location = 0/*1*/) out vec4 normal;
-layout(location = 1/*2*/) out vec4 direction;
 void main()
 {
 //    material = mtl;
     normal = norCs;
-    direction = vec4(normalize(posCs.xyz), 0);
 }
 )====";
 
@@ -322,7 +334,6 @@ void paz::App::Init(const std::string& sceneShaderPath)
 {
 //    _geometryBuffer.attach(_materialMap);
     _geometryBuffer.attach(_normalMap);
-    _geometryBuffer.attach(_directionMap);
     _geometryBuffer.attach(_depthMap);
 
     _renderBuffer.attach(_hdrRender);
@@ -555,8 +566,9 @@ static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z(
         _renderPass.begin();
 //        _renderPass.read("materialMap", _materialMap);
         _renderPass.read("normalMap", _normalMap);
-//        _renderPass.read("directionMap", _directionMap);
-//        _renderPass.read("depthMap", _depthMap);
+        _renderPass.read("depthMap", _depthMap);
+        _renderPass.uniform("projection", projection);
+        _renderPass.uniform("sun", mat_mult(view, SunVec));
         _renderPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();
 
