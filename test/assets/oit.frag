@@ -26,11 +26,11 @@ void main()
     vec3 color = 0.01*diffCol;
     vec3 nor = normalize(_nor);
     float cosViewAngle = abs(dot(nor, dir));
-    float cosSunAngle = abs(dot(nor, sunDir));
+    float cosSunAngle = abs(dot(nor, sunDir.xyz));
     float diff = cosSunAngle;
-    vec3 halfwayDir = normalize(sunDir - dir);
+    vec3 halfwayDir = normalize(sunDir.xyz - dir);
     float spec = cosSunAngle*pow(abs(dot(nor, halfwayDir)), specPower);
-    color += sunIll*mix(diff, spec, specFac)*diffCol;
+    color += sunIll.rgb*mix(diff, spec, specFac)*diffCol;
     for(uint i = 0u; i < numLights; ++i)
     {
         vec3 lightPos = light0[i].xyz;
