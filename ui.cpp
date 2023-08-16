@@ -19,9 +19,46 @@ int paz::Font::charWidth() const
     return _charWidth;
 }
 
+paz::Button::Button(const std::vector<std::string>& labels, const std::function<
+    void(Button&)>& action) : _mode(0), _labels(labels), _action(action) {}
+
+int paz::Button::mode() const
+{
+    return _mode;
+}
+
+void paz::Button::setMode(int mode)
+{
+    _mode = mode;
+}
+
+const std::string& paz::Button::label() const
+{
+    return _labels.at(_mode);
+}
+
+void paz::Button::operator()()
+{
+    _action(*this);
+}
+
+paz::Menu& paz::Button::parent() const
+{
+    return *_parent;
+}
+
 paz::Menu::Menu(const Font& font, const std::string& title, const std::vector<
-    std::vector<std::pair<std::string, std::function<void(Menu&)>>>>& buttons) :
-    _curPage(0), _curButton(0), _font(font), _title(title), _buttons(buttons) {}
+    std::vector<Button>>& buttons) : _curPage(0), _curButton(0), _font(font),
+    _title(title), _buttons(buttons)
+{
+    for(auto& m : _buttons)
+    {
+        for(auto& n : m)
+        {
+            n._parent = this;
+        }
+    }
+}
 
 void paz::Menu::update()
 {
@@ -39,7 +76,7 @@ void paz::Menu::update()
         KeyPressed(Key::KeypadEnter) || Window::GamepadPressed(
         GamepadButton::A)))
     {
-        _buttons[_curPage][_curButton].second(*this);
+        _buttons[_curPage][_curButton]();
     }
     if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
         Window::GamepadPressed(GamepadButton::Down))
@@ -63,7 +100,7 @@ void paz::Menu::update()
         for(std::size_t i = 0; i < _buttons[_curPage].size(); ++i)
         {
             const double x0 = 0;
-            const double x1 = x0 + (_buttons[_curPage][i].first.size() + 2)*
+            const double x1 = x0 + (_buttons[_curPage][i].label().size() + 2)*
                 scale*(_font.charWidth() + 1);
             const double y0 = (startRow - i - 1)*scale*_font.tex().height();
             const double y1 = y0 + scale*_font.tex().height();
@@ -86,7 +123,7 @@ void paz::Menu::update()
     {
         const bool highlight = _curButton >= 0 && i == static_cast<std::
             size_t>(_curButton) + 1;
-        std::string str = (i ? _buttons[_curPage][i - 1].first : (_curPage ?
+        std::string str = (i ? _buttons[_curPage][i - 1].label() : (_curPage ?
             "Options" : _title));
         if(i)
         {

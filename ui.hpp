@@ -19,6 +19,26 @@ namespace paz
         int charWidth() const;
     };
 
+    class Menu;
+    class Button
+    {
+        friend class Menu;
+
+        Menu* _parent;
+        int _mode;
+        std::vector<std::string> _labels;
+        std::function<void(Button&)> _action;
+
+    public:
+        Button(const std::vector<std::string>& labels, const std::function<void(
+            Button&)>& action);
+        int mode() const;
+        void setMode(int mode);
+        const std::string& label() const;
+        void operator()();
+        Menu& parent() const;
+    };
+
     class Menu
     {
         InstanceBuffer _chars;
@@ -27,13 +47,11 @@ namespace paz
 
         Font _font;
         std::string _title;
-        std::vector<std::vector<std::pair<std::string, std::function<void(
-            Menu&)>>>> _buttons;
+        std::vector<std::vector<Button>> _buttons;
 
     public:
         Menu(const Font& font, const std::string& title, const std::vector<std::
-            vector<std::pair<std::string, std::function<void(Menu&)>>>>&
-            buttons);
+            vector<Button>>& buttons);
         void update();
         void setState(int page, int button);
         const Font& font() const;
