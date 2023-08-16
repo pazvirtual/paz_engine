@@ -8,10 +8,6 @@ in float _falloff;
 layout(location = 0) out vec4 accum;
 layout(location = 1) out vec4 r;
 const vec3 diffCol = vec3(0.1, 0.8, 1.); //TEMP
-float luminance(in vec3 v)
-{
-    return dot(v, vec3(0.2126, 0.7152, 0.0722));
-}
 void main()
 {
     vec2 uv = 0.5*_loc.xy/_loc.z + 0.5;
