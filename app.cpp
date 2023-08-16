@@ -554,7 +554,7 @@ tempDone[j] = true;
             for(std::size_t j = 0; j < b.size(); ++j)
             {
                 const double dist = b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->z(), gravDir(0), gravDir(1), gravDir(2));
-                if(dist - radius < 0.1) //TEMP - how set thresh & what about CosMaxAngle ?
+                if(dist - radius < 0.01) //TEMP - how set thresh & what about CosMaxAngle ?
                 {
                     a[i]->grounded() = true;
 
