@@ -95,21 +95,30 @@ layout(location = 1) in vec4 normal;
 layout(location = 2) in uint material;
 layout(location = 3) in vec2 coord;
 layout(location = 4) in vec4 model0;
-layout(location = 5) in vec4 model1;
-layout(location = 6) in vec4 model2;
+layout(location = 5) in vec2 model1;
 uniform mat4 projection;
 uniform mat4 view;
-uniform mat4 model;
 flat out uint mtl;
 out vec4 posCs;
 out vec4 norCs;
 out vec2 uv;
 void main()
 {
-    mat4 model = mat4(model0.xyz, 0.,
-                      model0.w, model1.xy, 0.,
-                      model1.zw, model2.x, 0.,
-                      model2.yzw, 1.);
+    vec4 att = vec4(model0.xyz, sqrt(1. - dot(model0.xyz, model0.xyz)));
+    vec3 pos = vec3(model0.w, model1);
+    float xx = att.x*att.x;
+    float yy = att.y*att.y;
+    float zz = att.z*att.z;
+    float xy = att.x*att.y;
+    float zw = att.z*att.w;
+    float xz = att.x*att.z;
+    float yw = att.y*att.w;
+    float yz = att.y*att.z;
+    float xw = att.x*att.w;
+    mat4 model = mat4(1. - 2.*(yy + zz), 2.*(xy + zw), 2.*(xz - yw), 0.,
+                      2.*(xy - zw), 1. - 2.*(xx + zz), 2.*(yz + xw), 0.,
+                      2.*(xz + yw), 2.*(yz - xw), 1. - 2.*(xx + yy), 0.,
+                      pos, 1.);
     mat4 mv = view*model;
     mtl = material;
     posCs = mv*position;
@@ -666,41 +675,24 @@ timeSum[0] += timer.get();
         for(const auto& m : objectsByModel)
         {
 Timer timer1;
-            std::array<std::vector<float>, 3> modelMatData;
-            for(auto& n : modelMatData)
-            {
-                n.resize(4*m.second.size());
-            }
+            std::array<std::vector<float>, 2> modelMatData;
+            modelMatData[0].resize(4*m.second.size());
+            modelMatData[1].resize(2*m.second.size());
             for(std::size_t i = 0; i < m.second.size(); ++i)
             {
-                Vec att(4);
-                att(0) = m.second[i]->xAtt();
-                att(1) = m.second[i]->yAtt();
-                att(2) = m.second[i]->zAtt();
-                att(3) = -std::sqrt(1. - att(0)*att(0) - att(1)*att(1) - att(2)*
-                    att(2));
-                const Mat rot = to_mat(att);
-                modelMatData[0][4*i + 0] = rot(0);
-                modelMatData[0][4*i + 1] = rot(1);
-                modelMatData[0][4*i + 2] = rot(2);
-                modelMatData[0][4*i + 3] = rot(3);
-                modelMatData[1][4*i + 0] = rot(4);
-                modelMatData[1][4*i + 1] = rot(5);
-                modelMatData[1][4*i + 2] = rot(6);
-                modelMatData[1][4*i + 3] = rot(7);
-                modelMatData[2][4*i + 0] = rot(8);
-                modelMatData[2][4*i + 1] = m.second[i]->x() - cameraPos(0);
-                modelMatData[2][4*i + 2] = m.second[i]->y() - cameraPos(1);
-                modelMatData[2][4*i + 3] = m.second[i]->z() - cameraPos(2);
+                modelMatData[0][4*i + 0] = m.second[i]->xAtt();
+                modelMatData[0][4*i + 1] = m.second[i]->yAtt();
+                modelMatData[0][4*i + 2] = m.second[i]->zAtt();
+                modelMatData[0][4*i + 3] = m.second[i]->x() - cameraPos(0);
+                modelMatData[1][2*i + 0] = m.second[i]->y() - cameraPos(1);
+                modelMatData[1][2*i + 1] = m.second[i]->z() - cameraPos(2);
             }
 timeSum[1] += timer1.getAndRestart();
             const VertexBuffer verts = m.second.back()->model()._v;
             const IndexBuffer inds = m.second.back()->model()._i;
             paz::VertexBuffer buf;
-            for(const auto& n : modelMatData)
-            {
-                buf.attribute(4, n);
-            }
+            buf.attribute(4, modelMatData[0]);
+            buf.attribute(2, modelMatData[1]);
 timeSum[2] += timer1.getAndRestart();
             _geometryPass.draw(PrimitiveType::Triangles, verts, buf, inds);
 timeSum[3] += timer1.get();
@@ -712,7 +704,7 @@ avgGTimeSq = 0.99*avgGTimeSq + 0.01*gTime*gTime;
 _msgStream << "Avg. G-pass time: " << std::fixed << std::setprecision(5) << std::setw(7) << std::sqrt(avgGTimeSq) << std::endl;
 static decltype(timeSum) avgTimeSumSq;
 for(std::size_t i = 0; i < timeSum.size(); ++i){ avgTimeSumSq[i] = 0.99*avgTimeSumSq[i] + 0.01*timeSum[i]*timeSum[i]; }
-_msgStream << "    details: " << std::fixed << std::setprecision(5);
+_msgStream << "Breakdown: " << std::fixed << std::setprecision(5);
 for(auto n : avgTimeSumSq){ _msgStream << std::setw(7) << std::sqrt(n) << " "; }
 _msgStream << std::endl;
 
