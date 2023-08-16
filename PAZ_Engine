@@ -52,7 +52,8 @@ namespace paz
             transp = {});
         Model(const std::vector<float>& positions, const std::vector<float>&
             uvs, const std::string& diffTexPath = "", const std::array<float,
-            3>& emiss = {});
+            3>& emiss = {}, const std::vector<std::array<double, 9>>& transp =
+            {});
     };
 
     class Object

@@ -569,7 +569,7 @@ tempDone[j] = true;
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
-            if(o->model()._i.empty())
+            if(o->model()._i.empty() && o->model()._transp.empty())
             {
                 invisibleObjects.push_back(o);
             }
@@ -688,6 +688,10 @@ tempDone[j] = true;
         _geometryPass.uniform("view", convert_mat(view));
         for(const auto& n : objectsByModel)
         {
+            if(n.second.back()->model()._i.empty())
+            {
+                continue;
+            }
             if(n.second.back()->model()._diffTex.width())
             {
                 _geometryPass.read("diffTex", n.second.back()->model().
