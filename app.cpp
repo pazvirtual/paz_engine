@@ -64,6 +64,8 @@ static paz::Texture DefaultDiffTex;
 
 static paz::Texture Cursor;
 static paz::Texture Reticule;
+static int ReticuleIdx;
+static bool ReticuleHighlight;
 
 static paz::ObjectPtr CameraObject;
 static paz::ObjectPtr MicObject;
@@ -365,6 +367,9 @@ void paz::App::Run()
                     first)/(Window::Width() - 1));
                 CursorPass.uniform("y", static_cast<float>(Window::MousePos().
                     second)/(Window::Height() - 1));
+                CursorPass.uniform("idx", 0);
+                CursorPass.uniform("aspect", static_cast<float>(Cursor.
+                    height())/Cursor.width());
                 CursorPass.uniform("h", static_cast<float>(startMenu.
                     curButtonEnabled()));
                 CursorPass.uniform("scale", static_cast<int>(std::round(20.*
@@ -852,7 +857,10 @@ void paz::App::Run()
         CursorPass.begin({LoadAction::Load});
         CursorPass.uniform("x", 0.5f);
         CursorPass.uniform("y", 0.5f);
-        CursorPass.uniform("h", -1.f);
+        CursorPass.uniform("idx", ReticuleIdx);
+        CursorPass.uniform("aspect", static_cast<float>(Reticule.height())/
+            Reticule.width());
+        CursorPass.uniform("h", ReticuleHighlight ? 1.f : -1.f);
         CursorPass.uniform("scale", static_cast<int>(std::round(20.*Window::
             UiScale()))); //TEMP
         CursorPass.uniform("width", Window::ViewportWidth());
@@ -1015,6 +1023,9 @@ void paz::App::Run()
                     first)/(Window::Width() - 1));
                 CursorPass.uniform("y", static_cast<float>(Window::MousePos().
                     second)/(Window::Height() - 1));
+                CursorPass.uniform("idx", 0);
+                CursorPass.uniform("aspect", static_cast<float>(Cursor.
+                    height())/Cursor.width());
                 CursorPass.uniform("h", static_cast<float>(pauseMenu.
                     curButtonEnabled()));
                 CursorPass.uniform("scale", static_cast<int>(std::round(20.*
@@ -1076,4 +1087,10 @@ void paz::App::SetSun(const Vec& dir, const Vec& ill)
 void paz::App::PushDialog(const std::string& msg, double time)
 {
     Dialogs.emplace(msg, time);
+}
+
+void paz::App::SetReticule(int n, bool h)
+{
+    ReticuleIdx = n;
+    ReticuleHighlight = h;
 }

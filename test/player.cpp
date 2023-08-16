@@ -50,6 +50,7 @@ void Player::update(const paz::InputData& input)
         yVel() = _parent->yVel();
         zVel() = _parent->zVel();
     }
+paz::App::SetReticule(reg == Regime::Grounded ? 3 : 0, reg == Regime::Grounded);
 const double r = std::sqrt(x()*x() + y()*y() + z()*z());
 const double lat = std::asin(z()/r);
 const double lon = std::atan2(y(), x());

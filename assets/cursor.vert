@@ -4,6 +4,8 @@ uniform float y;
 uniform int scale;
 uniform int width;
 uniform int height;
+uniform int idx;
+uniform float aspect;
 out vec2 uv;
 void main()
 {
@@ -13,4 +15,5 @@ void main()
         height);
     gl_Position = vec4(a, b, 0., 1.);
     uv = 0.5*pos + 0.5;
+    uv.x = (uv.x + idx)*aspect;
 }
