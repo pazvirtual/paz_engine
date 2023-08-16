@@ -13,7 +13,7 @@
 #define _cameraBasePos Vec{{_cameraObject->x(), _cameraObject->y(), _cameraObject->z()}}
 #define _cameraAtt Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(), _cameraObject->zAtt(), std::sqrt(1. - _cameraObject->xAtt()*_cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() - _cameraObject->zAtt()*_cameraObject->zAtt())}}
 
-static constexpr double CosMaxAngle = 0.6; // 53.13 deg
+static constexpr double CosMaxAngle = 0.7; // 45.57 deg
 static constexpr std::size_t NumSteps = 100;
 static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
@@ -52,6 +52,7 @@ static paz::Texture _font;
 std::stringstream _msgStream;
 
 static double _cameraPitch = 0.;
+static double _cameraPrevGravPitch = 0.;
 
 static /*const*/ paz::Object* _cameraObject = nullptr;
 
@@ -643,11 +644,8 @@ tempDone[j] = true;
 //std::cout << static_cast<bool>(_cameraObject->grounded()) << " " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() +_cameraObject->yVel()*_cameraObject->yVel() +_cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
 static std::deque<double> rHist(60*30, 0.);
 static std::deque<double> latHist(60*30, 0.);
-static double maxFrameTime = 1./60.;
-{
-static int temp;
-if(++temp > 60) maxFrameTime = std::max(maxFrameTime, Window::FrameTime());
-}
+static double avgFrameTimeSq = 1./(60.*60.);
+avgFrameTimeSq = 0.9*avgFrameTimeSq + 0.1*Window::FrameTime()*Window::FrameTime();
 {
 const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
 const double lat = std::asin(_cameraObject->z()/r);
@@ -657,7 +655,7 @@ rHist.push_back(r);
 latHist.pop_front();
 latHist.push_back(lat);
 _msgStream << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
-_msgStream << 1./maxFrameTime << std::endl;
+_msgStream << 1./std::sqrt(avgFrameTimeSq) << std::endl;
 _msgStream << (_cameraObject->grounded() ? "Grounded" : "Floating") << std::endl;
 }
 
@@ -669,52 +667,64 @@ _msgStream << (_cameraObject->grounded() ? "Grounded" : "Floating") << std::endl
         // Get basis vectors (rows of rotation matrix).
         Mat cameraRot = to_mat(cameraAtt);
         Vec cameraForward = cameraRot.row(1).trans();
-        const Vec gravDir{{_cameraObject->xDown(), _cameraObject->yDown(), _cameraObject->zDown()}};
+        const Vec gravDir{{_cameraObject->xDown(), _cameraObject->yDown(),
+            _cameraObject->zDown()}};
         Vec cameraRight = gravDir.cross(cameraForward).normalized();
 
         _cameraObject->yAngRate() = 0.;
+
+        // Want to keep `gravPitch + _cameraPitch` (head pitch wrt gravity)
+        // constant as much as possible when grounded.
+        const Vec baseForward = cameraRight.cross(gravDir).normalized();
+        const double gravPitch = std::acos(std::max(0., std::min(1.,
+            baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) > 0. ?
+            -1. : 1.);
+_msgStream << std::setw(8) << (gravPitch + _cameraPitch)*180./M_PI << std::endl;
         if(_cameraObject->grounded())
         {
             _mousePos = Vec::Zero(2);
             _cameraObject->xAngRate() = 0.;
             _cameraObject->zAngRate() = -0.1*Window::MousePos().first;
-            const Vec baseForward = cameraRight.cross(gravDir).normalized();
-            const double deltaPitch = std::acos(std::max(0., std::min(1.,
-                baseForward.dot(cameraForward))))*(cameraForward.dot(gravDir) >
-                0. ? -1. : 1.) + 0.1*Window::MousePos().second*Window::
-                FrameTime();
-            if(std::abs(deltaPitch) > 1e-6)
-            {
-                _cameraPitch = std::max(-0.45*M_PI, std::min(0.45*
-                    M_PI, _cameraPitch + deltaPitch));
-            }
             cameraRot.setRow(0, cameraRight.trans());
             cameraRot.setRow(1, baseForward.trans());
             cameraRot.setRow(2, -gravDir.trans());
             Vec cameraBaseAtt = to_quat(cameraRot);
-            if(cameraBaseAtt(3) < 0.)
+            if(cameraAtt.dot(cameraBaseAtt) < 0.)
             {
                 cameraBaseAtt = -cameraBaseAtt;
             }
-            _cameraObject->xAtt() = cameraBaseAtt(0);
-            _cameraObject->yAtt() = cameraBaseAtt(1);
-            _cameraObject->zAtt() = cameraBaseAtt(2);
-            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch + 0.5*
-                M_PI), _cameraAtt);
+            if((cameraBaseAtt - cameraAtt).normSq() > 1e-6)
+            {
+                cameraBaseAtt = (0.9*cameraAtt + 0.1*cameraBaseAtt).
+                    normalized();
+                if(cameraBaseAtt(3) < 0.)
+                {
+                    cameraBaseAtt = -cameraBaseAtt;
+                }
+                _cameraObject->xAtt() = cameraBaseAtt(0);
+                _cameraObject->yAtt() = cameraBaseAtt(1);
+                _cameraObject->zAtt() = cameraBaseAtt(2);
+            }
+
+            const double deltaGravPitch = gravPitch - _cameraPrevGravPitch;
+            const double deltaPitch = -deltaGravPitch + 0.1*Window::MousePos().
+                second*Window::FrameTime();
+            _cameraPitch = std::max(-0.45*M_PI, std::min(0.45*M_PI, _cameraPitch
+                + deltaPitch));
         }
         else
         {
-            if(_cameraPitch)
+            if(std::abs(_cameraPitch) > 1e-6)
             {
-                cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch),
+                cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, 0.1*_cameraPitch),
                     cameraAtt);
                 _cameraObject->xAtt() = cameraAtt(0);
                 _cameraObject->yAtt() = cameraAtt(1);
                 _cameraObject->zAtt() = cameraAtt(2);
                 cameraRot = to_mat(_cameraAtt);
-                _cameraPitch = 0.;
+                _cameraPitch *= 0.9;
             }
-            cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, 0.5*M_PI), cameraAtt);
+
             _mousePos(0) += Window::MousePos().first;
             _mousePos(1) += Window::MousePos().second;
             const double norm = _mousePos.norm();
@@ -733,6 +743,9 @@ _msgStream << (_cameraObject->grounded() ? "Grounded" : "Floating") << std::endl
             _cameraObject->xAngRate() = 0.006*_mousePos(1);
             _cameraObject->zAngRate() = -0.006*_mousePos(0);
         }
+        _cameraPrevGravPitch = gravPitch;
+        cameraAtt = qmult(axis_angle(Vec{{1, 0, 0}}, _cameraPitch + 0.5*M_PI),
+            cameraAtt);
 
         cameraRight = cameraRot.row(0).trans();
         cameraForward = cameraRot.row(1).trans();
