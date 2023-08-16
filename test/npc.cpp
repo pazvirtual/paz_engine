@@ -4,7 +4,7 @@
 static const paz::Model Body("persontest.obj", 0, -0.2);
 static const paz::Model Head("persontest.obj", 1, -0.1);
 
-Npc::Npc() : _destYaw(paz::uniform(0., 2.*M_PI)), _walkTime(0.)
+Npc::Npc() : _destYaw(paz::uniform(0., paz::TwoPi)), _walkTime(0.)
 {
     _head.collisionType() = paz::CollisionType::None;
     _head.gravityType() = paz::GravityType::None;
@@ -55,12 +55,13 @@ void Npc::onCollide(const Object&)
     const paz::Vec east = paz::Vec{{0, 0, 1}}.cross(up).normalized();
     const paz::Vec north = up.cross(east);
     const double yaw = std::atan2(forward.dot(north), forward.dot(east));
-    const double deltaYaw = paz::normalize_angle(_destYaw - yaw + M_PI) - M_PI;
+    const double deltaYaw = paz::normalize_angle(_destYaw - yaw + paz::Pi) -
+        paz::Pi;
     zAngRate() = deltaYaw;
     _walkTime += paz::App::PhysTime();
     if(_walkTime > 10.)
     {
         _walkTime = 0.;
-        _destYaw = paz::uniform(0., 2.*M_PI);
+        _destYaw = paz::uniform(0., paz::TwoPi);
     }
 }

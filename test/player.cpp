@@ -53,7 +53,7 @@ void Player::update()
 const double r = std::sqrt(x()*x() + y()*y() + z()*z());
 const double lat = std::asin(z()/r);
 const double lon = std::atan2(y(), x());
-paz::App::MsgStream() << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(xVel()*xVel() + yVel()*yVel() + zVel()*zVel()) << std::endl;
+paz::App::MsgStream() << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./paz::Pi << " " << std::setw(9) << lon*180./paz::Pi << " | " << std::setw(8) << std::sqrt(xVel()*xVel() + yVel()*yVel() + zVel()*zVel()) << std::endl;
 switch(reg)
 {
 case Regime::Grounded: paz::App::MsgStream() << "Grounded" << std::endl; break;
@@ -70,7 +70,7 @@ paz::App::MsgStream() << alt << " | " << nor.trans() << std::endl;
     const paz::Vec baseForward = right.cross(gravDir).normalized();
     const double gravPitch = std::acos(std::max(0., std::min(1., baseForward.
         dot(forward))))*(forward.dot(gravDir) > 0. ? -1. : 1.);
-paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (gravPitch + _pitch)*180./M_PI << std::endl;
+paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (gravPitch + _pitch)*180./paz::Pi << std::endl;
     if(reg != Regime::Floating)
     {
         _mousePos = paz::Vec::Zero(2);
@@ -104,7 +104,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         const double deltaPitch = -deltaGravPitch + 0.1*(paz::Window::
             GamepadActive() ? 15.*-paz::Window::GamepadRightStick().second :
             paz::Window::MousePos().second)*paz::App::PhysTime();
-        _pitch = std::max(-0.45*M_PI, std::min(0.45*M_PI, _pitch + deltaPitch));
+        _pitch = std::max(-0.45*paz::Pi, std::min(0.45*paz::Pi, _pitch +
+            deltaPitch));
     }
     else
     {

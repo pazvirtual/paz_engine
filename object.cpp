@@ -165,11 +165,11 @@ void paz::physics(double gravity)
         double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[
             i]*ZAtt[i]);
         const double deltaX = normalize_angle(0.5*App::PhysTime()*XAngRate[i] +
-            M_PI) - M_PI;
+            Pi) - Pi;
         const double deltaY = normalize_angle(0.5*App::PhysTime()*YAngRate[i] +
-            M_PI) - M_PI;
+            Pi) - Pi;
         const double deltaZ = normalize_angle(0.5*App::PhysTime()*ZAngRate[i] +
-            M_PI) - M_PI;
+            Pi) - Pi;
         XAtt[i] +=  WAtt   *deltaX - ZAtt[i]*deltaY + YAtt[i]*deltaZ;
         YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
         ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;

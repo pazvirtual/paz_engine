@@ -360,12 +360,12 @@ void paz::App::Run()
             const double txPwr = 400.;
             static constexpr double vs = 343.;
             static constexpr double maxRxPwr = 0.3;
-            const double t0 = (vs + vlos)/(800.*M_PI*dist); // assuming f = 200
+            const double t0 = (vs + vlos)/(800.*Pi*dist); // assuming f = 200
             const double rxPwr = std::min(maxRxPwr, txPwr*t0*t0);
             double lPwr = rxPwr*(0.6 + 0.4*(dir.dot(lEar))); //TEMP
             double rPwr = rxPwr*(0.6 + 0.4*(dir.dot(rEar))); //TEMP
-            lPwr /= M_SQRT2*(0.6 + 0.4*std::cos(0.5*M_PI - 1.));
-            rPwr /= M_SQRT2*(0.6 + 0.4*std::cos(0.5*M_PI - 1.));
+            lPwr /= SqrtTwo*(0.6 + 0.4*std::cos(0.5*Pi - 1.));
+            rPwr /= SqrtTwo*(0.6 + 0.4*std::cos(0.5*Pi - 1.));
             const double lVol = std::sqrt(std::sqrt(std::max(0., lPwr)));
             const double rVol = std::sqrt(std::sqrt(std::max(0., rPwr)));
             const double lFreqScale = 1./(1. + vlos/vs);
