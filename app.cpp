@@ -528,6 +528,7 @@ for(auto& a0 : objects())
 }
 ////////
 
+        // Get geometry map.
         _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
             LoadAction::Clear);
         _geometryPass.cull(CullMode::Back);
@@ -550,6 +551,7 @@ static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z(
         }
         _geometryPass.end();
 
+        // Render in HDR.
         _renderPass.begin();
 //        _renderPass.read("materialMap", _materialMap);
         _renderPass.read("normalMap", _normalMap);
@@ -558,17 +560,20 @@ static_cast<float>(o->x()), static_cast<float>(o->y()), static_cast<float>(o->z(
         _renderPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();
 
+        // Tonemap to linear LDR.
         _postPass.begin();
         _postPass.read("hdrRender", _hdrRender);
         _postPass.uniform("whitePoint", 1.f);
         _postPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
         _postPass.end();
 
+        // Get luminance map.
         _lumPass.begin();
         _lumPass.read("img", _finalRender);
         _lumPass.primitives(PrimitiveType::TriangleStrip, _quadVertices);
         _lumPass.end();
 
+        // Anti-alias and correct gamma.
         _fxaaPass.begin();
         _fxaaPass.read("img", _finalRender);
         _fxaaPass.read("lum", _finalLumMap);
