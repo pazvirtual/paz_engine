@@ -70,6 +70,8 @@ int main()
     Player player;
     player.z() = Radius + 10.;
     World w;
+    w.transp().push_back({10., 0., Radius, 0., 0., Radius + 10., -10., 0.,
+        Radius});
     std::array<World1, 4> w1;
     w1[0].x() = 0.9*Radius;
     w1[1].x() = -0.9*Radius;
@@ -93,13 +95,13 @@ int main()
     w.lights().push_back({0., -Radius - 5. - 10., 0., 0., 1., 1., 0.1});
     w.lights().push_back({0., 0.,  Radius + 10.,      0., 1., 0., 0.1});
     w.lights().push_back({0., 0., -Radius - 10.,      0., 0., 1., 0.1});
-for(auto& n : w.lights())
-{
-const float lum = 0.2126*n[3] + 0.7152*n[4] + 0.0722*n[5];
-n[3] /= lum;
-n[4] /= lum;
-n[5] /= lum;
-}
+    for(auto& n : w.lights())
+    {
+        const float lum = 0.2126*n[3] + 0.7152*n[4] + 0.0722*n[5];
+        n[3] /= lum;
+        n[4] /= lum;
+        n[5] /= lum;
+    }
     paz::App::SetSun(paz::Vec{{1., 0., 0.}}, paz::Vec{{1., 1., 0.9}});
     paz::App::AttachCamera(player.head());
     paz::App::AttachMic(player.head());

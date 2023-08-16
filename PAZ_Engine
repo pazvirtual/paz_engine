@@ -101,6 +101,8 @@ namespace paz
         double zAngRate() const;
         Model& model();
         const Model& model() const;
+        std::vector<std::array<double, 9>>& transp(); // xyz1 xyz2 xyz3
+        const std::vector<std::array<double, 9>>& transp() const;
         CollisionType& collisionType();
         const CollisionType& collisionType() const;
         GravityType& gravityType();
@@ -115,7 +117,7 @@ namespace paz
         double& stdGravParam();
         double stdGravParam() const;
         std::vector<std::array<double, 7>>& lights(); // xyz rgb f
-        const std::vector<std::array<double, 7>>& lights() const; // xyz rgb f
+        const std::vector<std::array<double, 7>>& lights() const;
         void addTag(const std::string& tag);
         bool isTagged(const std::string& tag) const;
         void computeAltitude(double& alt, Vec& nor, Vec& vel) const;

@@ -29,6 +29,7 @@ static std::vector<double> XAngRate;
 static std::vector<double> YAngRate;
 static std::vector<double> ZAngRate;
 static std::vector<paz::Model> Mod;
+static std::vector<std::vector<std::array<double, 9>>> Transp;
 static std::vector<paz::CollisionType> CType;
 static std::vector<paz::GravityType> GType;
 static std::vector<double> XPrev;
@@ -199,6 +200,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     YAngRate.push_back(0.);
     ZAngRate.push_back(0.);
     Mod.emplace_back();
+    Transp.emplace_back();
     CType.push_back(CollisionType::Default);
     GType.push_back(GravityType::Default);
     CRadius.push_back(0.2);
@@ -228,6 +230,7 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(YAngRate)
     PUSH_COPY(ZAngRate)
     PUSH_COPY(Mod)
+    PUSH_COPY(Transp)
     PUSH_COPY(CType)
     PUSH_COPY(GType)
     PUSH_COPY(CRadius)
@@ -262,6 +265,7 @@ paz::Object& paz::Object::operator=(const Object& o)
     COPY(YAngRate)
     COPY(ZAngRate)
     COPY(Mod)
+    COPY(Transp)
     COPY(CType)
     COPY(GType)
     COPY(CRadius)
@@ -306,6 +310,7 @@ paz::Object::~Object()
     SWAP_AND_POP(YAngRate)
     SWAP_AND_POP(ZAngRate)
     SWAP_AND_POP(Mod)
+    SWAP_AND_POP(Transp)
     SWAP_AND_POP(CType)
     SWAP_AND_POP(GType)
     SWAP_AND_POP(CRadius)
@@ -473,6 +478,16 @@ paz::Model& paz::Object::model()
 const paz::Model& paz::Object::model() const
 {
     return Mod[objects().at(_id)];
+}
+
+std::vector<std::array<double, 9>>& paz::Object::transp()
+{
+    return Transp[objects().at(_id)];
+}
+
+const std::vector<std::array<double, 9>>& paz::Object::transp() const
+{
+    return Transp[objects().at(_id)];
 }
 
 paz::CollisionType& paz::Object::collisionType()

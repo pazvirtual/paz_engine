@@ -18,6 +18,7 @@ static constexpr float FontScale = 1.5f;
 static constexpr int CharWidth = 5;
 
 static paz::Framebuffer _geometryBuffer;
+static paz::Framebuffer _oitBuffer;
 static paz::Framebuffer _renderBuffer;
 static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
@@ -30,12 +31,16 @@ static paz::RenderTarget _depthMap(paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _finalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _oitAccumTex(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _oitRevealTex(paz::TextureFormat::RGBA8UNorm);
 
 static std::unordered_map<void*, paz::InstanceBuffer> _instances;
 
 static paz::RenderPass _geometryPass;
 static paz::RenderPass _renderPass0;
 static paz::RenderPass _renderPass1;
+static paz::RenderPass _oitPass0;
+static paz::RenderPass _oitPass1;
 static paz::RenderPass _postPass0;
 static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
@@ -189,6 +194,10 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     _renderBuffer.attach(_hdrRender);
 //    _renderBuffer.attach(_depthMap);
 
+    _oitBuffer.attach(_oitAccumTex);
+    _oitBuffer.attach(_oitRevealTex);
+    _oitBuffer.attach(_depthMap);
+
     _postBuffer.attach(_finalRender);
 
     _lumBuffer.attach(_finalLumMap);
@@ -198,6 +207,7 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     const VertexFunction sceneVert0(get_builtin("scene0.vert").str());
     const VertexFunction sceneVert1(get_builtin("scene1.vert").str());
     const VertexFunction textVert(get_builtin("text.vert").str());
+    const VertexFunction oitVert(get_builtin("oit.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
     const FragmentFunction sceneFrag0(get_asset(sceneShaderPath0).str());
     const FragmentFunction sceneFrag1(get_asset(sceneShaderPath1).str());
@@ -206,11 +216,17 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     const FragmentFunction postFrag(get_builtin("post.frag").str());
     const FragmentFunction consoleFrag(get_builtin("console.frag").str());
     const FragmentFunction textFrag(get_builtin("text.frag").str());
+    const FragmentFunction oitFrag(get_builtin("oit.frag").str());
+    const FragmentFunction compositeFrag(get_builtin("composite.frag").str());
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
     _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1,
         {BlendMode::One_One});
+    _oitPass0 = RenderPass(_oitBuffer, oitVert, oitFrag, {BlendMode::One_One,
+        BlendMode::Zero_InvSrcAlpha});
+    _oitPass1 = RenderPass(_renderBuffer, quadVert, compositeFrag, {BlendMode::
+        InvSrcAlpha_SrcAlpha});
     _postPass0 = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
     _fxaaPass = RenderPass(quadVert, fxaaFrag);
@@ -554,6 +570,7 @@ tempDone[j] = true;
         // Prepare for rendering.
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
         std::vector<const Object*> invisibleObjects;
+        std::vector<const Object*> transparentObjects;
         for(const auto& n : objects())
         {
             const Object* o = reinterpret_cast<const Object*>(n.first);
@@ -566,6 +583,10 @@ tempDone[j] = true;
                 // Address held to by `paz::Model::_t` identifies all copies of
                 // the same model.
                 objectsByModel[o->model()._t.get()].push_back(o);
+            }
+            if(!o->transp().empty())
+            {
+                transparentObjects.push_back(o);
             }
         }
         for(const auto& n : objectsByModel)
@@ -724,6 +745,42 @@ tempDone[j] = true;
         _renderPass1.draw(PrimitiveType::Triangles, _sphereVertices, lights,
             _sphereIndices);
         _renderPass1.end();
+
+        // Render transparent objects.
+        _oitPass0.begin({LoadAction::FillZeros, LoadAction::FillOnes},
+            LoadAction::Load);
+        _oitPass0.depth(DepthTestMode::LessNoMask);
+        _oitPass0.uniform("projection", projection);
+        _oitPass0.uniform("view", convert_mat(view));
+        for(const auto& n : transparentObjects) //TEMP - need to add lights & instance objects by model
+        {
+            _oitPass0.uniform("col", 0.f, 0.f, 1.f, 0.1f);
+            _oitPass0.uniform("model0", static_cast<float>(n->xAtt()), static_cast<float>(n->yAtt()), static_cast<float>(n->zAtt()), static_cast<float>(n->x() - cameraPos(0)));
+            _oitPass0.uniform("model1", static_cast<float>(n->y() - cameraPos(1)), static_cast<float>(n->z() - cameraPos(2)));
+            std::vector<float> pos;
+            pos.reserve(12*n->transp().size());
+            for(const auto& m : n->transp())
+            {
+                for(std::size_t i = 0; i < 3; ++i)
+                {
+                    for(std::size_t j = 0; j < 3; ++j)
+                    {
+                        pos.push_back(m[3*i + j]);
+                    }
+                    pos.push_back(1.);
+                }
+            }
+            VertexBuffer v; //TEMP - don't do this mid-render
+            v.addAttribute(4, pos);
+            _oitPass0.draw(PrimitiveType::Triangles, v);
+        }
+        _oitPass0.end();
+
+        _oitPass1.begin({LoadAction::Load});
+        _oitPass1.read("accumTex", _oitAccumTex);
+        _oitPass1.read("revealTex", _oitRevealTex);
+        _oitPass1.draw(PrimitiveType::TriangleStrip, _quadVertices);
+        _oitPass1.end();
 
         if(_fxaaEnabled)
         {
