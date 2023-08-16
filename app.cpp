@@ -106,7 +106,7 @@ void main()
 static const std::string GeometryVertSrc = 1 + R"====(
 layout(location = 0) in vec4 position;
 layout(location = 1) in vec4 normal;
-//layout(location = 2) in uint material;
+layout(location = 2) in uint material;
 layout(location = 3) in vec2 coord;
 layout(location = 4) in vec4 model0 [[instance]];
 layout(location = 5) in vec2 model1 [[instance]];
@@ -131,10 +131,10 @@ void main()
                       2.*(xy - zw), 1. - 2.*(xx + zz), 2.*(yz + xw), 0.,
                       2.*(xz + yw), 2.*(yz - xw), 1. - 2.*(xx + yy), 0.,
                       model0.w, model1.x, model1.y, 1.);
-    mat4 mv = view*model;
-    posCs = mv*position;
-    norCs = mv*normal;
-    gl_Position = projection*posCs;
+    mat4 mv = mul(view, model);
+    posCs = mul(mv, position);
+    norCs = mul(mv, normal);
+    gl_Position = mul(projection, posCs);
     uv = coord;
 }
 )====";
@@ -330,13 +330,10 @@ in vec2 uv;
 layout(location = 0) out vec4 color;
 void main()
 {
+    color = vec4(0., 0., 0., 0.);
     if(uv.y < height && uv.x < width)
     {
-        color = vec4(0., 0., 0., 0.5);
-    }
-    else
-    {
-        color = vec4(0.);
+        color.a = 0.5;
     }
 }
 )===";
@@ -379,7 +376,7 @@ layout(location = 0) out vec4 color;
 void main()
 {
     float t = texture(font, uv).x;
-    color = vec4(mix(vec3(0.9), vec3(1., 1., 0.), h), t);
+    color = vec4(mix(vec3(0.9, 0.9, 0.9), vec3(1., 1., 0.), h), t);
 }
 )===";
 
