@@ -248,49 +248,43 @@ void paz::do_collisions()
     }
 
     // Find and handle collisions.
-    std::vector<std::unordered_map<std::size_t, std::array<double, 3>>>
-        collisions(a.size());
     for(std::size_t i = 0; i < NumSteps; ++i)
     {
         for(std::size_t j = 0; j < a.size(); ++j)
         {
+            double x = XPrev[a[j]] + times[i]*(X[a[j]] - XPrev[a[j]]);
+            double y = YPrev[a[j]] + times[i]*(Y[a[j]] - YPrev[a[j]]);
+            double z = ZPrev[a[j]] + times[i]*(Z[a[j]] - ZPrev[a[j]]);
             double minDist = std::numeric_limits<double>::infinity();
             std::size_t idx = 0;
             double xNor = 0.;
             double yNor = 0.;
             double zNor = 1.;
-            double gx = 0.;
-            double gy = 0.;
-            double gz = 0.;
+            std::vector<std::pair<std::size_t, std::array<double, 3>>>
+                collisions;
             for(auto n : c[j])
             {
-                double x = XPrev[a[j]] + times[i]*(X[a[j]] - XPrev[a[j]]) - bX[
-                    n][i];
-                double y = YPrev[a[j]] + times[i]*(Y[a[j]] - YPrev[a[j]]) - bY[
-                    n][i];
-                double z = ZPrev[a[j]] + times[i]*(Z[a[j]] - ZPrev[a[j]]) - bZ[
-                    n][i];
-                const Vec relPos = bRot[n]*Vec{{x, y, z}};
-                const double x1 = relPos(0);
-                const double y1 = relPos(1);
-                const double z1 = relPos(2);
+                const double x1 = x - bX[n][i];
+                const double y1 = y - bY[n][i];
+                const double z1 = z - bZ[n][i];
+                const Vec relPos = bRot[n]*Vec{{x1, y1, z1}};
+                const double x2 = relPos(0);
+                const double y2 = relPos(1);
+                const double z2 = relPos(2);
                 double xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp;
-                const double dist = Mod[b[n]].collide(x1, y1, z1, CRadius[a[j]],
+                const double dist = Mod[b[n]].collide(x2, y2, z2, CRadius[a[j]],
                     xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp);
-                if(dist < CRadius[a[j]])
+                if(dist < CRadius[a[j]] - 1e-9)
                 {
-                    if(!collisions[j].count(n))
-                    {
-                        collisions[j].emplace(n, std::array<double, 3>{xNorTemp,
+                    collisions.emplace_back(n, std::array<double, 3>{xNorTemp,
                             yNorTemp, zNorTemp});
-                    }
                     const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew, zNew}};
                     xNew = newPos(0);
                     yNew = newPos(1);
                     zNew = newPos(2);
-                    gx += xNew - x;
-                    gy += yNew - y;
-                    gz += zNew - z;
+                    x += xNew - x1;
+                    y += yNew - y1;
+                    z += zNew - z1;
                     if(dist < minDist)
                     {
                         minDist = dist;
@@ -303,10 +297,6 @@ void paz::do_collisions()
                     }
                 }
             }
-            //TEMP - need to rewind and apply the following to `XPrev` etc. & `X` etc.
-            X[a[j]] += gx;
-            Y[a[j]] += gy;
-            Z[a[j]] += gz;
             if(std::isfinite(minDist))
             {
                 const double xVel = XVel[a[j]] - XVel[b[idx]];
@@ -318,26 +308,35 @@ void paz::do_collisions()
                     XVel[a[j]] -= norVel*xNor;
                     YVel[a[j]] -= norVel*yNor;
                     ZVel[a[j]] -= norVel*zNor;
-
-                    // Apply friction.
-                    XVel[a[j]] = XVel[b[idx]]; //TEMP
-                    YVel[a[j]] = YVel[b[idx]]; //TEMP
-                    ZVel[a[j]] = ZVel[b[idx]]; //TEMP
-                    //TEMP - need to change `XPrev` etc. & `X` etc. again
                 }
-            }
-        }
-    }
 
-    // Call `onCollide` methods retroactively. //TEMP - need to account for order of collisions and also provide states at time of collision
-    for(std::size_t i = 0; i < a.size(); ++i)
-    {
-        Object* aObj = reinterpret_cast<Object*>(Ids[a[i]]);
-        for(const auto& n : collisions[i])
-        {
-            Object* bObj = reinterpret_cast<Object*>(Ids[b[n.first]]);
-            aObj->onCollide(*bObj, n.second[0], n.second[1], n.second[2]);
-            bObj->onCollide(*aObj, n.second[0], n.second[1], n.second[2]);
+                // Adjust positions to fit new trajectory.
+                const double time0 = App::PhysTime()*(times[i] - times[0]);
+                XPrev[a[j]] = x - time0*XVel[a[j]];
+                YPrev[a[j]] = y - time0*YVel[a[j]];
+                ZPrev[a[j]] = z - time0*ZVel[a[j]];
+                const double time1 = App::PhysTime()*(times.back() - times[i]);
+                X[a[j]] = x + time1*XVel[a[j]];
+                Y[a[j]] = y + time1*YVel[a[j]];
+                Z[a[j]] = z + time1*ZVel[a[j]];
+
+                // Collision response.
+                Object& aObj = *reinterpret_cast<Object*>(Ids[a[j]]);
+                for(const auto& n : collisions)
+                {
+                    Object& bObj = *reinterpret_cast<Object*>(Ids[b[n.first]]);
+                    aObj.onCollide(bObj, n.second[0], n.second[1], n.second[2]);
+                    bObj.onCollide(aObj, n.second[0], n.second[1], n.second[2]);
+                }
+
+                // Adjust positions again.
+                XPrev[a[j]] = x - time0*XVel[a[j]];
+                YPrev[a[j]] = y - time0*YVel[a[j]];
+                ZPrev[a[j]] = z - time0*ZVel[a[j]];
+                X[a[j]] = x + time1*XVel[a[j]];
+                Y[a[j]] = y + time1*YVel[a[j]];
+                Z[a[j]] = z + time1*ZVel[a[j]];
+            }
         }
     }
 }
