@@ -25,6 +25,7 @@ namespace paz
     {
         friend class App;
         friend class Object;
+        friend void collisions();
 
         std::shared_ptr<std::vector<Triangle>> _t;
         double _radius = 0.;
@@ -59,6 +60,7 @@ namespace paz
     class Object
     {
         friend class App;
+        friend void collisions();
 
         const std::uintptr_t _id;
 

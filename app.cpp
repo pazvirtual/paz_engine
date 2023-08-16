@@ -8,9 +8,6 @@
 #include <iomanip>
 #include <deque>
 
-#define NO_FRICTION
-
-static constexpr std::size_t NumSteps = 100;
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 static constexpr std::size_t MaxConsoleLines = 1000;
@@ -422,158 +419,21 @@ void paz::App::Run()
             AudioEngine::SetVolume(0.);
         }
 
-if(!_paused)
-{
-        physics(_gravity);
-
-        // Identify all objects that can collide and precompute as much as
-        // possible.
-        std::vector<Object*> a;
-        std::vector<Object*> b;
-        a.reserve(objects().size());
-        b.reserve(objects().size());
-        for(auto& n : objects())
+        if(!_paused)
         {
-            Object* o = reinterpret_cast<Object*>(n.first);
-            if(o->collisionType() == CollisionType::Default)
-            {
-                a.push_back(o);
-            }
-            if(o->collisionType() == CollisionType::World)
-            {
-                b.push_back(o);
-            }
-        }
+            physics(_gravity);
 
-        // `a[i]` may collide with any `b[c[i][j]]`.
-        std::vector<std::vector<std::size_t>> c(a.size());
-        for(std::size_t i = 0; i < a.size(); ++i)
-        {
-            c[i].reserve(b.size());
-            for(std::size_t j = 0; j < b.size(); ++j)
+            collisions();
+
+            const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
+            for(const auto& n : tempObjects)
             {
-                if(b[j]->model().sweepVol(a[i]->xPrev(), a[i]->yPrev(), a[i]->
-                    zPrev(), a[i]->x(), a[i]->y(), a[i]->z(), b[j]->xPrev(), b[
-                    j]->yPrev(), b[j]->zPrev(), b[j]->x(), b[j]->y(), b[j]->z(),
-                    a[i]->collisionRadius()))
+                if(objects().count(n.first))
                 {
-                    c[i].push_back(j);
+                    reinterpret_cast<Object*>(n.first)->update();
                 }
             }
         }
-
-        std::vector<double> times(NumSteps);
-        for(std::size_t i = 0; i < NumSteps; ++i)
-        {
-            times[i] = static_cast<double>(i)/(NumSteps - 1);
-        }
-
-        std::vector<Mat> bRot(b.size());
-        std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
-            NumSteps));
-        std::vector<std::vector<double>> bY(b.size(), std::vector<double>(
-            NumSteps));
-        std::vector<std::vector<double>> bZ(b.size(), std::vector<double>(
-            NumSteps));
-        for(std::size_t i = 0; i < b.size(); ++i)
-        {
-            const double wAtt = std::sqrt(1. - b[i]->xAtt()*b[i]->xAtt() - b[
-                i]->yAtt()*b[i]->yAtt() - b[i]->zAtt()*b[i]->zAtt());
-            const Vec att{{b[i]->xAtt(), b[i]->yAtt(), b[i]->zAtt(), wAtt}};
-            bRot[i] = to_mat(att);
-            for(std::size_t j = 0; j < NumSteps; ++j)
-            {
-                bX[i][j] = b[i]->xPrev() + times[j]*(b[i]->x() - b[i]->xPrev());
-                bY[i][j] = b[i]->yPrev() + times[j]*(b[i]->y() - b[i]->yPrev());
-                bZ[i][j] = b[i]->zPrev() + times[j]*(b[i]->z() - b[i]->zPrev());
-            }
-        }
-
-        // Find and handle collisions. (Time is the outer loop to ensure
-        // collision repsonses occur in the correct order.)
-std::vector<bool> tempDone(a.size(), false);
-        for(std::size_t i = 0; i < NumSteps; ++i)
-        {
-            for(std::size_t j = 0; j < a.size(); ++j)
-            {
-if(tempDone[j]){ continue; }
-                for(auto n : c[j])
-                {
-                    double x = a[j]->xPrev() + times[i]*(a[j]->x() - a[j]->
-                        xPrev()) - bX[n][i];
-                    double y = a[j]->yPrev() + times[i]*(a[j]->y() - a[j]->
-                        yPrev()) - bY[n][i];
-                    double z = a[j]->zPrev() + times[i]*(a[j]->z() - a[j]->
-                        zPrev()) - bZ[n][i];
-                    const Vec relPos = bRot[n]*Vec{{x, y, z}};
-                    x = relPos(0);
-                    y = relPos(1);
-                    z = relPos(2);
-
-                    double xNew, yNew, zNew, xNor, yNor, zNor;
-                    const double dist = b[n]->model().collide(x, y, z, a[j]->
-                        collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
-                    if(dist < a[j]->collisionRadius())
-                    {
-                        const Vec nor = bRot[n].trans()*Vec{{xNor, yNor, zNor}};
-                        xNor = nor(0);
-                        yNor = nor(1);
-                        zNor = nor(2);
-                        const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew,
-                            zNew}};
-                        xNew = newPos(0);
-                        yNew = newPos(1);
-                        zNew = newPos(2);
-                        const double xVel = a[j]->xVel() - b[n]->xVel();
-                        const double yVel = a[j]->yVel() - b[n]->yVel();
-                        const double zVel = a[j]->zVel() - b[n]->zVel();
-                        const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
-                        if(norVel < 0.)
-                        {
-                            a[j]->xVel() -= norVel*xNor;
-                            a[j]->yVel() -= norVel*yNor;
-                            a[j]->zVel() -= norVel*zNor;
-
-                            // Apply friction.
-#ifndef NO_FRICTION
-                            a[j]->xVel() = b[n]->xVel();
-                            a[j]->yVel() = b[n]->yVel();
-                            a[j]->zVel() = b[n]->zVel();
-#endif
-                        }
-                        a[j]->x() = xNew + bX[n][i];
-                        a[j]->y() = yNew + bY[n][i];
-                        a[j]->z() = zNew + bZ[n][i];
-                        // Rewind world object to time of collison.
-                        b[n]->x() = bX[n][i];
-                        b[n]->y() = bY[n][i];
-                        b[n]->z() = bZ[n][i];
-                        a[j]->onCollide(*b[n]);
-                        b[n]->onCollide(*a[j]);
-                        // Fast forward both objects.
-                        b[n]->x() = bX[n].back();
-                        b[n]->y() = bY[n].back();
-                        b[n]->z() = bZ[n].back();
-                        const double extraTime = PhysTime()*(times.back() -
-                            times[i]);
-                        a[j]->x() += extraTime*a[j]->xVel();
-                        a[j]->y() += extraTime*a[j]->yVel();
-                        a[j]->z() += extraTime*a[j]->zVel();
-tempDone[j] = true;
-                    }
-                }
-            }
-        }
-
-        const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
-        for(const auto& n : tempObjects)
-        {
-            if(objects().count(n.first))
-            {
-                reinterpret_cast<Object*>(n.first)->update();
-            }
-        }
-}
 
         const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
             _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt()

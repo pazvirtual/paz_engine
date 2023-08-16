@@ -8,6 +8,7 @@ namespace paz
 {
     std::unordered_map<std::uintptr_t, std::size_t>& objects();
     void physics(double gravity);
+    void collisions();
 }
 
 #endif

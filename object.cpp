@@ -5,6 +5,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#define NO_FRICTION
+
+static constexpr std::size_t NumSteps = 100;
+
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
 #define PUSH_COPY(x) x.push_back(x[otherIdx]);
 #define COPY(x) x[idx] = x[otherIdx];
@@ -179,6 +183,148 @@ void paz::physics(double gravity)
         XAtt[i] *= invSignNorm;
         YAtt[i] *= invSignNorm;
         ZAtt[i] *= invSignNorm;
+    }
+}
+
+void paz::collisions()
+{
+    // Identify all objects that can collide and precompute as much as possible.
+    std::vector<std::size_t> a;
+    std::vector<std::size_t> b;
+    a.reserve(objects().size());
+    b.reserve(objects().size());
+    for(auto& n : objects())
+    {
+        Object* o = reinterpret_cast<Object*>(n.first);
+        if(o->collisionType() == CollisionType::Default)
+        {
+            a.push_back(n.second);
+        }
+        if(o->collisionType() == CollisionType::World)
+        {
+            b.push_back(n.second);
+        }
+    }
+
+    // `a[i]` may collide with any `b[c[i][j]]`.
+    std::vector<std::vector<std::size_t>> c(a.size());
+    for(std::size_t i = 0; i < a.size(); ++i)
+    {
+        c[i].reserve(b.size());
+        for(std::size_t j = 0; j < b.size(); ++j)
+        {
+            if(reinterpret_cast<Object*>(Ids[b[j]])->model().sweepVol(XPrev[a[
+                i]], YPrev[a[i]], ZPrev[a[i]], X[a[i]], Y[a[i]], Z[a[i]], XPrev[
+                b[j]], YPrev[b[j]], ZPrev[b[j]], X[b[j]], Y[b[j]], Z[b[j]],
+                CRadius[a[i]]))
+            {
+                c[i].push_back(j);
+            }
+        }
+    }
+
+    std::vector<double> times(NumSteps);
+    for(std::size_t i = 0; i < NumSteps; ++i)
+    {
+        times[i] = static_cast<double>(i)/(NumSteps - 1);
+    }
+
+    std::vector<Mat> bRot(b.size());
+    std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
+        NumSteps));
+    std::vector<std::vector<double>> bY(b.size(), std::vector<double>(
+        NumSteps));
+    std::vector<std::vector<double>> bZ(b.size(), std::vector<double>(
+        NumSteps));
+    for(std::size_t i = 0; i < b.size(); ++i)
+    {
+        const double wAtt = std::sqrt(1. - XAtt[b[i]]*XAtt[b[i]] - YAtt[b[i]]*
+            YAtt[b[i]] - ZAtt[b[i]]*ZAtt[b[i]]);
+        const Vec att{{XAtt[b[i]], YAtt[b[i]], ZAtt[b[i]], wAtt}};
+        bRot[i] = to_mat(att);
+        for(std::size_t j = 0; j < NumSteps; ++j)
+        {
+            bX[i][j] = XPrev[b[i]] + times[j]*(X[b[i]] - XPrev[b[i]]);
+            bY[i][j] = YPrev[b[i]] + times[j]*(Y[b[i]] - YPrev[b[i]]);
+            bZ[i][j] = ZPrev[b[i]] + times[j]*(Z[b[i]] - ZPrev[b[i]]);
+        }
+    }
+
+    // Find and handle collisions. (Time is the outer loop to ensure
+    // collision repsonses occur in the correct order.)
+std::vector<bool> tempDone(a.size(), false);
+    for(std::size_t i = 0; i < NumSteps; ++i)
+    {
+        for(std::size_t j = 0; j < a.size(); ++j)
+        {
+if(tempDone[j]){ continue; }
+            for(auto n : c[j])
+            {
+                double x = XPrev[a[j]] + times[i]*(X[a[j]] - XPrev[a[j]]) - bX[
+                    n][i];
+                double y = YPrev[a[j]] + times[i]*(Y[a[j]] - YPrev[a[j]]) - bY[
+                    n][i];
+                double z = ZPrev[a[j]] + times[i]*(Z[a[j]] - ZPrev[a[j]]) - bZ[
+                    n][i];
+                const Vec relPos = bRot[n]*Vec{{x, y, z}};
+                x = relPos(0);
+                y = relPos(1);
+                z = relPos(2);
+
+                double xNew, yNew, zNew, xNor, yNor, zNor;
+                Object* bObj = reinterpret_cast<Object*>(Ids[b[n]]);
+                const double dist = bObj->model().collide(x, y, z, CRadius[a[
+                    j]], xNew, yNew, zNew, xNor, yNor, zNor);
+                if(dist < CRadius[a[j]])
+                {
+                    Object* aObj = reinterpret_cast<Object*>(Ids[a[j]]);
+                    const Vec nor = bRot[n].trans()*Vec{{xNor, yNor, zNor}};
+                    xNor = nor(0);
+                    yNor = nor(1);
+                    zNor = nor(2);
+                    const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew, zNew}};
+                    xNew = newPos(0);
+                    yNew = newPos(1);
+                    zNew = newPos(2);
+                    const double xVel = XVel[a[j]] - XVel[b[n]];
+                    const double yVel = YVel[a[j]] - YVel[b[n]];
+                    const double zVel = ZVel[a[j]] - ZVel[b[n]];
+                    const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
+                    if(norVel < 0.)
+                    {
+                        XVel[a[j]] -= norVel*xNor;
+                        YVel[a[j]] -= norVel*yNor;
+                        ZVel[a[j]] -= norVel*zNor;
+
+                        // Apply friction.
+#ifndef NO_FRICTION
+                        XVel[a[j]] = XVel[b[n]];
+                        YVel[a[j]] = YVel[b[n]];
+                        ZVel[a[j]] = ZVel[b[n]];
+#endif
+                    }
+                    X[a[j]] = xNew + bX[n][i];
+                    Y[a[j]] = yNew + bY[n][i];
+                    Z[a[j]] = zNew + bZ[n][i];
+                    // Rewind world object to time of collison.
+                    X[b[n]] = bX[n][i];
+                    Y[b[n]] = bY[n][i];
+                    Z[b[n]] = bZ[n][i];
+                    aObj->onCollide(*bObj);
+                    bObj->onCollide(*aObj);
+                    // Fast forward both objects.
+                    X[b[n]] = bX[n].back();
+                    Y[b[n]] = bY[n].back();
+                    Z[b[n]] = bZ[n].back();
+                    const double extraTime = App::PhysTime()*(times.back() -
+                        times[i]);
+                    X[a[j]] += extraTime*XVel[a[j]];
+                    Y[a[j]] += extraTime*YVel[a[j]];
+                    Z[a[j]] += extraTime*ZVel[a[j]];
+tempDone[j] = true;
+                }
+            }
+        }
     }
 }
 
