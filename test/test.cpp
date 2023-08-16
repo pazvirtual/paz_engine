@@ -40,6 +40,16 @@ class World2 : public paz::Object
 
     double _angle;
 
+    void updateInternal()
+    {
+        x() = std::cos(_angle)*2.*Radius;
+        y() = std::sin(_angle)*2.*Radius;
+        z() = 0.;
+        xVel() = AngRate*-std::sin(_angle)*2.*Radius;
+        yVel() = AngRate*std::cos(_angle)*2.*Radius;
+        zVel() = 0.;
+    }
+
 public:
     World2(double initialAngle) : paz::Object(), _angle(initialAngle)
     {
@@ -47,16 +57,13 @@ public:
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None; //TEMP
         stdGravParam() = 9.81*10.*10.;
+        updateInternal();
     }
+
     void update(const paz::InputData& input) override
     {
         _angle = paz::normalize_angle(_angle + AngRate*input.timestep());
-        x() = std::cos(_angle)*2.*Radius;
-        y() = std::sin(_angle)*2.*Radius;
-        z() = 0.;
-        xVel() = AngRate*-std::sin(_angle)*2.*Radius;
-        yVel() = AngRate*std::cos(_angle)*2.*Radius;
-        zVel() = 0.;
+        updateInternal();
     }
 };
 
@@ -82,8 +89,12 @@ int main()
     npc0.z() = Radius;
     Npc npc1;
     std::swap(npc0, npc1);
-    npc0.x() = 2.*Radius;
-    npc0.z() = 10.;
+    npc0.x() = w2.x();
+    npc0.y() = w2.y();
+    npc0.z() = w2.z() + 10.5;
+    npc0.xVel() = w2.xVel();
+    npc0.yVel() = w2.yVel();
+    npc0.zVel() = w2.zVel();
     Npc npc2 = npc1;
     npc2.x() += 2.;
     Npc npc3;
@@ -99,6 +110,8 @@ int main()
         moreNpcs[i + 1] = moreNpcs[i];
         moreNpcs[i + 1].x() += 2.;
     }
+    Npc npc5 = npc0;
+    npc5.z() = -npc5.z();
     npc0.setName("NPC 0");
     npc1.setName("NPC 1");
     w.lights().push_back({ Radius + 5. + 10., 0., 0., 1., 0., 0., 0.1});

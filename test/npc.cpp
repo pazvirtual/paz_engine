@@ -1,6 +1,8 @@
 #include "npc.hpp"
 #include "PAZ_Math"
 
+static constexpr double CosMaxAngle = 0.7;
+
 static const paz::Model Body("persontest.obj", 0, -0.2);
 static const paz::Model Head("persontest.obj", 1, -0.1);
 
@@ -20,12 +22,26 @@ void Npc::update(const paz::InputData& input)
             uniform() < 0.5 ? "\nBLAHBjLAH blah." : ""), 1.);
     }
     _walkTime += input.timestep();
-    const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}}.normalized();
+    const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}};
     const paz::Vec initialAtt{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()
         *xAtt() - yAtt()*yAtt() - zAtt()*zAtt())}};
     const paz::Vec initialRight = paz::to_mat(initialAtt).row(0).trans();
     const paz::Vec forward = up.cross(initialRight).normalized();
     const paz::Vec right = forward.cross(up);
+    if(_collided)
+    {
+        double alt;
+        paz::Vec nor;
+        paz::Vec surfVel;
+        computeAltitude(alt, nor, surfVel);
+        if(nor.dot(up) > CosMaxAngle)
+        {
+            xVel() = _parent->xVel() + forward(0);
+            yVel() = _parent->yVel() + forward(1);
+            zVel() = _parent->zVel() + forward(2);
+        }
+        --_collided;
+    }
     paz::Mat rot(3);
     rot.setCol(0, right);
     rot.setCol(1, forward);
@@ -47,32 +63,39 @@ void Npc::update(const paz::InputData& input)
     _head.zAtt() = -att(2);
 }
 
-void Npc::onCollide(const Object&, double, double, double, double, double,
-    double)
+void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
+    zNor, double, double, double)
 {
-    const paz::Vec att{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()*xAtt() -
-        yAtt()*yAtt() - zAtt()*zAtt())}};
-    const paz::Mat rot = paz::to_mat(paz::qinv(att));
-    const paz::Vec right = rot.col(0);
-    const paz::Vec forward = rot.col(1);
-    xVel() = forward(0);
-    yVel() = forward(1);
-    zVel() = forward(2);
-    const paz::Vec up = rot.col(2);
-    const paz::Vec east = paz::Vec{{0, 0, 1}}.cross(up).normalized();
-    const paz::Vec north = up.cross(east);
-    const double yaw = std::atan2(forward.dot(north), forward.dot(east));
-    const double deltaYaw = paz::normalize_angle(_destYaw - yaw + paz::Pi) -
-        paz::Pi;
-    zAngRate() = deltaYaw;
-    if(_walkTime > 10.)
+    const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
+    const paz::Vec nor{{xNor, yNor, zNor}};
+    if(-nor.dot(gravDir) > CosMaxAngle)
     {
-        _walkTime = 0.;
-        _destYaw = paz::uniform(0., paz::TwoPi);
+        _collided = 2;
+        _parent.reset(o);
+        const paz::Vec att{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()*xAtt()
+            - yAtt()*yAtt() - zAtt()*zAtt())}};
+        const paz::Mat rot = paz::to_mat(paz::qinv(att));
+        const paz::Vec right = rot.col(0);
+        const paz::Vec forward = rot.col(1);
+        xVel() = _parent->xVel() + forward(0);
+        yVel() = _parent->yVel() + forward(1);
+        zVel() = _parent->zVel() + forward(2);
+        const paz::Vec up = rot.col(2);
+        const paz::Vec east = paz::Vec{{0, 0, 1}}.cross(up).normalized();
+        const paz::Vec north = up.cross(east);
+        const double yaw = std::atan2(forward.dot(north), forward.dot(east));
+        const double deltaYaw = paz::normalize_angle(_destYaw - yaw + paz::Pi) -
+            paz::Pi;
+        zAngRate() = deltaYaw;
+        if(_walkTime > 10.)
+        {
+            _walkTime = 0.;
+            _destYaw = paz::uniform(0., paz::TwoPi);
+        }
     }
 }
 
 void Npc::setName(const std::string& name)
 {
-_name = name;
+    _name = name;
 }
