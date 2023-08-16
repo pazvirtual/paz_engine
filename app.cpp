@@ -78,10 +78,26 @@ static const std::vector<paz::Button> OptionsButtons =
             MakeWindowed() : paz::Window::MakeFullscreen(); }
     },
     {
-        [](){ return paz::Window::HidpiEnabled() ? "HiDPI:      ON" :
-            "HiDPI:      OFF"; },
-        [](paz::Menu&){ paz::Window::HidpiEnabled() ? paz::Window::
-            DisableHidpi() : paz::Window::EnableHidpi(); }
+        []()
+        {
+            if(paz::Window::HidpiSupported())
+            {
+                return paz::Window::HidpiEnabled() ? "HiDPI:      ON" :
+                    "HiDPI:      OFF";
+            }
+            else
+            {
+                return "HiDPI:      N/A";
+            }
+        },
+        [](paz::Menu&)
+        {
+            if(paz::Window::HidpiSupported())
+            {
+                paz::Window::HidpiEnabled() ? paz::Window::DisableHidpi() :
+                    paz::Window::EnableHidpi();
+            }
+        }
     },
     {
         [](){ return _fxaaEnabled ? "FXAA:       ON" : "FXAA:       OFF"; },
@@ -218,9 +234,9 @@ void paz::App::Run()
         Menu startMenu(menuFont, _title,
         {
             {
-                {{"Start"}, [&](Menu&){ done = true; }},
-                {{"Options"}, [](Menu& m){ m.setState(1, 0); }},
-                {{"Quit"}, [](Menu&){ Window::Quit(); }}
+                {"Start", [&](Menu&){ done = true; }},
+                {"Options", [](Menu& m){ m.setState(1, 0); }},
+                {"Quit", [](Menu&){ Window::Quit(); }}
             },
             OptionsButtons
         }
@@ -260,14 +276,14 @@ void paz::App::Run()
     Menu pauseMenu(menuFont, "Paused",
     {
         {
-            {{"Resume"}, [&](Menu&)
+            {"Resume", [&](Menu&)
                 {
                     _paused = false;
                     Window::SetCursorMode(CursorMode::Disable);
                 }
             },
-            {{"Options"}, [](Menu& m){ m.setState(1, 0); }},
-            {{"Quit"}, [](Menu&){ Window::Quit(); }}
+            {"Options", [](Menu& m){ m.setState(1, 0); }},
+            {"Quit", [](Menu&){ Window::Quit(); }}
         },
         OptionsButtons
     }
