@@ -3,6 +3,7 @@
 
 static paz::Model Sphere;
 static paz::Model Ground;
+static paz::Model Tri;
 static paz::Model PlatformModel;
 static paz::Model Body;
 static paz::Model Head;
@@ -116,6 +117,16 @@ public:
     }
 };
 
+class World1 : public paz::Object
+{
+public:
+    World1()
+    {
+        model() = Ground;
+        collisionType() = paz::CollisionType::World;
+    }
+};
+
 class Platform : public paz::Object
 {
     double _timeAtTop = 0.1;
@@ -171,6 +182,7 @@ int main()
 {
     paz::App::Init("scene.frag", "font.pbm");
     Ground = paz::Model("plane.obj");
+    Tri = paz::Model("tri.obj");
     PlatformModel = paz::Model("platform.obj");
     Sphere = paz::Model("sphere50.obj");
     Body = paz::Model("persontest.obj");
@@ -178,6 +190,12 @@ int main()
     Player player;
 //    Ball b;
     World w;
+    std::vector<World1> w1(10);
+    for(std::size_t i = 0; i < w1.size(); ++i)
+    {
+        w1[i].y() = 20.*i;
+        w1[i].z() = Radius - 2.;
+    }
 //    Platform p;
     player.z() = Radius + 10;
 //    Npc npc;

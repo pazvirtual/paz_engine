@@ -23,6 +23,8 @@ namespace paz
             z1, double x2, double y2, double z2);
         void collide(double x, double y, double z, double radius, double& nx,
             double& ny, double& nz, double& d) const;
+        double castRay(double x, double y, double z, double xDir, double yDir,
+            double zDir) const;
     };
 }
 

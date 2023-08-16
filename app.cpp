@@ -531,7 +531,7 @@ if(tempDone[j]){ continue; }
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-                        a[j]->grounded() = -(xNor*gravDir(0) + yNor*gravDir(1) + zNor*gravDir(2)) > CosMaxAngle;
+                        a[j]->grounded() = true; //TEMP - see below
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -539,6 +539,34 @@ tempDone[j] = true;
                 }
             }
         }
+
+        // Use raycasting to check altitude regime.
+        for(std::size_t i = 0; i < a.size(); ++i)
+        {
+            if(a[i]->grounded())
+            {
+                continue;
+            }
+            const double x = a[i]->x() + offsetX[i];
+            const double y = a[i]->y() + offsetY[i];
+            const double z = a[i]->z() + offsetZ[i];
+            const double radius = a[i]->collisionRadius();
+            for(std::size_t j = 0; j < b.size(); ++j)
+            {
+                const double dist = b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->z(), gravDir(0), gravDir(1), gravDir(2));
+                if(dist - radius < 0.1) //TEMP - how set thresh & what about CosMaxAngle ?
+                {
+                    a[i]->grounded() = true;
+
+                    // Apply friction.
+                    a[i]->xVel() = 0.5*a[i]->xVel() + 0.5*b[j]->xVel();
+                    a[i]->yVel() = 0.5*a[i]->yVel() + 0.5*b[j]->yVel();
+                    a[i]->zVel() = 0.5*a[i]->zVel() + 0.5*b[j]->zVel();
+                    break;
+                }
+            }
+        }
+
 //std::cout << static_cast<bool>(_cameraObject->grounded()) << " " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() +_cameraObject->yVel()*_cameraObject->yVel() +_cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
 static std::deque<double> rHist(60*30, 0.);
 static std::deque<double> latHist(60*30, 0.);

@@ -198,3 +198,58 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double&
     ny = basisX[1]*dirX + basisY[1]*dirY + basisZ[1]*dirZ;
     nz = basisX[2]*dirX + basisY[2]*dirY + basisZ[2]*dirZ;
 }
+
+double paz::Triangle::castRay(double x, double y, double z, double xDir, double
+    yDir, double zDir) const
+{
+    // The triangle is degenerate.
+    if(_degenerate)
+    {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    // Ray is parallel to or points away from triangle.
+    const double rayDotNor = -xDir*basisX[0] - yDir*basisX[1] - zDir*basisX[2];
+    if(rayDotNor >= 0.)
+    {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    // Point is behind triangle.
+    x -= x0;
+    y -= y0;
+    z -= z0;
+    const double posDotNor = -x*basisX[0] - y*basisX[1] - z*basisX[2];
+    if(posDotNor < 0.)
+    {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    // Compute ray-plane intersection.
+    const double dist = -posDotNor/rayDotNor;
+    const double xp = x + dist*xDir;
+    const double yp = y + dist*yDir;
+    const double zp = z + dist*zDir;
+
+    // Finally, check if the intersection is inside of the triangle.
+    const double ypt = basisY[0]*xp + basisY[1]*yp + basisY[2]*zp;
+    const double zpt = basisZ[0]*xp + basisZ[1]*yp + basisZ[2]*zp;
+
+    // Check y limits.
+    if(ypt < 0. || ypt > y2t)
+    {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    // Check interior.
+    const double slopeLeft = z2t/y2t;
+    const double zLeft = slopeLeft*ypt;
+    const double slopeRight = (z2t - z1t)/y2t;
+    const double zRight = z1t + slopeRight*ypt;
+    if(zpt < zLeft || zpt > zRight)
+    {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    return dist;
+}
