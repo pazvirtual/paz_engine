@@ -1,4 +1,5 @@
 #include "object.hpp"
+#include "shared.cpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
@@ -296,7 +297,7 @@ void paz::App::Init(const std::string& sceneShaderPath)
     const VertexFunction geometryVert(GeometryVertSrc);
     const VertexFunction quadVert(QuadVertSrc);
     const FragmentFunction geometryFrag(GeometryFragSrc);
-    const FragmentFunction sceneFrag(load_file(sceneShaderPath).str());
+    const FragmentFunction sceneFrag(getAsset(sceneShaderPath).str());
     const FragmentFunction lumFrag(LumFragSrc);
     const FragmentFunction fxaaFrag(FxaaFragSrc);
     const FragmentFunction postFrag(PostFragSrc);

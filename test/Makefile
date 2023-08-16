@@ -19,31 +19,39 @@ else
     endif
     CXXFLAGS += -pthread
 endif
-INCL := -I..
-LIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
+CXXFLAGS += -I..
+LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
 ifeq ($(OSPRETTY), macOS)
-    LIBS += -framework MetalKit -framework Metal -framework Cocoa
+    LDLIBS += -framework MetalKit -framework Metal -framework Cocoa
 else
-    LIBS += $(LIBPATH)/libglfw3.a
+    LDLIBS += $(LIBPATH)/libglfw3.a
     ifeq ($(OSPRETTY), Linux)
-        LIBS += -lGL -lX11 -ldl
+        LDLIBS += -lGL -lX11 -ldl
     else
-        LIBS += -lgdi32 -lopengl32
+        LDLIBS += -lgdi32 -lopengl32
     endif
 endif
 
-SRC := $(wildcard *.cpp)
-OBJ := $(SRC:.cpp=.o)
-EXE := $(OBJ:.o=)
+ASSETS := $(wildcard assets/*)
 
-.PHONY: $(SRC)
+.PHONY: test.cpp
+test: test.cpp build/assets.o
 
-all: $(EXE)
+build/assets.o: build/assets.paz
+ifeq ($(OSPRETTY), macOS)
+	@printf "section .rodata\nglobal binary_assets_paz_start\nglobal binary_assets_paz_end\n_assets_start: incbin 'build/assets.paz'\n_assets_end:" > build/include-assets.s
+	nasm -f $(ASMARCH) build/include-assets.s -o build/assets.o
+else
+	cd build && ld -r -b binary -o assets.o assets.paz
+endif
 
-%: %.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(INCL) $(LIBS)
+build/assets.paz: $(ASSETS) build
+	paz-archive assets build/assets.paz
+
+build:
+	mkdir -p $@
 
 clean:
-	$(RM) $(OBJ) $(EXE)
+	$(RM) test build/*
 
 print-% : ; @echo $* = $($*)

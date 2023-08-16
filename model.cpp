@@ -1,5 +1,6 @@
 #include "PAZ_Engine"
 #include "triangle.hpp"
+#include "shared.hpp"
 #include <limits>
 #include <cmath>
 
@@ -15,8 +16,8 @@ paz::Model::Model(const std::string& path, int idx)
     std::vector<std::string> materialNames;
     std::vector<std::string> materialLibs;
     std::vector<std::vector<unsigned int>> indices;
-    parse_obj(load_file(path), names, positions, uvs, normals, materials,
-        materialNames, materialLibs, indices);
+    parse_obj(paz::getAsset(path).str(), names, positions, uvs, normals,
+        materials, materialNames, materialLibs, indices);
     _t = std::make_shared<std::vector<Triangle>>();
     _t->reserve(indices[idx].size()/3);
     for(std::size_t i = 0; i < indices[idx].size(); i += 3)

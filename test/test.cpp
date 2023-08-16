@@ -167,15 +167,14 @@ public:
     }
 };
 
-int main(int, char** argv)
+int main()
 {
-    const std::string appDir = paz::split_path(argv[0])[0];
-    paz::App::Init(appDir + "/scene.frag");
-    Ground = paz::Model(appDir + "/plane.obj");
-    PlatformModel = paz::Model(appDir + "/platform.obj");
-    Sphere = paz::Model(appDir + "/sphere50.obj");
-    Body = paz::Model(appDir + "/persontest.obj");
-    Head = paz::Model(appDir + "/persontest.obj", 1);
+    paz::App::Init("scene.frag");
+    Ground = paz::Model("plane.obj");
+    PlatformModel = paz::Model("platform.obj");
+    Sphere = paz::Model("sphere50.obj");
+    Body = paz::Model("persontest.obj");
+    Head = paz::Model("persontest.obj", 1);
     Player player;
 //    Ball b;
     World w;
