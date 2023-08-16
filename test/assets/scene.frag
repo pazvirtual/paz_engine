@@ -22,7 +22,7 @@ void main()
     float dist = zFar*zNear/(zFar + depth*(zNear - zFar))/-dir.z;
     vec3 pos = dist*dir;
     vec3 nor = normalize(texture(normalMap, uv).rgb);
-    color = vec4(0.*0.01*diffCol + emissCol, 1.);
+    color = vec4(0.*(0.01*diffCol + emissCol), 1.); //TEMP - repeated per light that contains this fragment
     vec3 lightDir = lightPos - pos;
     float lightDist = length(lightDir);
     lightDir /= lightDist;

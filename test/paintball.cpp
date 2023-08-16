@@ -1,6 +1,6 @@
 #include "paintball.hpp"
 
-static const paz::Model Model("icosphere3.obj", 0, 0., 0.1, "", 2.f);
+static const paz::Model Model("icosphere3.obj", 0, 0., 0.1, "", {0.5, 2., 2.});
 static const paz::AudioTrack SoundEffect = []()
 {
     std::vector<float> samples(44'100/200);

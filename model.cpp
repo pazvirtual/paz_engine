@@ -6,7 +6,8 @@
 #include <numeric>
 
 paz::Model::Model(const std::string& path, int idx, double zOffset, double
-    scale, const std::string& diffTexPath, float emiss) : _emiss(emiss)
+    scale, const std::string& diffTexPath, const std::array<float, 3>& emiss) :
+    _emiss(emiss)
 {
     std::vector<std::string> names;
     std::vector<std::vector<float>> positions;
@@ -71,7 +72,8 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
 }
 
 paz::Model::Model(const std::vector<float>& positions, const std::vector<float>&
-    uvs, const std::string& diffTexPath, float emiss) : _emiss(emiss)
+    uvs, const std::string& diffTexPath, const std::array<float, 3>& emiss) :
+    _emiss(emiss)
 {
     const std::size_t numVertices = positions.size()/4;
     const std::size_t numFaces = numVertices/3;

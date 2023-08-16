@@ -2,7 +2,7 @@ in vec4 posCs;
 in vec4 norCs;
 in vec2 uv;
 uniform sampler2D diffTex;
-uniform float emiss;
+uniform vec3 emiss;
 layout(location = 0) out vec4 diffCol;
 // ...
 layout(location = 1) out vec4 emissCol;
@@ -11,6 +11,6 @@ void main()
 {
     diffCol = texture(diffTex, uv);
     // ...
-    emissCol = vec4(emiss, emiss, emiss, 1.);
+    emissCol = vec4(emiss, 1.);
     normal = vec4(normalize(norCs.xyz), 0.);
 }

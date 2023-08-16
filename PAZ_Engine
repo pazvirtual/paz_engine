@@ -31,7 +31,7 @@ namespace paz
         VertexBuffer _v;
         IndexBuffer _i;
         Texture _diffTex;
-        float _emiss;
+        std::array<float, 3> _emiss;
 
         double collide(double x, double y, double z, double radius, double&
             xNew, double& yNew, double& zNew, double& xNor, double& yNor,
@@ -46,9 +46,11 @@ namespace paz
     public:
         Model() = default;
         Model(const std::string& path, int idx = 0, double zOffset = 0., double
-            scale = 1., const std::string& diffTexPath = "", float emiss = 0.f);
+            scale = 1., const std::string& diffTexPath = "", const std::array<
+            float, 3>& emiss = {});
         Model(const std::vector<float>& positions, const std::vector<float>&
-            uvs, const std::string& diffTexPath = "", float emiss = 0.f);
+            uvs, const std::string& diffTexPath = "", const std::array<float,
+            3>& emiss = {});
     };
 
     class Object
