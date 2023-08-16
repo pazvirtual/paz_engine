@@ -10,6 +10,117 @@ static paz::Model FancyBox;
 
 static constexpr double Radius = 50.;
 
+class Droplet : public Paintball
+{
+    bool _stuck = false;
+    double _timer = 0.;
+
+public:
+    Droplet(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir) :
+        Paintball()
+    {
+        lights().clear(); //TEMP
+        launch(pos, vel, dir);
+    }
+
+    void update(const paz::InputData& input) override
+    {
+        if(_stuck)
+        {
+            _timer += input.timestep();
+        }
+        Paintball::update(input);
+    }
+
+    void onCollide(const Object& o, double xNor, double yNor, double zNor,
+        double xB, double yB, double zB) override
+    {
+        _stuck = true;
+        Paintball::onCollide(o, xNor, yNor, zNor, xB, yB, zB);
+    }
+
+    bool done() const
+    {
+        return _timer > 1.;
+    }
+};
+
+class Fountain : public paz::Object
+{
+    double _timer = 0.;
+    std::vector<Droplet> _droplets;
+    static constexpr int NumPerLaunch = 1;
+
+public:
+    Fountain()
+    {
+        model() = FancyBox;
+        collisionType() = paz::CollisionType::World;
+        gravityType() = paz::GravityType::None;
+        lights().push_back({0., 0., 1.3, 0.5, 2., 2., 0.1});
+    }
+
+    void update(const paz::InputData& input) final
+    {
+        _timer += input.timestep();
+        if(_timer > 0.1)
+        {
+            const paz::Vec pos{{x(), y(), z()}};
+            const paz::Vec vel{{xVel(), yVel(), zVel()}};
+            for(int i = 0; i < NumPerLaunch; ++i)
+            {
+                const double wAtt = std::sqrt(1. - xAtt()*xAtt() - yAtt()*yAtt()
+                    - zAtt()*zAtt());
+                const paz::Vec att{{xAtt(), yAtt(), zAtt(), wAtt}};
+                paz::Vec dir = paz::to_mat(paz::qinv(att)).col(2);
+                dir += 0.01*paz::Vec{{paz::randn(), paz::randn(), paz::
+                    randn()}};
+                const double offset = 1.3 + i*0.1*Droplet::LaunchSpeed/
+                    NumPerLaunch;
+                _droplets.emplace_back(pos + offset*dir, vel, dir);
+            }
+            _timer = 0.;
+        }
+        std::size_t i = 0;
+        while(i < _droplets.size())
+        {
+            if(_droplets[i].done())
+            {
+                std::swap(_droplets[i], _droplets.back());
+                _droplets.pop_back();
+            }
+            else
+            {
+                ++i;
+            }
+        }
+    }
+
+    void setDir(double xDir, double yDir, double zDir)
+    {
+        const paz::Vec up{{xDir, yDir, zDir}};
+        paz::Vec right{{1., 0., 0.}};
+        if(std::abs(up.dot(right)) > 0.99)
+        {
+            right = paz::Vec{{0., 1., 0.}};
+        }
+        const paz::Vec forward = up.cross(right).normalized();
+        right = forward.cross(up).normalized();
+        paz::Mat rot(3);
+        rot.setCol(0, right);
+        rot.setCol(1, forward);
+        rot.setCol(2, up);
+        paz::Vec att = paz::to_quat(rot);
+        if(att(3) < 0.)
+        {
+            att = -att;
+        }
+        xAtt() = -att(0);
+        yAtt() = -att(1);
+        zAtt() = -att(2);
+    }
+};
+
 class World : public paz::Object
 {
 public:
@@ -39,6 +150,7 @@ class World2 : public paz::Object
     static constexpr double AngRate = 0.1;
 
     double _angle;
+    Fountain _f;
 
     void updateInternal()
     {
@@ -48,6 +160,12 @@ class World2 : public paz::Object
         xVel() = AngRate*-std::sin(_angle)*2.*Radius;
         yVel() = AngRate*std::cos(_angle)*2.*Radius;
         zVel() = 0.;
+        _f.x() = x();
+        _f.y() = y();
+        _f.z() = z() + 10.;
+        _f.xVel() = xVel();
+        _f.yVel() = yVel();
+        _f.zVel() = zVel();
     }
 
 public:
@@ -88,6 +206,7 @@ int main()
     npc0.x() = 10.;
     npc0.z() = Radius;
     Npc npc1;
+    std::swap(npc0, npc0);
     std::swap(npc0, npc1);
     npc0.x() = w2.x();
     npc0.y() = w2.y();

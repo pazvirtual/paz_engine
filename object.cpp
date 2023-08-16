@@ -557,6 +557,12 @@ paz::Object::Object(Object&& o) noexcept : _id(reinterpret_cast<std::uintptr_t>(
 
 paz::Object& paz::Object::operator=(Object&& o) noexcept
 {
+    // If source and destination are the same, do nothing.
+    if(_id == o._id)
+    {
+        return *this;
+    }
+
     // If destination is in a valid state, just swap, otherwise, copy construct.
     const auto otherIdx = objects().at(o._id);
     if(objects().count(_id))
