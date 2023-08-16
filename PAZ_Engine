@@ -29,6 +29,7 @@ namespace paz
     class App
     {
     public:
+        App() = delete;
         static void Init(const std::string& sceneShaderPath, const std::unordered_set<std::string>& objPaths);
         static void Run();
         static void AttachCamera(const Object& o);
