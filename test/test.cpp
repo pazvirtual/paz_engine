@@ -92,6 +92,13 @@ int main()
     Npc npc4 = std::move(npc3);
     npc3 = npc4;
     npc3.x() += 2.;
+    std::vector<Npc> moreNpcs(10);
+    moreNpcs[0] = npc3;
+    for(std::size_t i = 0; i + 1 < moreNpcs.size(); ++i)
+    {
+        moreNpcs[i + 1] = moreNpcs[i];
+        moreNpcs[i + 1].x() += 2.;
+    }
     w.lights().push_back({ Radius + 5. + 10., 0., 0., 1., 0., 0., 0.1});
     w.lights().push_back({-Radius - 5. - 10., 0., 0., 1., 1., 0., 0.1});
     w.lights().push_back({0.,  Radius + 5. + 10., 0., 1., 1., 1., 0.1});

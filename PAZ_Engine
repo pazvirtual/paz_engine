@@ -57,7 +57,6 @@ namespace paz
             {});
     };
 
-
     class Object
     {
         friend class App;
