@@ -519,8 +519,9 @@ void paz::App::Run()
             std::vector<int> characterAttr;
             std::vector<int> colAttr;
             std::vector<int> rowAttr;
-            const int startRow = (maxVisRows + _startMenu._buttons.size())/2 -
-                1;
+            const int startRow = _startMenu._layout == UiLayout::Vertical ?
+                (maxVisRows + _startMenu._buttons.size() - 1)/2 : (maxVisRows -
+                1)/2;
             const int startCol = _startMenu._alignment == UiAlignment::Center ?
                 std::round(0.5*(Window::ViewportWidth()/(scale*(CharWidth + 1))
                 - maxCols)) : 0;
