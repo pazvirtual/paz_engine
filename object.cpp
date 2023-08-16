@@ -119,20 +119,26 @@ void paz::physics()
             XVel[i] += XDown[i];
             YVel[i] += YDown[i];
             ZVel[i] += ZDown[i];
-            const double invNorm = 1./std::sqrt(XDown[i]*XDown[i] + YDown[i]*
-                YDown[i] + ZDown[i]*ZDown[i]);
-            if(std::isfinite(invNorm))
-            {
-                XDown[i] *= invNorm;
-                YDown[i] *= invNorm;
-                ZDown[i] *= invNorm;
-            }
         }
         else
         {
             X[i] += Window::FrameTime()*XVel[i];
             Y[i] += Window::FrameTime()*YVel[i];
             Z[i] += Window::FrameTime()*ZVel[i];
+            double dx, dy, dz, du, dv, dw;
+            grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
+                du, dv, dw);
+            XDown[i] = du;
+            YDown[i] = dv;
+            ZDown[i] = dw;
+        }
+        const double invNorm = 1./std::sqrt(XDown[i]*XDown[i] + YDown[i]*YDown[
+            i] + ZDown[i]*ZDown[i]);
+        if(std::isfinite(invNorm))
+        {
+            XDown[i] *= invNorm;
+            YDown[i] *= invNorm;
+            ZDown[i] *= invNorm;
         }
     }
     for(std::size_t i = 0; i < n; ++i)

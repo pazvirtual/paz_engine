@@ -58,6 +58,7 @@ class Fountain : public paz::Object
 {
     double _timer = 0.;
     std::vector<Droplet> _droplets;
+    paz::Vec _dir; //TEMP - replace w/ just setting attitude
 
 public:
     Fountain()
@@ -70,12 +71,12 @@ public:
         _timer += paz::Window::FrameTime();
         if(_timer > 0.05)
         {
-            for(int i = 0; i < 5; ++i)
+            const paz::Vec pos{{x(), y(), z()}};
+            const paz::Vec vel{{xVel(), yVel(), zVel()}};
+            for(int i = 0; i < 1/*5*/; ++i)
             {
-                const paz::Vec pos{{x(), y(), z()}};
-                const paz::Vec vel{{xVel(), yVel(), zVel()}};
-                const paz::Vec dir = paz::Vec{{0.01*paz::randn(), 0.01*paz::
-                    randn(), 1. + 0.01*paz::randn()}}.normalized();
+                const paz::Vec dir = (0.01*paz::Vec{{paz::randn(), paz::randn(),
+                    paz::randn()}} + _dir).normalized();
                 _droplets.emplace_back(pos + paz::uniform(0.05, 0.8)*dir, vel,
                     dir);
             }
@@ -94,6 +95,10 @@ public:
                 ++i;
             }
         }
+    }
+    void setDir(double xDir, double yDir, double zDir)
+    {
+        _dir = paz::Vec{{xDir, yDir, zDir}};
     }
 };
 
@@ -512,7 +517,7 @@ int main()
     Sphere50 = paz::Model("sphere50.obj");
     Body = paz::Model("persontest.obj", 0, -0.2);
     Head = paz::Model("persontest.obj", 1, -0.1);
-    PaintballModel = paz::Model("unitsphere.obj", 0, 0., 0.05);
+    PaintballModel = paz::Model("unitsphere.obj", 0, 0., 0.1);
     Player player;
     player.z() = Radius + 10.;
     std::vector<World> w(5);
@@ -531,15 +536,20 @@ int main()
     Npc npc3;
     npc3 = npc0;
     npc3.x() += 4.;
-    std::array<Fountain, 5> f;
-    for(auto& n : f)
+    std::array<Fountain, 10> f;
+    for(int i = 0; i < 10; ++i)
     {
-        n.z() = Radius;
+        f[i].z() = i%2 ? Radius : -Radius;
+        f[i].setDir(0., 0., i%2 ? 1. : -1.);
     }
-    f[1].x() = -Radius;
-    f[2].x() = Radius;
-    f[3].y() = -Radius;
-    f[4].y() = Radius;
+    f[2].x() = -Radius;
+    f[3].x() = -Radius;
+    f[4].x() = Radius;
+    f[5].x() = Radius;
+    f[6].y() = -Radius;
+    f[7].y() = -Radius;
+    f[8].y() = Radius;
+    f[9].y() = Radius;
     paz::App::AttachCamera(player.head());
     paz::App::Run();
 }

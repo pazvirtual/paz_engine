@@ -717,7 +717,7 @@ latHist.push_back(lat);
             _textPass.end();
         }
 
-        _plotPass.begin();
+        /*_plotPass.begin();
         {
             VertexBuffer plotData;
             {
@@ -744,7 +744,7 @@ latHist.push_back(lat);
             }
             _plotPass.draw(PrimitiveType::LineStrip, plotData);
         }
-        _plotPass.end();
+        _plotPass.end();*/
 
         Window::EndFrame();
     }
