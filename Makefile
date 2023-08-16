@@ -46,7 +46,7 @@ REINSTALLHEADER := $(shell cmp -s $(PROJNAME) $(INCLPATH)/$(PROJNAME); echo $$?)
 print-% : ; @echo $* = $($*)
 
 .PHONY: test
-default: lib$(LIBNAME).a test
+default: test
 
 lib$(LIBNAME).a: $(OBJ)
 	$(RM) lib$(LIBNAME).a
@@ -61,7 +61,7 @@ install: $(PROJNAME) lib$(LIBNAME).a
 	cp lib$(LIBNAME).a $(LIBPATH)/
 endif
 
-test:
+test: lib$(LIBNAME).a
 	$(MAKE) -C test
 	test/test
 
