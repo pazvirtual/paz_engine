@@ -18,7 +18,9 @@ static constexpr float FontScale = 1.5f;
 static constexpr int CharWidth = 5;
 
 static paz::Framebuffer _geometryBuffer;
-static paz::Framebuffer _oitBuffer;
+static paz::Framebuffer _oitGeometryBuffer;
+static paz::Framebuffer _oitRenderBuffer;
+static paz::Framebuffer _oitAccumBuffer;
 static paz::Framebuffer _renderBuffer;
 static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
@@ -31,6 +33,9 @@ static paz::RenderTarget _depthMap(paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _finalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _oitNormalMap(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _oitDepthMap(paz::TextureFormat::Depth32Float);
+static paz::RenderTarget _oitHdrRender(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _oitAccumTex(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _oitRevealTex(paz::TextureFormat::RGBA8UNorm);
 
@@ -39,8 +44,11 @@ static std::unordered_map<void*, paz::InstanceBuffer> _instances;
 static paz::RenderPass _geometryPass;
 static paz::RenderPass _renderPass0;
 static paz::RenderPass _renderPass1;
-static paz::RenderPass _oitPass0;
-static paz::RenderPass _oitPass1;
+static paz::RenderPass _oitGeometryPass;
+static paz::RenderPass _oitRenderPass0;
+static paz::RenderPass _oitRenderPass1;
+static paz::RenderPass _oitAccumPass;
+static paz::RenderPass _oitCompositePass;
 static paz::RenderPass _postPass0;
 static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
@@ -192,23 +200,30 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     _geometryBuffer.attach(_depthMap);
 
     _renderBuffer.attach(_hdrRender);
-//    _renderBuffer.attach(_depthMap);
 
-    _oitBuffer.attach(_oitAccumTex);
-    _oitBuffer.attach(_oitRevealTex);
-    _oitBuffer.attach(_depthMap);
+    _oitGeometryBuffer.attach(_oitNormalMap);
+    _oitGeometryBuffer.attach(_oitDepthMap);
+
+    _oitRenderBuffer.attach(_oitHdrRender);
+
+    _oitAccumBuffer.attach(_oitAccumTex);
+    _oitAccumBuffer.attach(_oitRevealTex);
+    _oitAccumBuffer.attach(_depthMap);
 
     _postBuffer.attach(_finalRender);
 
     _lumBuffer.attach(_finalLumMap);
 
     const VertexFunction geometryVert(get_builtin("geometry.vert").str());
+    const VertexFunction oitGeometryVert(get_builtin("oitgeometry.vert").str());
     const VertexFunction quadVert(get_builtin("quad.vert").str());
     const VertexFunction sceneVert0(get_builtin("scene0.vert").str());
     const VertexFunction sceneVert1(get_builtin("scene1.vert").str());
     const VertexFunction textVert(get_builtin("text.vert").str());
     const VertexFunction oitVert(get_builtin("oit.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
+    const FragmentFunction oitGeometryFrag(get_builtin("oitgeometry.frag").
+        str());
     const FragmentFunction sceneFrag0(get_asset(sceneShaderPath0).str());
     const FragmentFunction sceneFrag1(get_asset(sceneShaderPath1).str());
     const FragmentFunction lumFrag(get_builtin("lum.frag").str());
@@ -223,10 +238,12 @@ void paz::App::Init(const std::string& sceneShaderPath0, const std::string&
     _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
     _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1,
         {BlendMode::One_One});
-    _oitPass0 = RenderPass(_oitBuffer, oitVert, oitFrag, {BlendMode::One_One,
-        BlendMode::Zero_InvSrcAlpha});
-    _oitPass1 = RenderPass(_renderBuffer, quadVert, compositeFrag, {BlendMode::
-        InvSrcAlpha_SrcAlpha});
+    _oitGeometryPass = RenderPass(_oitGeometryBuffer, oitGeometryVert, oitGeometryFrag);
+    _oitRenderPass0 = RenderPass(_oitRenderBuffer, sceneVert0, sceneFrag0);
+    _oitRenderPass1 = RenderPass(_oitRenderBuffer, sceneVert1, sceneFrag1,
+        {BlendMode::One_One});
+    _oitAccumPass = RenderPass(_oitAccumBuffer, oitVert, oitFrag, {BlendMode::One_One, BlendMode::Zero_InvSrcAlpha});
+    _oitCompositePass = RenderPass(_renderBuffer, quadVert, compositeFrag, {BlendMode::InvSrcAlpha_SrcAlpha});
     _postPass0 = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
     _fxaaPass = RenderPass(quadVert, fxaaFrag);
@@ -747,40 +764,82 @@ tempDone[j] = true;
         _renderPass1.end();
 
         // Render transparent objects.
-        _oitPass0.begin({LoadAction::FillZeros, LoadAction::FillOnes},
-            LoadAction::Load);
-        _oitPass0.depth(DepthTestMode::LessNoMask);
-        _oitPass0.uniform("projection", projection);
-        _oitPass0.uniform("view", convert_mat(view));
-        for(const auto& n : transparentObjects) //TEMP - need to add lights & instance objects by model
+        bool cleared = false;
+        for(const auto& m : transparentObjects)
         {
-            _oitPass0.uniform("col", 0.f, 0.f, 1.f, 0.1f);
-            _oitPass0.uniform("model0", static_cast<float>(n->xAtt()), static_cast<float>(n->yAtt()), static_cast<float>(n->zAtt()), static_cast<float>(n->x() - cameraPos(0)));
-            _oitPass0.uniform("model1", static_cast<float>(n->y() - cameraPos(1)), static_cast<float>(n->z() - cameraPos(2)));
-            std::vector<float> pos;
-            pos.reserve(12*n->transp().size());
-            for(const auto& m : n->transp())
+            for(const auto& n : m->transp())
             {
+                std::vector<float> pos(12);
                 for(std::size_t i = 0; i < 3; ++i)
                 {
                     for(std::size_t j = 0; j < 3; ++j)
                     {
-                        pos.push_back(m[3*i + j]);
+                        pos[4*i + j] = n[3*i + j];
                     }
-                    pos.push_back(1.);
+                    pos[4*i + 3] = 1.;
                 }
-            }
-            VertexBuffer v; //TEMP - don't do this mid-render
-            v.addAttribute(4, pos);
-            _oitPass0.draw(PrimitiveType::Triangles, v);
-        }
-        _oitPass0.end();
+                std::vector<float> nor(12);
+//                nor[0] = ??;
+//                nor[1] = ??;
+//                nor[2] = ??;
+                nor[3] = 0.;
+                std::copy(nor.begin(), nor.begin() + 4, nor.begin() + 4);
+                std::copy(nor.begin(), nor.begin() + 4, nor.begin() + 8);
+                VertexBuffer v; //TEMP - don't do this mid-render
+                v.addAttribute(4, pos);
+                v.addAttribute(4, nor);
 
-        _oitPass1.begin({LoadAction::Load});
-        _oitPass1.read("accumTex", _oitAccumTex);
-        _oitPass1.read("revealTex", _oitRevealTex);
-        _oitPass1.draw(PrimitiveType::TriangleStrip, _quadVertices);
-        _oitPass1.end();
+                _oitGeometryPass.begin({LoadAction::Clear, LoadAction::Clear},
+                    LoadAction::Clear);
+                _oitGeometryPass.depth(DepthTestMode::Always);
+                _oitGeometryPass.uniform("projection", projection);
+                _oitGeometryPass.uniform("view", convert_mat(view));
+                _oitGeometryPass.uniform("model0", static_cast<float>(m->xAtt()), static_cast<float>(m->yAtt()), static_cast<float>(m->zAtt()), static_cast<float>(m->x() - cameraPos(0))); _oitGeometryPass.uniform("model1", static_cast<float>(m->y() - cameraPos(1)), static_cast<float>(m->z() - cameraPos(2)));
+try{
+                _oitGeometryPass.draw(PrimitiveType::Triangles, v);
+}catch(...){ throw std::runtime_error("A"); }
+                _oitGeometryPass.end();
+
+                _oitRenderPass0.begin({LoadAction::Clear});
+                _oitRenderPass0.uniform("col", 0.f, 0.f, 1.f, 0.1f); //TEMP
+                _oitRenderPass0.read("normalMap", _oitNormalMap);
+                _oitRenderPass0.read("depthMap", _oitDepthMap);
+try{
+                _oitRenderPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
+}catch(...){ throw std::runtime_error("B"); }
+                _oitRenderPass0.end();
+
+                _oitRenderPass1.begin({LoadAction::Load});
+                _oitRenderPass1.uniform("col", 0.f, 0.f, 1.f, 0.1f); //TEMP
+                _oitRenderPass1.read("normalMap", _oitNormalMap);
+                _oitRenderPass1.read("depthMap", _oitDepthMap);
+try{
+                _oitRenderPass1.draw(PrimitiveType::TriangleStrip, _quadVertices);
+}catch(...){ throw std::runtime_error("C"); }
+                _oitRenderPass1.end();
+
+                if(cleared)
+                {
+                    _oitAccumPass.begin({LoadAction::Load, LoadAction::Load});
+                }
+                else
+                {
+                    _oitAccumPass.begin({LoadAction::Clear, LoadAction::Clear});
+                    cleared = true;
+                }
+                _oitAccumPass.read("oitRender", _oitHdrRender);
+try{
+                _oitAccumPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+}catch(...){ throw std::runtime_error("D"); }
+                _oitAccumPass.end();
+            }
+        }
+
+        _oitCompositePass.begin({LoadAction::Load});
+        _oitCompositePass.read("accumTex", _oitAccumTex);
+        _oitCompositePass.read("revealTex", _oitRevealTex);
+        _oitCompositePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+        _oitCompositePass.end();
 
         if(_fxaaEnabled)
         {
