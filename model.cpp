@@ -93,7 +93,12 @@ paz::Model::Model(const std::vector<float>& positions) //TEMP
         const double t2y = positions[i2 + 1];
         const double t2z = positions[i2 + 2];
         _t->emplace_back(t0x, t0y, t0z, t1x, t1y, t1z, t2x, t2y, t2z);
-//        normals[...] = ...
+        std::array<double, 3> nor;
+        _t->back().getNormal(nor[0], nor[1], nor[2]);
+        for(int j = 0; j < 3; ++j)
+        {
+            std::copy(nor.begin(), nor.end(), normals.begin() + 4*(i + j));
+        }
         radiusSq = std::max(radiusSq, t0x*t0x + t0y*t0y + t0z*t0z);
         radiusSq = std::max(radiusSq, t1x*t1x + t1y*t1y + t1z*t1z);
         radiusSq = std::max(radiusSq, t2x*t2x + t2y*t2y + t2z*t2z);

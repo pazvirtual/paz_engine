@@ -11,7 +11,6 @@
 #define NO_FRICTION
 
 static constexpr std::size_t NumSteps = 100;
-static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 static constexpr std::size_t MaxConsoleLines = 1000;
@@ -66,6 +65,8 @@ static const paz::Object* _soundSrc;
 static bool _paused;
 
 static double _gravity;
+
+static std::vector<paz::Vec> _lightPos;
 
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
@@ -846,6 +847,20 @@ latHist.push_back(cameraPos(2)/rHist.back());
         view.setBlock(0, 0, 3, 3, Mat{{1., 0., 0.}, {0., 0., 1.}, {0., -1.,
             0.}}*to_mat(cameraAtt));
 
+        // Define light sources.
+        std::vector<float> lightsData(4*_lightPos.size());
+        for(std::size_t i = 0; i < _lightPos.size(); ++i)
+        {
+            const Vec p = view*Vec{{_lightPos[i](0) - cameraPos(0), _lightPos[
+                i](1) - cameraPos(1), _lightPos[i](2) - cameraPos(2), 1.}};
+            lightsData[4*i + 0] = p(0);
+            lightsData[4*i + 1] = p(1);
+            lightsData[4*i + 2] = p(2);
+            lightsData[4*i + 3] = 1.; //TEMP
+        }
+        Texture lights(TextureFormat::RGBA32Float, 1, _lightPos.size(),
+            lightsData.data());
+
         // Get geometry map.
 Timer timer;
         std::unordered_map<void*, std::vector<const Object*>> objectsByModel;
@@ -930,7 +945,7 @@ _msgStream << std::endl;
         _renderPass.read("depthMap", _depthMap);
         _renderPass.uniform("invProjection", convert_mat(convert_mat(
             projection).inv()));
-        _renderPass.uniform("sun", convert_vec(view*SunVec));
+        _renderPass.read("lights", lights);
         _renderPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass.end();
 
@@ -1091,4 +1106,13 @@ void paz::App::SetSound(const Object& o, const AudioTrack& sound, bool loop)
 {
     _soundSrc = &o;
     AudioEngine::Play(sound, loop);
+}
+
+void paz::App::AddLight(const Vec& pos)
+{
+    if(pos.size() != 3)
+    {
+        throw std::runtime_error("Light position must be a 3-vector.");
+    }
+    _lightPos.push_back(pos);
 }
