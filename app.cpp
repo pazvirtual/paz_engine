@@ -441,6 +441,8 @@ void paz::App::Run()
         physics();
         gravity();
 
+        const Vec gravDir = -_cameraBasePos.normalized();
+
         // Identify all objects that can collide and precompute as much as possible.
         std::vector<Object*> a;
         std::vector<Object*> b;
@@ -529,7 +531,7 @@ if(tempDone[j]){ continue; }
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
-//                        a[j]->grounded() = true;// > CosMaxAngle;
+                        a[j]->grounded() = -(xNor*gravDir(0) + yNor*gravDir(1) + zNor*gravDir(2)) > CosMaxAngle;
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -540,6 +542,11 @@ tempDone[j] = true;
 //std::cout << static_cast<bool>(_cameraObject->grounded()) << " " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() +_cameraObject->yVel()*_cameraObject->yVel() +_cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
 static std::deque<double> rHist(60*30, 0.);
 static std::deque<double> latHist(60*30, 0.);
+static double maxFrameTime = 1./60.;
+{
+static int temp;
+if(++temp > 60) maxFrameTime = std::max(maxFrameTime, Window::FrameTime());
+}
 {
 const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
 const double lat = std::asin(_cameraObject->z()/r);
@@ -550,13 +557,12 @@ latHist.pop_front();
 latHist.push_back(lat);
 std::stringstream ss;
 ss << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel());
+ss << "\n" << 1./maxFrameTime;
+ss << "\n" << (_cameraObject->grounded() ? "Grounded" : "Floating");
 _msg = ss.str();
 }
 
-
         update();
-
-        const Vec gravDir = -_cameraBasePos.normalized();
 
         Vec cameraAtt = _cameraAtt;
 
