@@ -44,6 +44,7 @@ ifeq ($(OSPRETTY), macOS)
 endif
 
 REINSTALLHEADER := $(shell cmp -s $(PROJNAME) $(INCLPATH)/$(PROJNAME); echo $$?)
+REINSTALLLIB := $(shell cmp -s lib$(LIBNAME).a $(LIBPATH)/lib$(LIBNAME).a; echo $$?)
 
 print-% : ; @echo $* = $($*)
 
@@ -55,12 +56,21 @@ lib$(LIBNAME).a: $(OBJ)
 	ar $(ARFLAGS) lib$(LIBNAME).a $^
 
 ifneq ($(REINSTALLHEADER), 0)
+    ifneq ($(REINSTALLLIB), 0)
 install: $(PROJNAME) lib$(LIBNAME).a
 	cp $(PROJNAME) $(INCLPATH)/
 	cp lib$(LIBNAME).a $(LIBPATH)/
+    else
+install: $(PROJNAME) lib$(LIBNAME).a
+	cp $(PROJNAME) $(INCLPATH)/
+    endif
 else
+    ifneq ($(REINSTALLLIB), 0)
 install: $(PROJNAME) lib$(LIBNAME).a
 	cp lib$(LIBNAME).a $(LIBPATH)/
+    else
+install: $(PROJNAME) lib$(LIBNAME).a
+    endif
 endif
 
 test: lib$(LIBNAME).a
