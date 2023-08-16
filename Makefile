@@ -30,13 +30,14 @@ ifeq ($(OSPRETTY), Windows)
 endif
 ARFLAGS := -rcs
 
+ASSETS := $(wildcard assets/*)
 CSRC := $(wildcard *.c) $(wildcard *.cpp)
 ifeq ($(OSPRETTY), macOS)
     MACOSEXCL := gl_core_4_1.c $(patsubst %_macos.mm, %.cpp, $(wildcard *_macos.mm))
     CSRC := $(filter-out $(MACOSEXCL), $(CSRC))
 endif
 OBJCSRC := $(wildcard *.mm)
-OBJ := $(patsubst %.c, %.o, $(patsubst %.cpp, %.c, $(CSRC)))
+OBJ := assets.o $(patsubst %.c, %.o, $(patsubst %.cpp, %.c, $(CSRC)))
 ifeq ($(OSPRETTY), macOS)
     OBJ += $(OBJCSRC:%.mm=%.o)
 endif
@@ -76,6 +77,19 @@ analyze: $(OBJCSRC)
 
 %.o: %.mm
 	$(CC) -c -o $@ $< $(CXXFLAGS)
+
+assets.o: assets.paz
+ifeq ($(OSPRETTY), macOS)
+	@printf "section .rodata\nglobal _paz_binary_assets_paz_start\nglobal _paz_binary_assets_paz_end\n_paz_binary_assets_paz_start: incbin 'assets.paz'\n_paz_binary_assets_paz_end:" > include-assets.s
+	nasm -f macho64 include-assets.s -o assets.o
+	$(RM) include-assets.s
+else
+	ld -r -b binary -o assets.o assets.paz
+	objcopy --prefix-symbols=_paz assets.o
+endif
+
+assets.paz: $(ASSETS)
+	paz-archive assets
 
 clean:
 	$(RM) $(OBJ) lib$(LIBNAME).a

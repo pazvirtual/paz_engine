@@ -2,5 +2,6 @@
 *.a
 *.exe
 *.zip
+*.paz
 test/test
 test/build
