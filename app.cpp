@@ -568,9 +568,9 @@ if(tempDone[j]){ continue; }
                             a[j]->yVel() = 0.5*a[j]->yVel() + 0.5*b[k]->yVel();
                             a[j]->zVel() = 0.5*a[j]->zVel() + 0.5*b[k]->zVel();
                         }
-                        a[j]->x() = xNew - offsetX[j] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
-                        a[j]->y() = yNew - offsetY[j] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
-                        a[j]->z() = zNew - offsetZ[j] + (NumSteps - i - 1)*a[j]->zVel()/NumSteps*Window::FrameTime();
+                        a[j]->x() = xNew - offsetX[j] + bX[k][i] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*Window::FrameTime();
+                        a[j]->y() = yNew - offsetY[j] + bY[k][i] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*Window::FrameTime();
+                        a[j]->z() = zNew - offsetZ[j] + bZ[k][i] + (NumSteps - i - 1)*a[j]->zVel()/NumSteps*Window::FrameTime();
                         a[j]->localNorX() = xNor;
                         a[j]->localNorY() = yNor;
                         a[j]->localNorZ() = zNor;
