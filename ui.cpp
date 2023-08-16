@@ -140,15 +140,27 @@ void paz::Menu::update()
     int col = 0;
     for(std::size_t i = 0; i < _buttons[_curPage].size() + 1; ++i)
     {
-        const bool highlight = curButtonEnabled() && i == static_cast<std::
-            size_t>(_curButton) + 1;
+        float highlight = 0.f;
+        if(i && !_buttons[_curPage][i - 1].enabled())
+        {
+            highlight = -1.f;
+        }
+        else if(curButtonEnabled() && i == static_cast<std::size_t>(_curButton)
+            + 1)
+        {
+            highlight = 1.f;
+        }
         std::string str = (i ? _buttons[_curPage][i - 1].label() : (_curPage ?
             "Options" : _title));
         if(i)
         {
-            if(highlight)
+            if(highlight > 0.f)
             {
                 str = "->" + str;
+            }
+            else if(highlight < 0.f)
+            {
+                str = "  " + str;
             }
             else
             {
