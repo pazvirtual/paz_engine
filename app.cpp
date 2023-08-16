@@ -413,48 +413,6 @@ void paz::App::Run()
 
     while(!Window::Done())
     {
-        if(!Paused && MicObject && SoundSrc)
-        {
-            const Vec relPos{{SoundSrc->x() - MicObject->x(), SoundSrc->y() -
-                MicObject->y(), SoundSrc->z() - MicObject->z()}};
-            const Vec relVel{{SoundSrc->xVel() - MicObject->xVel(), SoundSrc->
-                yVel() - MicObject->yVel(), SoundSrc->zVel() - MicObject->
-                zVel()}};
-            const double dist = relPos.norm();
-            const Vec dir = relPos/dist;
-            const Vec micAtt{{MicObject->xAtt(), MicObject->yAtt(), MicObject->
-                zAtt(), std::sqrt(1. - MicObject->xAtt()*MicObject->xAtt() -
-                MicObject->yAtt()*MicObject->yAtt() - MicObject->zAtt()*
-                MicObject->zAtt())}};
-            const Mat micRot = to_mat(micAtt);
-            const Vec micX = micRot.row(1).trans();
-            const Vec micY = -micRot.row(0).trans();
-            const Vec lEar = std::sin(1.)*micX + std::cos(1.)*micY;
-            const Vec rEar = std::sin(1.)*micX - std::cos(1.)*micY;
-            const double vlos = dir.dot(relVel);
-            const double txPwr = 400.;
-            static constexpr double vs = 343.;
-            static constexpr double maxRxPwr = 0.3;
-            const double t0 = (vs + vlos)/(800.*Pi*dist); // assuming f = 200
-            const double rxPwr = std::min(maxRxPwr, txPwr*t0*t0);
-            double lPwr = rxPwr*(0.6 + 0.4*(dir.dot(lEar))); //TEMP
-            double rPwr = rxPwr*(0.6 + 0.4*(dir.dot(rEar))); //TEMP
-            lPwr /= SqrtTwo*(0.6 + 0.4*std::cos(0.5*Pi - 1.));
-            rPwr /= SqrtTwo*(0.6 + 0.4*std::cos(0.5*Pi - 1.));
-            const double lVol = std::sqrt(std::sqrt(std::max(0., lPwr)));
-            const double rVol = std::sqrt(std::sqrt(std::max(0., rPwr)));
-            const double lFreqScale = 1./(1. + vlos/vs);
-            const double rFreqScale = 1./(1. + vlos/vs);
-            AudioEngine::SetVolume(lVol, 0);
-            AudioEngine::SetVolume(rVol, 1);
-            AudioEngine::SetFreqScale(lFreqScale, 0);
-            AudioEngine::SetFreqScale(rFreqScale, 1);
-        }
-        else
-        {
-            AudioEngine::SetVolume(0.);
-        }
-
         bool justPaused = false;
         if(Paused)
         {
@@ -500,6 +458,56 @@ void paz::App::Run()
         }
 
         const double fac = 1. + AccumTime/Timestep;
+
+        if(!Paused && MicObject && SoundSrc)
+        {
+            const Vec relPos{{mix(SoundSrc->xPrev() - MicObject->xPrev(),
+                SoundSrc->x() - MicObject->x(), fac), mix(SoundSrc->yPrev() -
+                MicObject->yPrev(), SoundSrc->y() - MicObject->y(), fac), mix(
+                SoundSrc->zPrev() - MicObject->zPrev(), SoundSrc->z() -
+                MicObject->z(), fac)}};
+            const Vec relVel{{SoundSrc->xVel() - MicObject->xVel(), SoundSrc->
+                yVel() - MicObject->yVel(), SoundSrc->zVel() - MicObject->
+                zVel()}};
+            const double dist = relPos.norm();
+            const Vec dir = relPos/dist;
+            const double wAttPrev = std::sqrt(1. - MicObject->xAttPrev()*
+                MicObject->xAttPrev() - MicObject->yAttPrev()*MicObject->
+                yAttPrev() - MicObject->zAttPrev()*MicObject->zAttPrev());
+            const double wAtt = std::sqrt(1. - MicObject->xAtt()*MicObject->
+                xAtt() - MicObject->yAtt()*MicObject->yAtt() - MicObject->
+                zAtt()*MicObject->zAtt());
+            const Vec micAtt = nlerp({{MicObject->xAttPrev(), MicObject->
+                yAttPrev(), MicObject->zAttPrev(), wAttPrev}}, {{MicObject->
+                xAtt(), MicObject->yAtt(), MicObject->zAtt(), wAtt}}, fac);
+            const Mat micRot = to_mat(micAtt);
+            const Vec micX = micRot.row(1).trans();
+            const Vec micY = -micRot.row(0).trans();
+            const Vec lEar = std::sin(1.)*micX + std::cos(1.)*micY;
+            const Vec rEar = std::sin(1.)*micX - std::cos(1.)*micY;
+            const double vlos = dir.dot(relVel);
+            const double txPwr = 400.;
+            static constexpr double vs = 343.;
+            static constexpr double maxRxPwr = 0.3;
+            const double t0 = (vs + vlos)/(800.*Pi*dist); // assuming f = 200
+            const double rxPwr = std::min(maxRxPwr, txPwr*t0*t0);
+            double lPwr = rxPwr*(0.6 + 0.4*(dir.dot(lEar))); //TEMP
+            double rPwr = rxPwr*(0.6 + 0.4*(dir.dot(rEar))); //TEMP
+            lPwr /= SqrtTwo*(0.6 + 0.4*std::cos(0.5*Pi - 1.));
+            rPwr /= SqrtTwo*(0.6 + 0.4*std::cos(0.5*Pi - 1.));
+            const double lVol = std::sqrt(std::sqrt(std::max(0., lPwr)));
+            const double rVol = std::sqrt(std::sqrt(std::max(0., rPwr)));
+            const double lFreqScale = 1./(1. + vlos/vs);
+            const double rFreqScale = 1./(1. + vlos/vs);
+            AudioEngine::SetVolume(lVol, 0);
+            AudioEngine::SetVolume(rVol, 1);
+            AudioEngine::SetFreqScale(lFreqScale, 0);
+            AudioEngine::SetFreqScale(rFreqScale, 1);
+        }
+        else
+        {
+            AudioEngine::SetVolume(0.);
+        }
 
         const double cameraWAttPrev = std::sqrt(1. - CameraObject->xAttPrev()*
             CameraObject->xAttPrev() - CameraObject->yAttPrev()*CameraObject->
