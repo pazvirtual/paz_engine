@@ -72,6 +72,7 @@ void paz::physics()
         YAtt[i] /= signNorm;
         ZAtt[i] /= signNorm;
     }
+    std::fill(Grounded.begin(), Grounded.end(), false);
 }
 
 void paz::gravity()

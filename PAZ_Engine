@@ -21,9 +21,9 @@ namespace paz
         VertexBuffer _v;
         IndexBuffer _i;
 
-        double collide(double x, double y, double z, double xPrev, double yPrev,
-            double zPrev, double radius, double& xNew, double& yNew, double&
-            zNew, double& xNor, double& yNor, double& zNor) const;
+        double collide(double x, double y, double z, double radius, double&
+            xNew, double& yNew, double& zNew, double& xNor, double& yNor,
+            double& zNor) const;
 
     public:
         Model() = default;

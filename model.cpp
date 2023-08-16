@@ -4,8 +4,6 @@
 #include <limits>
 #include <cmath>
 
-static constexpr std::size_t NumSteps = 100;
-
 paz::Model::Model(const std::string& path, int idx)
 {
     std::vector<std::string> names;
@@ -42,30 +40,21 @@ paz::Model::Model(const std::string& path, int idx)
     _i = IndexBuffer(indices[idx]);
 }
 
-double paz::Model::collide(double x, double y, double z, double xPrev, double
-    yPrev, double zPrev, double radius, double& xNew, double& yNew, double&
-    zNew, double& xNor, double& yNor, double& zNor) const
+double paz::Model::collide(double x, double y, double z, double radius, double&
+    xNew, double& yNew, double& zNew, double& xNor, double& yNor, double& zNor)
+    const
 {
     double minDist = std::numeric_limits<double>::infinity();
-    xNew = x;
-    yNew = y;
-    zNew = z;
     xNor = 0.;
     yNor = 0.;
     zNor = 1.;
-bool done = false;
-for(std::size_t i = 0; i < NumSteps; ++i)
-{
-double gx = 0.;
-double gz = 0.;
-double gy = 0.;
-    const double curX = xPrev + (i + 1)*(x - xPrev)/NumSteps;
-    const double curY = yPrev + (i + 1)*(y - yPrev)/NumSteps;
-    const double curZ = zPrev + (i + 1)*(z - zPrev)/NumSteps;
+    double gx = 0.;
+    double gy = 0.;
+    double gz = 0.;
     for(const auto& n : *_t)
     {
         double xNorTemp, yNorTemp, zNorTemp, d;
-        n.collide(curX, curY, curZ, radius, xNorTemp, yNorTemp, zNorTemp, d);
+        n.collide(x, y, z, radius, xNorTemp, yNorTemp, zNorTemp, d);
         if(d < radius)
         {
             const double a = radius - d;
@@ -74,21 +63,15 @@ double gy = 0.;
             gz += a*zNorTemp;
             if(d < minDist)
             {
-done = true;
                 minDist = d;
                 xNor = xNorTemp;
                 yNor = yNorTemp;
                 zNor = zNorTemp;
             }
         }
-if(done)
-{
-xNew = curX + gx;
-yNew = curY + gy;
-zNew = curZ + gz;
-return minDist;
-}
     }
-}
+    xNew = x + gx;
+    yNew = y + gy;
+    zNew = z + gz;
     return minDist;
 }

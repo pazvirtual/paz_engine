@@ -4,33 +4,40 @@
 #include "PAZ_Math"
 #include <limits>
 
+//#define DO_FXAA
+
 #define _cameraBasePos Vec{{_cameraObject->x(), _cameraObject->y(), _cameraObject->z()}}
-#define _cameraVel Vec{{_cameraObject->xVel(), _cameraObject->yVel(), _cameraObject->zVel()}}
 #define _cameraAtt Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(), _cameraObject->zAtt(), std::sqrt(1. - _cameraObject->xAtt()*_cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() - _cameraObject->zAtt()*_cameraObject->zAtt())}}
-#define _cameraAngRate Vec{{_cameraObject->xAngRate(), _cameraObject->yAngRate(), _cameraObject->zAngRate()}}
 
 static constexpr double CosMaxAngle = 0.6; // 53.13 deg
+static constexpr std::size_t NumSteps = 100;
 static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
 static constexpr double InteractRangeInFrontSq = 9.;
 
 static paz::Framebuffer _geometryBuffer;
 static paz::Framebuffer _renderBuffer;
+#ifdef DO_FXAA
 static paz::Framebuffer _postBuffer;
 static paz::Framebuffer _lumBuffer;
+#endif
 
 static paz::RenderTarget _materialMap(1, paz::TextureFormat::R8UInt);
 static paz::RenderTarget _normalMap(1, paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _depthMap(1, paz::TextureFormat::Depth32Float);
 static paz::RenderTarget _hdrRender(1, paz::TextureFormat::RGBA16Float);
+#ifdef DO_FXAA
 static paz::RenderTarget _finalRender(1, paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget _finalLumMap(1, paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+#endif
 
 static paz::RenderPass _geometryPass;
 static paz::RenderPass _renderPass;
 static paz::RenderPass _postPass;
+#ifdef DO_FXAA
 static paz::RenderPass _lumPass;
 static paz::RenderPass _fxaaPass;
+#endif
 
 static paz::VertexBuffer _quadVertices;
 
@@ -112,6 +119,7 @@ void main()
 }
 )====";
 
+#ifdef DO_FXAA
 static const std::string LumFragSrc = 1 + R"===(
 uniform sampler2D img;
 in vec2 uv;
@@ -279,6 +287,31 @@ void main()
     color = vec4(reinhard(hdrCol, whitePoint), 1.);
 }
 )===";
+#else
+static const std::string PostFragSrc = 1 + R"===(
+const float eps = 1e-6;
+uniform sampler2D hdrRender;
+uniform float whitePoint;
+in vec2 uv;
+layout(location = 0) out vec4 color;
+float luminance(in vec3 v)
+{
+    return dot(v, vec3(0.2126, 0.7152, 0.0722));
+}
+vec3 reinhard(in vec3 col, in float w)
+{
+    float lOld = max(eps, luminance(col));
+    float lNew = lOld*(1. + lOld/max(eps, w*w))/(1. + lOld);
+    return col*lNew/lOld;
+}
+void main()
+{
+    vec3 hdrCol = texture(hdrRender, uv).rgb;
+    color = vec4(reinhard(hdrCol, whitePoint), 1.);
+    color.rgb = pow(color.rgb, vec3(0.4545));
+}
+)===";
+#endif
 
 static constexpr std::array<float, 8> QuadPos = {1, -1, 1, 1, -1, -1, -1, 1};
 
@@ -290,23 +323,31 @@ void paz::App::Init(const std::string& sceneShaderPath)
 
     _renderBuffer.attach(_hdrRender);
 
+#ifdef DO_FXAA
     _postBuffer.attach(_finalRender);
 
     _lumBuffer.attach(_finalLumMap);
+#endif
 
     const VertexFunction geometryVert(GeometryVertSrc);
     const VertexFunction quadVert(QuadVertSrc);
     const FragmentFunction geometryFrag(GeometryFragSrc);
     const FragmentFunction sceneFrag(getAsset(sceneShaderPath).str());
+#ifdef DO_FXAA
     const FragmentFunction lumFrag(LumFragSrc);
     const FragmentFunction fxaaFrag(FxaaFragSrc);
+#endif
     const FragmentFunction postFrag(PostFragSrc);
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
     _renderPass = RenderPass(_renderBuffer, quadVert, sceneFrag);
+#ifdef DO_FXAA
     _postPass = RenderPass(_postBuffer, quadVert, postFrag);
     _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
     _fxaaPass = RenderPass(quadVert, fxaaFrag);
+#else
+    _postPass = RenderPass(quadVert, postFrag);
+#endif
 
     _quadVertices.attribute(2, QuadPos);
 
@@ -320,33 +361,30 @@ void paz::App::Run()
         physics();
         gravity();
 
-////////
-for(auto& a0 : objects())
-{
-    Object* a = reinterpret_cast<Object*>(a0.first);
-    if(a->collisionType() != CollisionType::Default)
-    {
-        continue;
-    }
-
-    Object* collidedWith = nullptr;
-    double xNew, yNew, zNew;
-    double xNor, yNor, zNor;
-    for(auto& b0 : objects())
-    {
-        Object* b = reinterpret_cast<Object*>(b0.first);
-        if(b->collisionType() != CollisionType::World)
+        // Identify all objects that can collide and precompute as much as possible.
+        std::vector<Object*> a;
+        std::vector<Object*> b;
+        for(auto& n : objects())
         {
-            continue;
+            Object* o = reinterpret_cast<Object*>(n.first);
+            if(o->collisionType() == CollisionType::Default)
+            {
+                a.push_back(o);
+            }
+            if(o->collisionType() == CollisionType::World)
+            {
+                b.push_back(o);
+            }
         }
 
-        double offsetX;
-        double offsetY;
-        double offsetZ;
+        std::vector<double> offsetX(a.size());
+        std::vector<double> offsetY(a.size());
+        std::vector<double> offsetZ(a.size());
+        for(std::size_t i = 0; i < a.size(); ++i)
         {
-            const double q0 = a->xAtt();
-            const double q1 = a->yAtt();
-            const double q2 = a->zAtt();
+            const double q0 = a[i]->xAtt();
+            const double q1 = a[i]->yAtt();
+            const double q2 = a[i]->zAtt();
             const auto q3 = -std::sqrt(1. - q0*q0 - q1*q1 - q2*q2);
             const auto xx = q0*q0;
             const auto yy = q1*q1;
@@ -354,67 +392,78 @@ for(auto& a0 : objects())
             const auto yw = q1*q3;
             const auto yz = q1*q2;
             const auto xw = q0*q3;
-            offsetX = a->collisionRadius()*2.*(xz + yw);
-            offsetY = a->collisionRadius()*2.*(yz - xw);
-            offsetZ = a->collisionRadius()*(1. - 2.*(xx + yy));
+            offsetX[i] = a[i]->collisionRadius()*2.*(xz + yw);
+            offsetY[i] = a[i]->collisionRadius()*2.*(yz - xw);
+            offsetZ[i] = a[i]->collisionRadius()*(1. - 2.*(xx + yy));
         }
 
-        const double x = a->x() + offsetX - b->x();
-        const double y = a->y() + offsetY - b->y();
-        const double z = a->z() + offsetZ - b->z();
-
-        const double xPrev = a->xPrev() + offsetX - b->xPrev();
-        const double yPrev = a->yPrev() + offsetY - b->yPrev();
-        const double zPrev = a->zPrev() + offsetZ - b->zPrev();
-
-        const double c = b->model().collide(x, y, z, xPrev, yPrev, zPrev, a->
-            collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
-        if(c < a->collisionRadius())
+        std::vector<std::vector<double>> bX(b.size(), std::vector<double>(NumSteps));
+        std::vector<std::vector<double>> bY(b.size(), std::vector<double>(NumSteps));
+        std::vector<std::vector<double>> bZ(b.size(), std::vector<double>(NumSteps));
+        for(std::size_t i = 0; i < b.size(); ++i)
         {
-            collidedWith = b;
-            xNew -= offsetX;
-            yNew -= offsetY;
-            zNew -= offsetZ;
-            break; //TEMP
+            for(std::size_t j = 0; j < NumSteps; ++j)
+            {
+                bX[i][j] = b[i]->xPrev() + (j + 1)*(b[i]->x() - b[i]->xPrev())/NumSteps;
+                bY[i][j] = b[i]->yPrev() + (j + 1)*(b[i]->y() - b[i]->yPrev())/NumSteps;
+                bZ[i][j] = b[i]->zPrev() + (j + 1)*(b[i]->z() - b[i]->zPrev())/NumSteps;
+            }
         }
-    }
 
-    if(collidedWith)
-    {
-        a->localNorX() = xNor;
-        a->localNorY() = yNor;
-        a->localNorZ() = zNor;
-        a->x() = xNew;
-        a->y() = yNew;
-        a->z() = zNew;
-
-        const double xVel = a->xVel() - collidedWith->xVel();
-        const double yVel = a->yVel() - collidedWith->yVel();
-        const double zVel = a->zVel() - collidedWith->zVel();
-        const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
-        if(norVel < 0.)
+        // Find and handle collisions. (Time is the outer loop to ensure collision repsonses occur in the correct order.)
+std::vector<bool> tempDone(a.size(), false);
+        for(std::size_t i = 0; i < NumSteps; ++i)
         {
-//            a->xVel() -= norVel*nx;
-//            a->yVel() -= norVel*ny;
-//            a->zVel() -= norVel*nz;
-            // friction here ...
-a->xVel() = a->yVel() = a->zVel() = 0.;
+            for(std::size_t j = 0; j < a.size(); ++j)
+            {
+if(tempDone[j]){ continue; }
+                for(std::size_t k = 0; k < b.size(); ++k)
+                {
+                    const double x = offsetX[i] + a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->xPrev())/NumSteps - bX[k][i];
+                    const double y = offsetY[i] + a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->yPrev())/NumSteps - bY[k][i];
+                    const double z = offsetZ[i] + a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->zPrev())/NumSteps - bZ[k][i];
+
+                    double xNew, yNew, zNew, xNor, yNor, zNor;
+                    const double c = b[k]->model().collide(x, y, z, a[j]->collisionRadius(), xNew, yNew, zNew, xNor, yNor, zNor);
+                    if(c < a[j]->collisionRadius())
+                    {
+                        const double xVel = a[j]->xVel() - b[k]->xVel();
+                        const double yVel = a[j]->yVel() - b[k]->yVel();
+                        const double zVel = a[j]->zVel() - b[k]->zVel();
+                        const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
+                        if(norVel < 0.)
+                        {
+                            a[j]->xVel() -= norVel*xNor;
+                            a[j]->yVel() -= norVel*yNor;
+                            a[j]->zVel() -= norVel*zNor;
+
+                            // Apply friction.
+                            a[j]->xVel() = 0.5*a[j]->xVel() + 0.5*b[k]->xVel();
+                            a[j]->yVel() = 0.5*a[j]->yVel() + 0.5*b[k]->yVel();
+                            a[j]->zVel() = 0.5*a[j]->zVel() + 0.5*b[k]->zVel();
+                        }
+                        a[j]->x() = xNew - offsetX[j] + (NumSteps - i - 1)*a[j]->xVel()/NumSteps*paz::Window::FrameTime();
+                        a[j]->y() = yNew - offsetY[j] + (NumSteps - i - 1)*a[j]->yVel()/NumSteps*paz::Window::FrameTime();
+                        a[j]->z() = zNew - offsetZ[j] + (NumSteps - i - 1)*a[j]->zVel()/NumSteps*paz::Window::FrameTime();
+                        a[j]->localNorX() = xNor;
+                        a[j]->localNorY() = yNor;
+                        a[j]->localNorZ() = zNor;
+                        a[j]->grounded() = true;// > CosMaxAngle;
+                        a[j]->onCollide(*b[k]);
+                        b[k]->onCollide(*a[j]);
+tempDone[j] = true;
+                    }
+                }
+            }
         }
-
-        a->onCollide(*collidedWith);
-        collidedWith->onCollide(*a);
-    }
-
-    a->grounded() = static_cast<bool>(collidedWith);// && a->localNorZ() > CosMaxAngle;
-    if(a->grounded())
-    {
-//        a->xVel() = 0.; //TEMP - need friction
-//        a->yVel() = 0.;
-//        a->zVel() = 0.;
-    }
+//std::cout << static_cast<bool>(_cameraObject->grounded()) << " " << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() +_cameraObject->yVel()*_cameraObject->yVel() +_cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
+{
+const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
+const double lat = std::asin(_cameraObject->z()/r);
+const double lon = std::atan2(_cameraObject->y(), _cameraObject->x());
+std::cout << lat*180./M_PI << " " << lon*180./M_PI << std::endl;
 }
-////////
-std::cout << _cameraObject->z() << " " << _cameraObject->localNorZ() << " " << _cameraObject->xAtt() << std::endl;
+
 
         update();
 
@@ -640,6 +689,7 @@ std::cout << _cameraObject->z() << " " << _cameraObject->localNorZ() << " " << _
         _postPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _postPass.end();
 
+#ifdef DO_FXAA
         // Get luminance map.
         _lumPass.begin();
         _lumPass.read("img", _finalRender);
@@ -652,6 +702,7 @@ std::cout << _cameraObject->z() << " " << _cameraObject->localNorZ() << " " << _
         _fxaaPass.read("lum", _finalLumMap);
         _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _fxaaPass.end();
+#endif
 
         Window::EndFrame();
     }
