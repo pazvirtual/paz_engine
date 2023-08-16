@@ -1,6 +1,8 @@
 #include "ui.hpp"
 #include "shared.hpp"
 
+static constexpr double StickSpeed = 10.;
+
 paz::Font::Font(Texture tex, int scale, int charWidth) : _tex(tex), _scale(
     scale), _charWidth(charWidth) {}
 
@@ -48,7 +50,7 @@ bool paz::Button::enabled() const
 
 paz::Menu::Menu(const Font& font, const std::string& title, const std::vector<
     std::vector<Button>>& buttons) : _curPage(0), _curButton(0), _font(font),
-    _title(title), _buttons(buttons) {}
+    _title(title), _buttons(buttons), _downDist(0.), _upDist(0.) {}
 
 void paz::Menu::update()
 {
@@ -68,10 +70,20 @@ void paz::Menu::update()
     {
         _buttons[_curPage][_curButton](*this);
     }
-    const bool down = Window::KeyPressed(Key::S) || Window::KeyPressed(Key::
-        Down) || Window::GamepadPressed(GamepadButton::Down);
-    const bool up = Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up)
-        || Window::GamepadPressed(GamepadButton::Up);
+    bool down = Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
+        Window::GamepadPressed(GamepadButton::Down);
+    if(_downDist > 1.)
+    {
+        down = true;
+        _downDist = 0.;
+    }
+    bool up = Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
+        Window::GamepadPressed(GamepadButton::Up);
+    if(_upDist > 1.)
+    {
+        up = true;
+        _upDist = 0.;
+    }
     if(down && !up)
     {
         while(true)
@@ -171,6 +183,22 @@ void paz::Menu::update()
     _chars.addAttribute(1, characterAttr);
     _chars.addAttribute(1, colAttr);
     _chars.addAttribute(1, rowAttr);
+
+    const double stickDown = std::max(Window::GamepadLeftStick().second, Window::GamepadRightStick().second);
+    const double stickUp = std::min(Window::GamepadLeftStick().second, Window::GamepadRightStick().second);
+    if(stickDown > 0. && stickUp >= 0.)
+    {
+        _downDist += stickDown*StickSpeed*Window::FrameTime();
+    }
+    else if(stickUp < 0. && stickDown <= 0.)
+    {
+        _upDist -= stickUp*StickSpeed*Window::FrameTime();
+    }
+    else
+    {
+        _downDist = 0.;
+        _upDist = 0.;
+    }
 }
 
 void paz::Menu::setState(int page, int button)

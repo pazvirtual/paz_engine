@@ -49,6 +49,9 @@ namespace paz
         std::string _title;
         std::vector<std::vector<Button>> _buttons;
 
+        double _downDist;
+        double _upDist;
+
     public:
         Menu(const Font& font, const std::string& title, const std::vector<std::
             vector<Button>>& buttons);
