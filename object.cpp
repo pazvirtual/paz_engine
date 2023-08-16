@@ -282,7 +282,7 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                     const double dist = Mod[b[n.first]].collide(x2, y2, z2,
                         CRadius[a[i]], xNew, yNew, zNew, xNorTemp, yNorTemp,
                         zNorTemp, n.second);
-                    if(dist < CRadius[a[i]] - 1e-9)
+                    if(dist < CRadius[a[i]])
                     {
                         collisions.emplace_back(n.first, std::array<double, 3>{
                             xNorTemp, yNorTemp, zNorTemp});

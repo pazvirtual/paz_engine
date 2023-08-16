@@ -196,8 +196,10 @@ void paz::Menu::update()
     _chars.addAttribute(1, colAttr);
     _chars.addAttribute(1, rowAttr);
 
-    const double stickDown = std::max(Window::GamepadLeftStick().second, Window::GamepadRightStick().second);
-    const double stickUp = std::min(Window::GamepadLeftStick().second, Window::GamepadRightStick().second);
+    const double stickDown = std::max(Window::GamepadLeftStick().second,
+        Window::GamepadRightStick().second);
+    const double stickUp = std::min(Window::GamepadLeftStick().second, Window::
+        GamepadRightStick().second);
     if(stickDown > 0. && stickUp >= 0.)
     {
         _downDist += stickDown*StickSpeed*Window::FrameTime();

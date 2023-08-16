@@ -39,7 +39,7 @@ void Player::update(const paz::InputData& input)
     }
     if(_collided)
     {
-        --_collided;
+        _collided = false;
     }
     if(reg == Regime::Grounded && !_moving)
     {
@@ -341,7 +341,7 @@ void Player::onCollide(const paz::Object& o, double xNor, double yNor, double
     const paz::Vec nor{{xNor, yNor, zNor}};
     if(-nor.dot(gravDir) > CosMaxAngle)
     {
-        _collided = 2;
+        _collided = true;
         _parent.reset(o);
         _relX = x() - xB;
         _relY = y() - yB;

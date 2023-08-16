@@ -22,7 +22,7 @@ class Player : public paz::Object
     double _prevGravPitch = 0.;
     paz::Vec _mousePos = paz::Vec::Zero(2);
     paz::Object _head; // camera
-    int _collided = 0;
+    bool _collided = false;
 
     Paintball _paintball;
 

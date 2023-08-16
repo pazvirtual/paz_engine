@@ -40,7 +40,7 @@ void Npc::update(const paz::InputData& input)
             yVel() = _parent->yVel() + forward(1);
             zVel() = _parent->zVel() + forward(2);
         }
-        --_collided;
+        _collided = false;
     }
     paz::Mat rot(3);
     rot.setCol(0, right);
@@ -70,7 +70,7 @@ void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
     const paz::Vec nor{{xNor, yNor, zNor}};
     if(-nor.dot(gravDir) > CosMaxAngle)
     {
-        _collided = 2;
+        _collided = true;
         _parent.reset(o);
         const paz::Vec att{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()*xAtt()
             - yAtt()*yAtt() - zAtt()*zAtt())}};
