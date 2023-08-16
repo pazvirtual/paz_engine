@@ -5,7 +5,6 @@
 
 class Npc : public paz::Object
 {
-    bool _collided;
     double _destYaw;
     double _walkTime;
     paz::Object _head;
