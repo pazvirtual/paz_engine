@@ -25,7 +25,7 @@ namespace paz
         friend class App;
         friend class Object;
 
-        std::shared_ptr<std::vector<paz::Triangle>> _t;
+        std::shared_ptr<std::vector<Triangle>> _t;
         double _radius = 0.;
         VertexBuffer _v;
         IndexBuffer _i;
@@ -122,7 +122,8 @@ namespace paz
         static void AttachCamera(const Object& o);
         static double CameraYaw();
         static std::stringstream& MsgStream();
-        static paz::Bytes GetAsset(const std::string& path);
+        static Bytes GetAsset(const std::string& path);
+        static double PhysTime();
     };
 }
 

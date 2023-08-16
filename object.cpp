@@ -87,39 +87,39 @@ void paz::physics()
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
                 du, dv, dw, massiveIds);
-            const double k1_1 = Window::FrameTime()*dx;
-            const double k1_2 = Window::FrameTime()*dy;
-            const double k1_3 = Window::FrameTime()*dz;
-            const double k1_4 = Window::FrameTime()*du;
-            const double k1_5 = Window::FrameTime()*dv;
-            const double k1_6 = Window::FrameTime()*dw;
+            const double k1_1 = App::PhysTime()*dx;
+            const double k1_2 = App::PhysTime()*dy;
+            const double k1_3 = App::PhysTime()*dz;
+            const double k1_4 = App::PhysTime()*du;
+            const double k1_5 = App::PhysTime()*dv;
+            const double k1_6 = App::PhysTime()*dw;
             grav_ode(X[i] + 0.5*k1_1, Y[i] + 0.5*k1_2, Z[i] + 0.5*k1_3, XVel[i]
                 + 0.5*k1_4, YVel[i] + 0.5*k1_5, ZVel[i] + 0.5*k1_6, dx, dy, dz,
                 du, dv, dw, massiveIds);
-            const double k2_1 = Window::FrameTime()*dx;
-            const double k2_2 = Window::FrameTime()*dy;
-            const double k2_3 = Window::FrameTime()*dz;
-            const double k2_4 = Window::FrameTime()*du;
-            const double k2_5 = Window::FrameTime()*dv;
-            const double k2_6 = Window::FrameTime()*dw;
+            const double k2_1 = App::PhysTime()*dx;
+            const double k2_2 = App::PhysTime()*dy;
+            const double k2_3 = App::PhysTime()*dz;
+            const double k2_4 = App::PhysTime()*du;
+            const double k2_5 = App::PhysTime()*dv;
+            const double k2_6 = App::PhysTime()*dw;
             grav_ode(X[i] + 0.5*k2_1, Y[i] + 0.5*k2_2, Z[i] + 0.5*k2_3, XVel[i]
                 + 0.5*k2_4, YVel[i] + 0.5*k2_5, ZVel[i] + 0.5*k2_6, dx, dy, dz,
                 du, dv, dw, massiveIds);
-            const double k3_1 = Window::FrameTime()*dx;
-            const double k3_2 = Window::FrameTime()*dy;
-            const double k3_3 = Window::FrameTime()*dz;
-            const double k3_4 = Window::FrameTime()*du;
-            const double k3_5 = Window::FrameTime()*dv;
-            const double k3_6 = Window::FrameTime()*dw;
+            const double k3_1 = App::PhysTime()*dx;
+            const double k3_2 = App::PhysTime()*dy;
+            const double k3_3 = App::PhysTime()*dz;
+            const double k3_4 = App::PhysTime()*du;
+            const double k3_5 = App::PhysTime()*dv;
+            const double k3_6 = App::PhysTime()*dw;
             grav_ode(X[i] + k3_1, Y[i] + k3_2, Z[i] + k3_3, XVel[i] + k3_4,
                 YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw,
                 massiveIds);
-            const double k4_1 = Window::FrameTime()*dx;
-            const double k4_2 = Window::FrameTime()*dy;
-            const double k4_3 = Window::FrameTime()*dz;
-            const double k4_4 = Window::FrameTime()*du;
-            const double k4_5 = Window::FrameTime()*dv;
-            const double k4_6 = Window::FrameTime()*dw;
+            const double k4_1 = App::PhysTime()*dx;
+            const double k4_2 = App::PhysTime()*dy;
+            const double k4_3 = App::PhysTime()*dz;
+            const double k4_4 = App::PhysTime()*du;
+            const double k4_5 = App::PhysTime()*dv;
+            const double k4_6 = App::PhysTime()*dw;
             static constexpr double c = 1./6.;
             X[i] += c*(k1_1 + 2.*(k2_1 + k3_1) + k4_1);
             Y[i] += c*(k1_2 + 2.*(k2_2 + k3_2) + k4_2);
@@ -133,9 +133,9 @@ void paz::physics()
         }
         else
         {
-            X[i] += Window::FrameTime()*XVel[i];
-            Y[i] += Window::FrameTime()*YVel[i];
-            Z[i] += Window::FrameTime()*ZVel[i];
+            X[i] += App::PhysTime()*XVel[i];
+            Y[i] += App::PhysTime()*YVel[i];
+            Z[i] += App::PhysTime()*ZVel[i];
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
                 du, dv, dw, massiveIds);
@@ -163,12 +163,12 @@ void paz::physics()
     {
         double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[
             i]*ZAtt[i]);
-        const double deltaX = normalize_angle(0.5*Window::FrameTime()*XAngRate[
-            i] + M_PI) - M_PI;
-        const double deltaY = normalize_angle(0.5*Window::FrameTime()*YAngRate[
-            i] + M_PI) - M_PI;
-        const double deltaZ = normalize_angle(0.5*Window::FrameTime()*ZAngRate[
-            i] + M_PI) - M_PI;
+        const double deltaX = normalize_angle(0.5*App::PhysTime()*XAngRate[i] +
+            M_PI) - M_PI;
+        const double deltaY = normalize_angle(0.5*App::PhysTime()*YAngRate[i] +
+            M_PI) - M_PI;
+        const double deltaZ = normalize_angle(0.5*App::PhysTime()*ZAngRate[i] +
+            M_PI) - M_PI;
         XAtt[i] +=  WAtt   *deltaX - ZAtt[i]*deltaY + YAtt[i]*deltaZ;
         YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
         ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;

@@ -52,7 +52,7 @@ public:
     {
         if(_stuck)
         {
-            _timer += paz::Window::FrameTime();
+            _timer += paz::App::PhysTime();
             if(_timer >= 30.)
             {
                 addTag("done");
@@ -81,7 +81,7 @@ public:
     }
     void update() final
     {
-        _timer += paz::Window::FrameTime();
+        _timer += paz::App::PhysTime();
         if(_timer > 0.1)
         {
             const paz::Vec pos{{x(), y(), z()}};
@@ -240,7 +240,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             const double deltaGravPitch = gravPitch - _prevGravPitch;
             const double deltaPitch = -deltaGravPitch + 0.1*(paz::Window::
                 GamepadActive() ? 15.*-paz::Window::GamepadRightStick().second :
-                paz::Window::MousePos().second)*paz::Window::FrameTime();
+                paz::Window::MousePos().second)*paz::App::PhysTime();
             _pitch = std::max(-0.45*M_PI, std::min(0.45*M_PI, _pitch +
                 deltaPitch));
         }
@@ -269,7 +269,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             }
             else if(norm > 0.1)
             {
-                _mousePos -= 50.0/norm*paz::Window::FrameTime()*_mousePos;
+                _mousePos -= 50.0/norm*paz::App::PhysTime()*_mousePos;
             }
             else
             {
@@ -366,35 +366,35 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
                 const paz::Vec net = paz::Window::GamepadLeftStick().first*
                     groundRight - paz::Window::GamepadLeftStick().second*
                     groundForward;
-                xVel() += 12.*net(0)*paz::Window::FrameTime();
-                yVel() += 12.*net(1)*paz::Window::FrameTime();
-                zVel() += 12.*net(2)*paz::Window::FrameTime();
+                xVel() += 12.*net(0)*paz::App::PhysTime();
+                yVel() += 12.*net(1)*paz::App::PhysTime();
+                zVel() += 12.*net(2)*paz::App::PhysTime();
             }
             else
             {
                 if(paz::Window::KeyDown(paz::Key::A))
                 {
-                    xVel() -= 12.*groundRight(0)*paz::Window::FrameTime();
-                    yVel() -= 12.*groundRight(1)*paz::Window::FrameTime();
-                    zVel() -= 12.*groundRight(2)*paz::Window::FrameTime();
+                    xVel() -= 12.*groundRight(0)*paz::App::PhysTime();
+                    yVel() -= 12.*groundRight(1)*paz::App::PhysTime();
+                    zVel() -= 12.*groundRight(2)*paz::App::PhysTime();
                 }
                 if(paz::Window::KeyDown(paz::Key::D))
                 {
-                    xVel() += 12.*groundRight(0)*paz::Window::FrameTime();
-                    yVel() += 12.*groundRight(1)*paz::Window::FrameTime();
-                    zVel() += 12.*groundRight(2)*paz::Window::FrameTime();
+                    xVel() += 12.*groundRight(0)*paz::App::PhysTime();
+                    yVel() += 12.*groundRight(1)*paz::App::PhysTime();
+                    zVel() += 12.*groundRight(2)*paz::App::PhysTime();
                 }
                 if(paz::Window::KeyDown(paz::Key::W))
                 {
-                    xVel() += 12.*groundForward(0)*paz::Window::FrameTime();
-                    yVel() += 12.*groundForward(1)*paz::Window::FrameTime();
-                    zVel() += 12.*groundForward(2)*paz::Window::FrameTime();
+                    xVel() += 12.*groundForward(0)*paz::App::PhysTime();
+                    yVel() += 12.*groundForward(1)*paz::App::PhysTime();
+                    zVel() += 12.*groundForward(2)*paz::App::PhysTime();
                 }
                 if(paz::Window::KeyDown(paz::Key::S))
                 {
-                    xVel() -= 12.*groundForward(0)*paz::Window::FrameTime();
-                    yVel() -= 12.*groundForward(1)*paz::Window::FrameTime();
-                    zVel() -= 12.*groundForward(2)*paz::Window::FrameTime();
+                    xVel() -= 12.*groundForward(0)*paz::App::PhysTime();
+                    yVel() -= 12.*groundForward(1)*paz::App::PhysTime();
+                    zVel() -= 12.*groundForward(2)*paz::App::PhysTime();
                 }
             }
         }
@@ -404,35 +404,35 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
             {
                 const paz::Vec net = paz::Window::GamepadLeftStick().first*
                     right - paz::Window::GamepadLeftStick().second*forward;
-                xVel() += 12.*net(0)*paz::Window::FrameTime();
-                yVel() += 12.*net(1)*paz::Window::FrameTime();
-                zVel() += 12.*net(2)*paz::Window::FrameTime();
+                xVel() += 12.*net(0)*paz::App::PhysTime();
+                yVel() += 12.*net(1)*paz::App::PhysTime();
+                zVel() += 12.*net(2)*paz::App::PhysTime();
             }
             else
             {
                 if(paz::Window::KeyDown(paz::Key::A))
                 {
-                    xVel() -= 12.*right(0)*paz::Window::FrameTime();
-                    yVel() -= 12.*right(1)*paz::Window::FrameTime();
-                    zVel() -= 12.*right(2)*paz::Window::FrameTime();
+                    xVel() -= 12.*right(0)*paz::App::PhysTime();
+                    yVel() -= 12.*right(1)*paz::App::PhysTime();
+                    zVel() -= 12.*right(2)*paz::App::PhysTime();
                 }
                 if(paz::Window::KeyDown(paz::Key::D))
                 {
-                    xVel() += 12.*right(0)*paz::Window::FrameTime();
-                    yVel() += 12.*right(1)*paz::Window::FrameTime();
-                    zVel() += 12.*right(2)*paz::Window::FrameTime();
+                    xVel() += 12.*right(0)*paz::App::PhysTime();
+                    yVel() += 12.*right(1)*paz::App::PhysTime();
+                    zVel() += 12.*right(2)*paz::App::PhysTime();
                 }
                 if(paz::Window::KeyDown(paz::Key::W))
                 {
-                    xVel() += 12.*forward(0)*paz::Window::FrameTime();
-                    yVel() += 12.*forward(1)*paz::Window::FrameTime();
-                    zVel() += 12.*forward(2)*paz::Window::FrameTime();
+                    xVel() += 12.*forward(0)*paz::App::PhysTime();
+                    yVel() += 12.*forward(1)*paz::App::PhysTime();
+                    zVel() += 12.*forward(2)*paz::App::PhysTime();
                 }
                 if(paz::Window::KeyDown(paz::Key::S))
                 {
-                    xVel() -= 12.*forward(0)*paz::Window::FrameTime();
-                    yVel() -= 12.*forward(1)*paz::Window::FrameTime();
-                    zVel() -= 12.*forward(2)*paz::Window::FrameTime();
+                    xVel() -= 12.*forward(0)*paz::App::PhysTime();
+                    yVel() -= 12.*forward(1)*paz::App::PhysTime();
+                    zVel() -= 12.*forward(2)*paz::App::PhysTime();
                 }
             }
         }
@@ -440,23 +440,23 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             const double net = paz::Window::GamepadRightTrigger() - paz::
                 Window::GamepadLeftTrigger();
-            xVel() += 12.*up(0)*net*paz::Window::FrameTime();
-            yVel() += 12.*up(1)*net*paz::Window::FrameTime();
-            zVel() += 12.*up(2)*net*paz::Window::FrameTime();
+            xVel() += 12.*up(0)*net*paz::App::PhysTime();
+            yVel() += 12.*up(1)*net*paz::App::PhysTime();
+            zVel() += 12.*up(2)*net*paz::App::PhysTime();
         }
         else
         {
             if(paz::Window::KeyDown(paz::Key::LeftShift))
             {
-                xVel() += 12.*up(0)*paz::Window::FrameTime();
-                yVel() += 12.*up(1)*paz::Window::FrameTime();
-                zVel() += 12.*up(2)*paz::Window::FrameTime();
+                xVel() += 12.*up(0)*paz::App::PhysTime();
+                yVel() += 12.*up(1)*paz::App::PhysTime();
+                zVel() += 12.*up(2)*paz::App::PhysTime();
             }
             if(paz::Window::KeyDown(paz::Key::LeftControl))
             {
-                xVel() -= 12.*up(0)*paz::Window::FrameTime();
-                yVel() -= 12.*up(1)*paz::Window::FrameTime();
-                zVel() -= 12.*up(2)*paz::Window::FrameTime();
+                xVel() -= 12.*up(0)*paz::App::PhysTime();
+                yVel() -= 12.*up(1)*paz::App::PhysTime();
+                zVel() -= 12.*up(2)*paz::App::PhysTime();
             }
         }
 
@@ -534,7 +534,7 @@ public:
         const double deltaYaw = paz::normalize_angle(_destYaw - yaw + M_PI) -
             M_PI;
         zAngRate() = deltaYaw;
-        _walkTime += paz::Window::FrameTime();
+        _walkTime += paz::App::PhysTime();
         if(_walkTime > 10.)
         {
             _walkTime = 0.;
@@ -586,7 +586,7 @@ public:
     }
     void update() override
     {
-        _angle = paz::normalize_angle(_angle + AngRate*paz::Window::FrameTime());
+        _angle = paz::normalize_angle(_angle + AngRate*paz::App::PhysTime());
         x() = std::cos(_angle)*2.*Radius;
         y() = std::sin(_angle)*2.*Radius;
         z() = 0.;

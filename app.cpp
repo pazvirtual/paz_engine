@@ -480,7 +480,7 @@ void paz::App::Run()
     {
         physics();
 
-paz::Timer timer;
+Timer timer;
         // Identify all objects that can collide and precompute as much as
         // possible.
         std::vector<Object*> a;
@@ -518,6 +518,12 @@ paz::Timer timer;
         }
 const double colTime0 = timer.getAndRestart();
 
+        std::vector<double> times(NumSteps);
+        for(std::size_t i = 0; i < NumSteps; ++i)
+        {
+            times[i] = static_cast<double>(i)/(NumSteps - 1);
+        }
+
         std::vector<Mat> bRot(b.size());
         std::vector<std::vector<double>> bX(b.size(), std::vector<double>(
             NumSteps));
@@ -533,20 +539,15 @@ const double colTime0 = timer.getAndRestart();
             bRot[i] = to_mat(att);
             for(std::size_t j = 0; j < NumSteps; ++j)
             {
-                static constexpr double t0 = 1./NumSteps;
-                bX[i][j] = b[i]->xPrev() + (j + 1)*(b[i]->x() - b[i]->xPrev())*
-                    t0;
-                bY[i][j] = b[i]->yPrev() + (j + 1)*(b[i]->y() - b[i]->yPrev())*
-                    t0;
-                bZ[i][j] = b[i]->zPrev() + (j + 1)*(b[i]->z() - b[i]->zPrev())*
-                    t0;
+                bX[i][j] = b[i]->xPrev() + times[j]*(b[i]->x() - b[i]->xPrev());
+                bY[i][j] = b[i]->yPrev() + times[j]*(b[i]->y() - b[i]->yPrev());
+                bZ[i][j] = b[i]->zPrev() + times[j]*(b[i]->z() - b[i]->zPrev());
             }
         }
 
         // Find and handle collisions. (Time is the outer loop to ensure
         // collision repsonses occur in the correct order.)
 std::vector<bool> tempDone(a.size(), false);
-        const double stepSize = Window::FrameTime()/NumSteps;
         for(std::size_t i = 0; i < NumSteps; ++i)
         {
             for(std::size_t j = 0; j < a.size(); ++j)
@@ -554,12 +555,12 @@ std::vector<bool> tempDone(a.size(), false);
 if(tempDone[j]){ continue; }
                 for(auto n : c[j])
                 {
-                    double x = a[j]->xPrev() + (i + 1)*(a[j]->x() - a[j]->
-                        xPrev())/NumSteps - bX[n][i];
-                    double y = a[j]->yPrev() + (i + 1)*(a[j]->y() - a[j]->
-                        yPrev())/NumSteps - bY[n][i];
-                    double z = a[j]->zPrev() + (i + 1)*(a[j]->z() - a[j]->
-                        zPrev())/NumSteps - bZ[n][i];
+                    double x = a[j]->xPrev() + times[i]*(a[j]->x() - a[j]->
+                        xPrev()) - bX[n][i];
+                    double y = a[j]->yPrev() + times[i]*(a[j]->y() - a[j]->
+                        yPrev()) - bY[n][i];
+                    double z = a[j]->zPrev() + times[i]*(a[j]->z() - a[j]->
+                        zPrev()) - bZ[n][i];
                     const Vec relPos = bRot[n]*Vec{{x, y, z}};
                     x = relPos(0);
                     y = relPos(1);
@@ -601,7 +602,8 @@ if(tempDone[j]){ continue; }
                         a[j]->z() = zNew + bZ[n][i];
                         a[j]->onCollide(*b[n]);
                         b[n]->onCollide(*a[j]);
-                        const double extraTime = (NumSteps - i - 1)*stepSize;
+                        const double extraTime = PhysTime()*(times.back() -
+                            times[i]);
                         a[j]->x() += extraTime*a[j]->xVel();
                         a[j]->y() += extraTime*a[j]->yVel();
                         a[j]->z() += extraTime*a[j]->zVel();
@@ -617,7 +619,7 @@ static double avgColTime1Sq = 0.;
 avgColTime1Sq = 0.99*avgColTime1Sq + 0.01*colTime1*colTime1;
 _msgStream << "Avg. collision times: " << std::fixed << std::setprecision(6) << std::setw(8) << std::sqrt(avgColTime0Sq) << " " << std::setw(8) << std::sqrt(avgColTime1Sq) << std::endl;
 static double avgFrameTimeSq = 1./(60.*60.);
-avgFrameTimeSq = 0.99*avgFrameTimeSq + 0.01*Window::FrameTime()*Window::FrameTime();
+avgFrameTimeSq = 0.99*avgFrameTimeSq + 0.01*PhysTime()*PhysTime();
 _msgStream << "Avg. FPS: " << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
 
         const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
@@ -841,4 +843,9 @@ std::stringstream& paz::App::MsgStream()
 paz::Bytes paz::App::GetAsset(const std::string& path)
 {
     return get_asset(path);
+}
+
+double paz::App::PhysTime()
+{
+    return std::min(0.1, Window::FrameTime());
 }
