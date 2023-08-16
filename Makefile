@@ -92,7 +92,7 @@ assets.paz: $(ASSETS)
 	paz-archive assets
 
 clean:
-	$(RM) $(OBJ) lib$(LIBNAME).a
+	$(RM) $(OBJ) lib$(LIBNAME).a assets.paz
 	$(MAKE) -C test clean
 
 zip: $(PROJNAME) lib$(LIBNAME).a
