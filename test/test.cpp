@@ -62,8 +62,7 @@ public:
 
 int main()
 {
-    paz::App::Init("scene0.frag", "scene1.frag", "font.pbm", "PAZ Engine Test P"
-        "rogram");
+    paz::App::Init("PAZ Engine Test Program");
     Sphere50 = paz::Model("icosphere5.obj", 0, 0., Radius, "earth-day.bmp");
     Sphere10 = paz::Model("icosphere5.obj", 0, 0., 10., "moon.bmp");
     FancyBox = paz::Model("fancybox.obj");

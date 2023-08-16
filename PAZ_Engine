@@ -132,9 +132,7 @@ namespace paz
     {
     public:
         App() = delete;
-        static void Init(const std::string& sceneShaderPath0, const std::string&
-            sceneShaderPath1, const std::string& fontPath, const std::string&
-            title);
+        static void Init(const std::string& title);
         static void Run();
         static void AttachCamera(const Object& o);
         static void AttachMic(const Object& o);
