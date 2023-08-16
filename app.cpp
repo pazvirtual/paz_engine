@@ -342,7 +342,8 @@ void paz::App::Run()
             Window::PollEvents();
 
             if(startMenu.curPage() == 1 && (Window::KeyPressed(Key::Escape) ||
-                Window::GamepadPressed(GamepadButton::Start)))
+                Window::MousePressed(3) || Window::GamepadPressed(
+                GamepadButton::Start)))
             {
                 startMenu.setState(0, 1);
             }
@@ -1028,15 +1029,17 @@ void paz::App::Run()
             ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
             ConsolePass.end();
 
-            if(!justPaused && (Window::KeyPressed(Key::Escape) || Window::
-                GamepadPressed(GamepadButton::Start)))
+            if(!justPaused)
             {
-                if(pauseMenu.curPage() == 0)
+                if(pauseMenu.curPage() == 0 && (Window::KeyPressed(Key::Escape)
+                    || Window::GamepadPressed(GamepadButton::Start)))
                 {
                     Paused = false;
                     Window::SetCursorMode(CursorMode::Disable);
                 }
-                else if(pauseMenu.curPage() == 1)
+                else if(pauseMenu.curPage() == 1 && (Window::KeyPressed(Key::
+                    Escape) || Window::MousePressed(3) || Window::
+                    GamepadPressed(GamepadButton::Start)))
                 {
                     pauseMenu.setState(0, 1);
                 }
