@@ -1,6 +1,9 @@
 #include "object.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
+#include <limits>
+#include <unordered_map>
+#include <unordered_set>
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
 
@@ -30,11 +33,13 @@ static std::vector<double> LocalNorZ;
 static std::vector<double> XPrev;
 static std::vector<double> YPrev;
 static std::vector<double> ZPrev;
-static std::vector<char> Grounded;
+static std::vector<double> Altitude;
 static std::vector<double> CRadius;
 static std::vector<double> XDown;
 static std::vector<double> YDown;
 static std::vector<double> ZDown;
+static std::unordered_map<std::string, std::unordered_set<paz::Object*>>
+    ObjectsByTag;
 
 static void grav_ode(double x, double y, double z, double u, double v, double w,
     double& dx, double& dy, double& dz, double& du, double& dv, double& dw)
@@ -149,15 +154,8 @@ void paz::physics()
         YAtt[i] *= invSignNorm;
         ZAtt[i] *= invSignNorm;
     }
-    std::fill(Grounded.begin(), Grounded.end(), false);
-}
-
-void paz::update()
-{
-    for(const auto& n : objects())
-    {
-        reinterpret_cast<Object*>(n.first)->update();
-    }
+    std::fill(Altitude.begin(), Altitude.end(), std::numeric_limits<double>::
+        infinity());
 }
 
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
@@ -180,7 +178,7 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     LocalNorX.push_back(0.);
     LocalNorY.push_back(0.);
     LocalNorZ.push_back(1.);
-    Grounded.push_back(false);
+    Altitude.push_back(std::numeric_limits<double>::infinity());
     CRadius.push_back(0.2);
     XDown.push_back(0.);
     YDown.push_back(0.);
@@ -208,11 +206,15 @@ paz::Object::~Object()
     SWAP_AND_POP(LocalNorX);
     SWAP_AND_POP(LocalNorY);
     SWAP_AND_POP(LocalNorZ);
-    SWAP_AND_POP(Grounded);
+    SWAP_AND_POP(Altitude);
     SWAP_AND_POP(CRadius);
     SWAP_AND_POP(XDown);
     SWAP_AND_POP(YDown);
     SWAP_AND_POP(ZDown);
+    for(auto& n : ObjectsByTag)
+    {
+        n.second.erase(this);
+    }
 }
 
 void paz::Object::update() {}
@@ -220,6 +222,25 @@ void paz::Object::update() {}
 void paz::Object::onCollide(const Object& /* o */) {}
 
 void paz::Object::onInteract(const Object& /* o */) {}
+
+void paz::Object::onNotify(const Object& /* o */, const Bytes& /* data */) {}
+
+void paz::Object::notify(Object& o, const Bytes& data) const
+{
+    o.onNotify(*this, data);
+}
+
+void paz::Object::notifyTagged(const std::string& tag, const Bytes& data) const
+{
+    if(!ObjectsByTag.count(tag))
+    {
+        return;
+    }
+    for(auto& n : ObjectsByTag.at(tag))
+    {
+        n->onNotify(*this, data);
+    }
+}
 
 double& paz::Object::x()
 {
@@ -361,9 +382,9 @@ const paz::CollisionType& paz::Object::collisionType() const
     return CType[objects().at(_id)];
 }
 
-double& paz::Object::localNorX()
+void paz::Object::setLocalNorX(double n)
 {
-    return LocalNorX[objects().at(_id)];
+    LocalNorX[objects().at(_id)] = n;
 }
 
 double paz::Object::localNorX() const
@@ -371,9 +392,9 @@ double paz::Object::localNorX() const
     return LocalNorX[objects().at(_id)];
 }
 
-double& paz::Object::localNorY()
+void paz::Object::setLocalNorY(double n)
 {
-    return LocalNorY[objects().at(_id)];
+    LocalNorY[objects().at(_id)] = n;
 }
 
 double paz::Object::localNorY() const
@@ -381,9 +402,9 @@ double paz::Object::localNorY() const
     return LocalNorY[objects().at(_id)];
 }
 
-double& paz::Object::localNorZ()
+void paz::Object::setLocalNorZ(double n)
 {
-    return LocalNorZ[objects().at(_id)];
+    LocalNorZ[objects().at(_id)] = n;
 }
 
 double paz::Object::localNorZ() const
@@ -406,14 +427,14 @@ double paz::Object::zPrev() const
     return ZPrev[objects().at(_id)];
 }
 
-void paz::Object::setGrounded(bool status)
+void paz::Object::setAltitude(double n)
 {
-    Grounded[objects().at(_id)] = status;
+    Altitude[objects().at(_id)] = n;
 }
 
-bool paz::Object::grounded() const
+double paz::Object::altitude() const
 {
-    return Grounded[objects().at(_id)];
+    return Altitude[objects().at(_id)];
 }
 
 double& paz::Object::collisionRadius()
@@ -439,4 +460,9 @@ double paz::Object::yDown() const
 double paz::Object::zDown() const
 {
     return ZDown[objects().at(_id)];
+}
+
+void paz::Object::addTag(const std::string& tag)
+{
+    ObjectsByTag[tag].insert(this);
 }

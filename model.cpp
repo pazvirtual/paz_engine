@@ -4,7 +4,8 @@
 #include <limits>
 #include <cmath>
 
-paz::Model::Model(const std::string& path, int idx, double zOffset)
+paz::Model::Model(const std::string& path, int idx, double zOffset, double
+    scale)
 {
     std::vector<std::string> names;
     std::vector<std::vector<float>> positions;
@@ -23,6 +24,16 @@ paz::Model::Model(const std::string& path, int idx, double zOffset)
         for(std::size_t i = 0; i < positions[idx].size(); i += 4)
         {
             positions[idx][i + 2] += zOffset;
+        }
+    }
+    if(scale > 0. && std::abs(scale - 1.) > 1e-6)
+    {
+        for(std::size_t i = 0; i < positions[idx].size(); i += 4)
+        {
+            for(std::size_t j = 0; j < 3; ++j)
+            {
+                positions[idx][i + j] *= scale;
+            }
         }
     }
     double radiusSq = 0.;

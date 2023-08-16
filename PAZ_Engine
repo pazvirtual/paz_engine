@@ -3,6 +3,7 @@
 
 #include <PAZ_Graphics>
 #include <PAZ_IO>
+#include <PAZ_Math>
 #include <unordered_set>
 #include <sstream>
 
@@ -32,7 +33,8 @@ namespace paz
 
     public:
         Model() = default;
-        Model(const std::string& path, int idx = 0, double zOffset = 0.);
+        Model(const std::string& path, int idx = 0, double zOffset = 0., double
+            scale = 1.);
     };
 
     class Object
@@ -41,21 +43,27 @@ namespace paz
 
         const std::uintptr_t _id;
 
-        double& localNorX();
-        double& localNorY();
-        double& localNorZ();
-        void setGrounded(bool status);
+        void setLocalNorX(double n);
+        void setLocalNorY(double n);
+        void setLocalNorZ(double n);
+        void setAltitude(double n);
 
         double xPrev() const;
         double yPrev() const;
         double zPrev() const;
 
-    public:
-        Object();
-        virtual ~Object();
         virtual void update();
         virtual void onCollide(const Object& o);
         virtual void onInteract(const Object& o);
+        virtual void onNotify(const Object& o, const Bytes& data);
+
+    public:
+        Object();
+        Object(const Object& o) = delete;
+        Object& operator=(const Object& o) = delete;
+        virtual ~Object();
+        void notify(Object& o, const Bytes& data) const;
+        void notifyTagged(const std::string& tag, const Bytes& data) const;
         double& x();
         double x() const;
         double& y();
@@ -87,7 +95,7 @@ namespace paz
         double localNorX() const;
         double localNorY() const;
         double localNorZ() const;
-        bool grounded() const;
+        double altitude() const;
         double& collisionHeight();
         double collisionHeight() const;
         double& collisionRadius();
@@ -95,6 +103,7 @@ namespace paz
         double xDown() const;
         double yDown() const;
         double zDown() const;
+        void addTag(const std::string& tag);
     };
 
     class App
@@ -107,6 +116,7 @@ namespace paz
         static void AttachCamera(const Object& o);
         static double CameraYaw();
         static std::stringstream& MsgStream();
+        static paz::Bytes GetAsset(const std::string& path);
     };
 }
 

@@ -10,7 +10,6 @@
 //#define DO_FXAA
 #define NO_FRICTION
 
-static constexpr double CosMaxAngle = 0.7; // 45.57 deg
 static constexpr std::size_t NumSteps = 100;
 static const paz::Vec SunVec{{0.57735, 0.57735, 0.57735, 0.}};
 static constexpr double InteractRangeBehindSq = 4.;
@@ -545,11 +544,10 @@ if(tempDone[j]){ continue; }
                             yVel()/NumSteps*Window::FrameTime();
                         a[j]->z() = zNew + bZ[k][i] + (NumSteps - i - 1)*a[j]->
                             zVel()/NumSteps*Window::FrameTime();
-                        a[j]->localNorX() = xNor;
-                        a[j]->localNorY() = yNor;
-                        a[j]->localNorZ() = zNor;
-                        a[j]->setGrounded(-xNor*a[j]->xDown() - yNor*a[j]->
-                            yDown() - zNor*a[j]->zDown() > CosMaxAngle);
+                        a[j]->setLocalNorX(xNor);
+                        a[j]->setLocalNorY(yNor);
+                        a[j]->setLocalNorZ(zNor);
+                        a[j]->setAltitude(0.);
                         a[j]->onCollide(*b[k]);
                         b[k]->onCollide(*a[j]);
 tempDone[j] = true;
@@ -561,7 +559,7 @@ tempDone[j] = true;
         // Use raycasting to check altitude regime.
         for(std::size_t i = 0; i < a.size(); ++i)
         {
-            if(a[i]->grounded())
+            if(a[i]->altitude() < 0.01)
             {
                 continue;
             }
@@ -575,13 +573,13 @@ tempDone[j] = true;
                 b[j]->model().castRay(x - b[j]->x(), y - b[j]->y(), z - b[j]->
                     z(), a[i]->xDown(), a[i]->yDown(), a[i]->zDown(), xNor,
                     yNor, zNor, dist);
-                if(dist - radius < 0.01)
+                const double alt = dist - radius;
+                a[i]->setAltitude(std::min(a[i]->altitude(), alt)); //TEMP
+                if(alt < 0.01)
                 {
-                    a[i]->localNorX() = xNor;
-                    a[i]->localNorY() = yNor;
-                    a[i]->localNorZ() = zNor;
-                    a[i]->setGrounded(-xNor*a[i]->xDown() - yNor*a[i]->yDown() -
-                        zNor*a[i]->zDown() > CosMaxAngle);
+                    a[i]->setLocalNorX(xNor);
+                    a[i]->setLocalNorY(yNor);
+                    a[i]->setLocalNorZ(zNor);
 
                     // Apply friction.
 #ifndef NO_FRICTION
@@ -610,23 +608,24 @@ tempDone[j] = true;
             }
         }
 
-static std::deque<double> rHist(60*30, 0.);
-static std::deque<double> latHist(60*30, 0.);
 static double avgFrameTimeSq = 1./(60.*60.);
 avgFrameTimeSq = 0.9*avgFrameTimeSq + 0.1*Window::FrameTime()*Window::FrameTime();
+paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
+static std::deque<double> rHist(60*30, 0.);
+static std::deque<double> latHist(60*30, 0.);
 {
 const double r = std::sqrt(_cameraObject->x()*_cameraObject->x() + _cameraObject->y()*_cameraObject->y() + _cameraObject->z()*_cameraObject->z());
 const double lat = std::asin(_cameraObject->z()/r);
-const double lon = std::atan2(_cameraObject->y(), _cameraObject->x());
 rHist.pop_front();
 rHist.push_back(r);
 latHist.pop_front();
 latHist.push_back(lat);
-_msgStream << std::fixed << std::setprecision(4) << std::setw(8) << r << " " << std::setw(9) << lat*180./M_PI << " " << std::setw(9) << lon*180./M_PI << " | " << std::setw(8) << std::sqrt(_cameraObject->xVel()*_cameraObject->xVel() + _cameraObject->yVel()*_cameraObject->yVel() + _cameraObject->zVel()*_cameraObject->zVel()) << std::endl;
-_msgStream << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt(avgFrameTimeSq) << std::endl;
 }
 
-        update();
+        for(const auto& n : objects())
+        {
+            reinterpret_cast<Object*>(n.first)->update();
+        }
 
         const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
             _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt()
@@ -638,7 +637,8 @@ _msgStream << std::fixed << std::setprecision(2) << std::setw(6) << 1./std::sqrt
             1e3);
         Mat view = Mat::Zero(4);
         view(3, 3) = 1.;
-        view.setBlock(0, 0, 3, 3, to_mat(cameraAtt));
+        view.setBlock(0, 0, 3, 3, Mat{{1., 0., 0.}, {0., 0., 1.}, {0., -1.,
+            0.}}*paz::to_mat(cameraAtt));
 
         // Get geometry map.
         _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
@@ -786,4 +786,9 @@ void paz::App::AttachCamera(const Object& o)
 std::stringstream& paz::App::MsgStream()
 {
     return _msgStream;
+}
+
+paz::Bytes paz::App::GetAsset(const std::string& path)
+{
+    return get_asset(path);
 }
