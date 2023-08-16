@@ -62,6 +62,8 @@ static const paz::Object* _cameraObject;
 
 static bool _paused;
 
+static double _gravity;
+
 static paz::Mat convert_mat(const std::array<float, 16>& m)
 {
     paz::Mat res(4, 4);
@@ -482,6 +484,15 @@ void paz::App::Run()
         }
         while(!Window::Done() && !done)
         {
+            if(Window::GamepadActive())
+            {
+                Window::SetCursorMode(CursorMode::Disable);
+            }
+            else
+            {
+                Window::SetCursorMode(CursorMode::Normal);
+            }
+
             if(Window::KeyPressed(Key::Space) || Window::KeyPressed(Key::Enter)
                 || Window::KeyPressed(Key::KeypadEnter) || Window::
                 GamepadPressed(GamepadButton::A))
@@ -499,16 +510,33 @@ void paz::App::Run()
                     default: throw std::logic_error("Unrecognized UI action.");
                 }
             }
-            if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down) ||
-                Window::GamepadPressed(GamepadButton::Down))
+            if(_startMenu._layout == UiLayout::Vertical)
             {
-                curButton = std::min(static_cast<std::size_t>(curButton) + 1,
-                    _startMenu._buttons.size() - 1);
+                if(Window::KeyPressed(Key::S) || Window::KeyPressed(Key::Down)
+                    || Window::GamepadPressed(GamepadButton::Down))
+                {
+                    curButton = std::min(static_cast<std::size_t>(curButton) +
+                        1, _startMenu._buttons.size() - 1);
+                }
+                if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
+                    Window::GamepadPressed(GamepadButton::Up))
+                {
+                    curButton = std::max(curButton - 1, 0);
+                }
             }
-            if(Window::KeyPressed(Key::W) || Window::KeyPressed(Key::Up) ||
-                Window::GamepadPressed(GamepadButton::Up))
+            else
             {
-                curButton = std::max(curButton - 1, 0);
+                if(Window::KeyPressed(Key::D) || Window::KeyPressed(Key::Right)
+                    || Window::GamepadPressed(GamepadButton::Right))
+                {
+                    curButton = std::min(static_cast<std::size_t>(curButton) +
+                        1, _startMenu._buttons.size() - 1);
+                }
+                if(Window::KeyPressed(Key::A) || Window::KeyPressed(Key::Left)
+                    || Window::GamepadPressed(GamepadButton::Left))
+                {
+                    curButton = std::max(curButton - 1, 0);
+                }
             }
 
             const float scale = std::round(2.f*FontScale*Window::UiScale());
@@ -598,7 +626,7 @@ void paz::App::Run()
 
 if(!_paused)
 {
-        physics();
+        physics(_gravity);
 
 Timer timer;
         // Identify all objects that can collide and precompute as much as
@@ -1003,4 +1031,9 @@ double paz::App::PhysTime()
 void paz::App::SetConsole(ConsoleMode mode)
 {
     _consoleMode = mode;
+}
+
+void paz::App::SetGravity(double acc)
+{
+    _gravity = acc;
 }

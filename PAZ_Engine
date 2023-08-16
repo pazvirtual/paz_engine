@@ -124,10 +124,9 @@ namespace paz
         Horizontal, Vertical
     };
 
-    // `Begin` and `End` depend on language's writing direction.
     enum class UiAlignment
     {
-        Left, Center, Right, Begin, End
+        Left, Center, Right
     };
 
     class UiDescriptor
@@ -137,7 +136,7 @@ namespace paz
         std::string _title;
         std::vector<std::pair<UiAction, std::string>> _buttons;
         UiLayout _layout = UiLayout::Vertical;
-        UiAlignment _alignment = UiAlignment::Begin;
+        UiAlignment _alignment = UiAlignment::Left;
 
     public:
         void setTitle(const std::string& title);
@@ -164,6 +163,7 @@ namespace paz
         static Bytes GetAsset(const std::string& path);
         static double PhysTime();
         static void SetConsole(ConsoleMode mode);
+        static void SetGravity(double acc);
     };
 }
 

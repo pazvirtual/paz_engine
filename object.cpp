@@ -44,14 +44,14 @@ static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
 
 static void grav_ode(double x, double y, double z, double u, double v, double w,
     double& dx, double& dy, double& dz, double& du, double& dv, double& dw,
-    const std::vector<std::size_t>& massiveIds)
+    const std::vector<std::size_t>& massiveIds, double gravity)
 {
     dx = u;
     dy = v;
     dz = w;
     du = 0;
     dv = 0;
-    dw = 0;
+    dw = gravity;
     for(auto n : massiveIds)
     {
         const double deltaX = x - X[n];
@@ -66,7 +66,7 @@ static void grav_ode(double x, double y, double z, double u, double v, double w,
     }
 }
 
-void paz::physics()
+void paz::physics(double gravity)
 {
     std::vector<std::size_t> massiveIds;
     const auto n = X.size();
@@ -86,7 +86,7 @@ void paz::physics()
         {
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
-                du, dv, dw, massiveIds);
+                du, dv, dw, massiveIds, gravity);
             const double k1_1 = App::PhysTime()*dx;
             const double k1_2 = App::PhysTime()*dy;
             const double k1_3 = App::PhysTime()*dz;
@@ -95,7 +95,7 @@ void paz::physics()
             const double k1_6 = App::PhysTime()*dw;
             grav_ode(X[i] + 0.5*k1_1, Y[i] + 0.5*k1_2, Z[i] + 0.5*k1_3, XVel[i]
                 + 0.5*k1_4, YVel[i] + 0.5*k1_5, ZVel[i] + 0.5*k1_6, dx, dy, dz,
-                du, dv, dw, massiveIds);
+                du, dv, dw, massiveIds, gravity);
             const double k2_1 = App::PhysTime()*dx;
             const double k2_2 = App::PhysTime()*dy;
             const double k2_3 = App::PhysTime()*dz;
@@ -104,7 +104,7 @@ void paz::physics()
             const double k2_6 = App::PhysTime()*dw;
             grav_ode(X[i] + 0.5*k2_1, Y[i] + 0.5*k2_2, Z[i] + 0.5*k2_3, XVel[i]
                 + 0.5*k2_4, YVel[i] + 0.5*k2_5, ZVel[i] + 0.5*k2_6, dx, dy, dz,
-                du, dv, dw, massiveIds);
+                du, dv, dw, massiveIds, gravity);
             const double k3_1 = App::PhysTime()*dx;
             const double k3_2 = App::PhysTime()*dy;
             const double k3_3 = App::PhysTime()*dz;
@@ -113,7 +113,7 @@ void paz::physics()
             const double k3_6 = App::PhysTime()*dw;
             grav_ode(X[i] + k3_1, Y[i] + k3_2, Z[i] + k3_3, XVel[i] + k3_4,
                 YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw,
-                massiveIds);
+                massiveIds, gravity);
             const double k4_1 = App::PhysTime()*dx;
             const double k4_2 = App::PhysTime()*dy;
             const double k4_3 = App::PhysTime()*dz;
@@ -138,7 +138,7 @@ void paz::physics()
             Z[i] += App::PhysTime()*ZVel[i];
             double dx, dy, dz, du, dv, dw;
             grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
-                du, dv, dw, massiveIds);
+                du, dv, dw, massiveIds, gravity);
             XDown[i] = du;
             YDown[i] = dv;
             ZDown[i] = dw;
