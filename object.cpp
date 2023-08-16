@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#define NO_FRICTION
-
 static constexpr std::size_t NumSteps = 100;
 
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
@@ -249,14 +247,20 @@ void paz::collisions()
         }
     }
 
-    // Find and handle collisions. (Time is the outer loop to ensure
-    // collision repsonses occur in the correct order.)
-std::vector<bool> tempDone(a.size(), false);
+    // Find and handle collisions.
+    std::vector<std::unordered_set<std::size_t>> collisionPairs(a.size());
     for(std::size_t i = 0; i < NumSteps; ++i)
     {
         for(std::size_t j = 0; j < a.size(); ++j)
         {
-if(tempDone[j]){ continue; }
+            double minDist = std::numeric_limits<double>::infinity();
+            std::size_t idx = 0;
+            double xNor = 0.;
+            double yNor = 0.;
+            double zNor = 1.;
+            double gx = 0.;
+            double gy = 0.;
+            double gz = 0.;
             for(auto n : c[j])
             {
                 double x = XPrev[a[j]] + times[i]*(X[a[j]] - XPrev[a[j]]) - bX[
@@ -266,63 +270,69 @@ if(tempDone[j]){ continue; }
                 double z = ZPrev[a[j]] + times[i]*(Z[a[j]] - ZPrev[a[j]]) - bZ[
                     n][i];
                 const Vec relPos = bRot[n]*Vec{{x, y, z}};
-                x = relPos(0);
-                y = relPos(1);
-                z = relPos(2);
-
-                double xNew, yNew, zNew, xNor, yNor, zNor;
-                const double dist = Mod[b[n]].collide(x, y, z, CRadius[a[j]],
-                    xNew, yNew, zNew, xNor, yNor, zNor);
+                const double x1 = relPos(0);
+                const double y1 = relPos(1);
+                const double z1 = relPos(2);
+                double xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp;
+                const double dist = Mod[b[n]].collide(x1, y1, z1, CRadius[a[j]],
+                    xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp);
                 if(dist < CRadius[a[j]])
                 {
-                    const Vec nor = bRot[n].trans()*Vec{{xNor, yNor, zNor}};
-                    xNor = nor(0);
-                    yNor = nor(1);
-                    zNor = nor(2);
+                    collisionPairs[j].insert(n);
                     const Vec newPos = bRot[n].trans()*Vec{{xNew, yNew, zNew}};
                     xNew = newPos(0);
                     yNew = newPos(1);
                     zNew = newPos(2);
-                    const double xVel = XVel[a[j]] - XVel[b[n]];
-                    const double yVel = YVel[a[j]] - YVel[b[n]];
-                    const double zVel = ZVel[a[j]] - ZVel[b[n]];
-                    const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
-                    if(norVel < 0.)
+                    gx += xNew - x;
+                    gy += yNew - y;
+                    gz += zNew - z;
+                    if(dist < minDist)
                     {
-                        XVel[a[j]] -= norVel*xNor;
-                        YVel[a[j]] -= norVel*yNor;
-                        ZVel[a[j]] -= norVel*zNor;
-
-                        // Apply friction.
-#ifndef NO_FRICTION
-                        XVel[a[j]] = XVel[b[n]];
-                        YVel[a[j]] = YVel[b[n]];
-                        ZVel[a[j]] = ZVel[b[n]];
-#endif
+                        minDist = dist;
+                        idx = n;
+                        const Vec nor = bRot[n].trans()*Vec{{xNorTemp, yNorTemp,
+                            zNorTemp}};
+                        xNor = nor(0);
+                        yNor = nor(1);
+                        zNor = nor(2);
                     }
-                    X[a[j]] = xNew + bX[n][i];
-                    Y[a[j]] = yNew + bY[n][i];
-                    Z[a[j]] = zNew + bZ[n][i];
-                    // Rewind world object to time of collison.
-                    X[b[n]] = bX[n][i];
-                    Y[b[n]] = bY[n][i];
-                    Z[b[n]] = bZ[n][i];
-                    Object* aObj = reinterpret_cast<Object*>(Ids[a[j]]);
-                    Object* bObj = reinterpret_cast<Object*>(Ids[b[n]]);
-                    aObj->onCollide(*bObj);
-                    bObj->onCollide(*aObj);
-                    // Fast forward both objects.
-                    X[b[n]] = bX[n].back();
-                    Y[b[n]] = bY[n].back();
-                    Z[b[n]] = bZ[n].back();
-                    const double extraTime = App::PhysTime()*(times.back() -
-                        times[i]);
-                    X[a[j]] += extraTime*XVel[a[j]];
-                    Y[a[j]] += extraTime*YVel[a[j]];
-                    Z[a[j]] += extraTime*ZVel[a[j]];
-tempDone[j] = true;
                 }
             }
+            //TEMP - need to rewind and apply the following to `XPrev` etc. & `X` etc.
+            X[a[j]] += gx;
+            Y[a[j]] += gy;
+            Z[a[j]] += gz;
+            if(std::isfinite(minDist))
+            {
+                const double xVel = XVel[a[j]] - XVel[b[idx]];
+                const double yVel = YVel[a[j]] - YVel[b[idx]];
+                const double zVel = ZVel[a[j]] - ZVel[b[idx]];
+                const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
+                if(norVel < 0.)
+                {
+                    XVel[a[j]] -= norVel*xNor;
+                    YVel[a[j]] -= norVel*yNor;
+                    ZVel[a[j]] -= norVel*zNor;
+
+                    // Apply friction.
+                    XVel[a[j]] = XVel[b[idx]]; //TEMP
+                    YVel[a[j]] = YVel[b[idx]]; //TEMP
+                    ZVel[a[j]] = ZVel[b[idx]]; //TEMP
+                    //TEMP - need to change `XPrev` etc. & `X` etc. again
+                }
+            }
+        }
+    }
+
+    // Call `onCollide` methods retroactively. //TEMP - need to account for order of collisions and also provide states at time of collision
+    for(std::size_t i = 0; i < a.size(); ++i)
+    {
+        Object* aObj = reinterpret_cast<Object*>(Ids[a[i]]);
+        for(auto n : collisionPairs[i])
+        {
+            Object* bObj = reinterpret_cast<Object*>(Ids[b[n]]);
+            aObj->onCollide(*bObj);
+            bObj->onCollide(*aObj);
         }
     }
 }
