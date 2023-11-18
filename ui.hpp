@@ -1,7 +1,7 @@
 #ifndef PAZ_ENGINE_UI_HPP
 #define PAZ_ENGINE_UI_HPP
 
-#include <PAZ_Engine>
+#include "PAZ_Engine"
 #include <functional>
 
 namespace paz
