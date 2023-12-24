@@ -2,7 +2,6 @@
 #define PAZ_ENGINE_TIMER_HPP
 
 #include <chrono>
-#include <iostream>
 
 namespace paz
 {

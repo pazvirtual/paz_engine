@@ -1,7 +1,7 @@
 #ifndef PAZ_ENGINE_IO_HPP
 #define PAZ_ENGINE_IO_HPP
 
-#include <iostream>
+#include <string>
 
 namespace paz
 {
