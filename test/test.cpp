@@ -4,11 +4,11 @@
 #include "PAZ_Math"
 #include <iomanip>
 
-static paz::Model Sphere50;
-static paz::Model Sphere10;
-static paz::Model FancyBox;
-
 static constexpr double Radius = 50.;
+
+static paz::Model _sphere50;
+static paz::Model _sphere10;
+static paz::Model _fancyBox;
 
 class Droplet : public Paintball
 {
@@ -54,7 +54,7 @@ class Fountain : public paz::Object
 public:
     Fountain()
     {
-        model() = FancyBox;
+        model() = _fancyBox;
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None;
         lights().push_back({0., 0., 1.3, 0.5, 2., 2., 0.1});
@@ -126,7 +126,7 @@ class World : public paz::Object
 public:
     World()
     {
-        model() = Sphere50;
+        model() = _sphere50;
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None; //TEMP
         stdGravParam() = 0.6*9.81*Radius*Radius;
@@ -138,7 +138,7 @@ class World1 : public paz::Object
 public:
     World1()
     {
-        model() = Sphere10;
+        model() = _sphere10;
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None; //TEMP
         stdGravParam() = 0.1*9.81*Radius*Radius;
@@ -184,7 +184,7 @@ class World2 : public paz::Object
 public:
     World2(double initialAngle) : paz::Object(), _angle(initialAngle)
     {
-        model() = Sphere10;
+        model() = _sphere10;
         collisionType() = paz::CollisionType::World;
         gravityType() = paz::GravityType::None; //TEMP
         stdGravParam() = 9.81*10.*10.;
@@ -201,10 +201,11 @@ public:
 int main()
 {
     paz::App::Init("PAZ Engine Test Program");
-    Sphere50 = paz::Model("icosphere5.pazmodel", 0, 0., Radius, "earth-day.bmp",
-        {}, {{10., 5., Radius, 0., 0., Radius + 10., -10., -5., Radius}});
-    Sphere10 = paz::Model("icosphere5.pazmodel", 0, 0., 10., "moon.bmp");
-    FancyBox = paz::Model("fancybox.pazmodel");
+    _sphere50 = paz::Model("icosphere5.pazmodel", 0, 0., Radius,
+        "earth-day.bmp", {}, {{10., 5., Radius, 0., 0., Radius + 10., -10., -5.,
+        Radius}});
+    _sphere10 = paz::Model("icosphere5.pazmodel", 0, 0., 10., "moon.bmp");
+    _fancyBox = paz::Model("fancybox.pazmodel");
     Player player;
     player.y() = 1.;
     player.z() = Radius + 10.;

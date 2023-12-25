@@ -6,51 +6,50 @@
 #include <unordered_set>
 #include <optional>
 
-static constexpr std::size_t NumSteps = 10;
-
 #define SWAP_AND_POP(x) std::swap(x[idx], x.back()); x.pop_back();
 #define PUSH_COPY(x) x.push_back(x[otherIdx]);
 #define COPY(x) x[idx] = x[otherIdx];
+#define GET_CMESH(idx) (_cMesh[idx]._t ? _cMesh[idx] : _mod[idx])
 
-#define GET_CMESH(idx) (CMesh[idx]._t ? CMesh[idx] : Mod[idx])
+static constexpr std::size_t NumSteps = 20;
+
+static std::vector<std::uintptr_t> _ids;
+static std::vector<double> _x;
+static std::vector<double> _y;
+static std::vector<double> _z;
+static std::vector<double> _xVel;
+static std::vector<double> _yVel;
+static std::vector<double> _zVel;
+static std::vector<double> _xAtt;
+static std::vector<double> _yAtt;
+static std::vector<double> _zAtt;
+static std::vector<double> _xAngRate;
+static std::vector<double> _yAngRate;
+static std::vector<double> _zAngRate;
+static std::vector<paz::Model> _mod;
+static std::vector<paz::CollisionMesh> _cMesh;
+static std::vector<paz::CollisionType> _cType;
+static std::vector<paz::GravityType> _gType;
+static std::vector<double> _xPrev;
+static std::vector<double> _yPrev;
+static std::vector<double> _zPrev;
+static std::vector<double> _xAttPrev;
+static std::vector<double> _yAttPrev;
+static std::vector<double> _zAttPrev;
+static std::vector<double> _cRadius;
+static std::vector<double> _xDown;
+static std::vector<double> _yDown;
+static std::vector<double> _zDown;
+static std::vector<double> _stdGravParam;
+static std::vector<std::vector<std::array<double, 7>>> _lights;
+static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
+    _objectsByTag;
 
 std::unordered_map<std::uintptr_t, std::size_t>& paz::objects()
 {
     static std::unordered_map<std::uintptr_t, std::size_t> o;
     return o;
 }
-
-static std::vector<std::uintptr_t> Ids;
-static std::vector<double> X;
-static std::vector<double> Y;
-static std::vector<double> Z;
-static std::vector<double> XVel;
-static std::vector<double> YVel;
-static std::vector<double> ZVel;
-static std::vector<double> XAtt;
-static std::vector<double> YAtt;
-static std::vector<double> ZAtt;
-static std::vector<double> XAngRate;
-static std::vector<double> YAngRate;
-static std::vector<double> ZAngRate;
-static std::vector<paz::Model> Mod;
-static std::vector<paz::CollisionMesh> CMesh;
-static std::vector<paz::CollisionType> CType;
-static std::vector<paz::GravityType> GType;
-static std::vector<double> XPrev;
-static std::vector<double> YPrev;
-static std::vector<double> ZPrev;
-static std::vector<double> XAttPrev;
-static std::vector<double> YAttPrev;
-static std::vector<double> ZAttPrev;
-static std::vector<double> CRadius;
-static std::vector<double> XDown;
-static std::vector<double> YDown;
-static std::vector<double> ZDown;
-static std::vector<double> StdGravParam;
-static std::vector<std::vector<std::array<double, 7>>> Lights;
-static std::unordered_map<std::string, std::unordered_set<std::uintptr_t>>
-    ObjectsByTag;
 
 static void grav_ode(double x, double y, double z, double u, double v, double w,
     double& dx, double& dy, double& dz, double& du, double& dv, double& dw,
@@ -64,12 +63,12 @@ static void grav_ode(double x, double y, double z, double u, double v, double w,
     dw = gravity;
     for(auto n : massiveIds)
     {
-        const double deltaX = x - X[n];
-        const double deltaY = y - Y[n];
-        const double deltaZ = z - Z[n];
+        const double deltaX = x - _x[n];
+        const double deltaY = y - _y[n];
+        const double deltaZ = z - _z[n];
         const double radius = std::sqrt(deltaX*deltaX + deltaY*deltaY + deltaZ*
             deltaZ);
-        const double t0 = -StdGravParam[n]/(radius*radius*radius);
+        const double t0 = -_stdGravParam[n]/(radius*radius*radius);
         du += t0*deltaX;
         dv += t0*deltaY;
         dw += t0*deltaZ;
@@ -79,53 +78,53 @@ static void grav_ode(double x, double y, double z, double u, double v, double w,
 void paz::do_physics(double gravity, double timestep)
 {
     std::vector<std::size_t> massiveIds;
-    const auto n = X.size();
+    const auto n = _x.size();
     for(std::size_t i = 0; i < n; ++i)
     {
-        if(CType[i] == CollisionType::World && StdGravParam[i] > 0.) //TEMP - should go off of `GType[i]`
+        if(_cType[i] == CollisionType::World && _stdGravParam[i] > 0.) //TEMP - should go off of `_gType[i]`
         {
             massiveIds.push_back(i);
         }
     }
-    XPrev = X;
-    YPrev = Y;
-    ZPrev = Z;
-    XAttPrev = XAtt;
-    YAttPrev = YAtt;
-    ZAttPrev = ZAtt;
+    _xPrev = _x;
+    _yPrev = _y;
+    _zPrev = _z;
+    _xAttPrev = _xAtt;
+    _yAttPrev = _yAtt;
+    _zAttPrev = _zAtt;
     for(std::size_t i = 0; i < n; ++i)
     {
-        if(GType[i] == GravityType::Default)
+        if(_gType[i] == GravityType::Default)
         {
             double dx, dy, dz, du, dv, dw;
-            grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
-                du, dv, dw, massiveIds, gravity);
+            grav_ode(_x[i], _y[i], _z[i], _xVel[i], _yVel[i], _zVel[i], dx, dy,
+                dz, du, dv, dw, massiveIds, gravity);
             const double k1_1 = timestep*dx;
             const double k1_2 = timestep*dy;
             const double k1_3 = timestep*dz;
             const double k1_4 = timestep*du;
             const double k1_5 = timestep*dv;
             const double k1_6 = timestep*dw;
-            grav_ode(X[i] + 0.5*k1_1, Y[i] + 0.5*k1_2, Z[i] + 0.5*k1_3, XVel[i]
-                + 0.5*k1_4, YVel[i] + 0.5*k1_5, ZVel[i] + 0.5*k1_6, dx, dy, dz,
-                du, dv, dw, massiveIds, gravity);
+            grav_ode(_x[i] + 0.5*k1_1, _y[i] + 0.5*k1_2, _z[i] + 0.5*k1_3,
+                _xVel[i] + 0.5*k1_4, _yVel[i] + 0.5*k1_5, _zVel[i] + 0.5*k1_6,
+                dx, dy, dz, du, dv, dw, massiveIds, gravity);
             const double k2_1 = timestep*dx;
             const double k2_2 = timestep*dy;
             const double k2_3 = timestep*dz;
             const double k2_4 = timestep*du;
             const double k2_5 = timestep*dv;
             const double k2_6 = timestep*dw;
-            grav_ode(X[i] + 0.5*k2_1, Y[i] + 0.5*k2_2, Z[i] + 0.5*k2_3, XVel[i]
-                + 0.5*k2_4, YVel[i] + 0.5*k2_5, ZVel[i] + 0.5*k2_6, dx, dy, dz,
-                du, dv, dw, massiveIds, gravity);
+            grav_ode(_x[i] + 0.5*k2_1, _y[i] + 0.5*k2_2, _z[i] + 0.5*k2_3,
+                _xVel[i] + 0.5*k2_4, _yVel[i] + 0.5*k2_5, _zVel[i] + 0.5*k2_6,
+                dx, dy, dz, du, dv, dw, massiveIds, gravity);
             const double k3_1 = timestep*dx;
             const double k3_2 = timestep*dy;
             const double k3_3 = timestep*dz;
             const double k3_4 = timestep*du;
             const double k3_5 = timestep*dv;
             const double k3_6 = timestep*dw;
-            grav_ode(X[i] + k3_1, Y[i] + k3_2, Z[i] + k3_3, XVel[i] + k3_4,
-                YVel[i] + k3_5, ZVel[i] + k3_6, dx, dy, dz, du, dv, dw,
+            grav_ode(_x[i] + k3_1, _y[i] + k3_2, _z[i] + k3_3, _xVel[i] + k3_4,
+                _yVel[i] + k3_5, _zVel[i] + k3_6, dx, dy, dz, du, dv, dw,
                 massiveIds, gravity);
             const double k4_1 = timestep*dx;
             const double k4_2 = timestep*dy;
@@ -134,63 +133,63 @@ void paz::do_physics(double gravity, double timestep)
             const double k4_5 = timestep*dv;
             const double k4_6 = timestep*dw;
             static constexpr double c = 1./6.;
-            X[i] += c*(k1_1 + 2.*(k2_1 + k3_1) + k4_1);
-            Y[i] += c*(k1_2 + 2.*(k2_2 + k3_2) + k4_2);
-            Z[i] += c*(k1_3 + 2.*(k2_3 + k3_3) + k4_3);
-            XDown[i] = c*(k1_4 + 2.*(k2_4 + k3_4) + k4_4);
-            YDown[i] = c*(k1_5 + 2.*(k2_5 + k3_5) + k4_5);
-            ZDown[i] = c*(k1_6 + 2.*(k2_6 + k3_6) + k4_6);
-            XVel[i] += XDown[i];
-            YVel[i] += YDown[i];
-            ZVel[i] += ZDown[i];
+            _x[i] += c*(k1_1 + 2.*(k2_1 + k3_1) + k4_1);
+            _y[i] += c*(k1_2 + 2.*(k2_2 + k3_2) + k4_2);
+            _z[i] += c*(k1_3 + 2.*(k2_3 + k3_3) + k4_3);
+            _xDown[i] = c*(k1_4 + 2.*(k2_4 + k3_4) + k4_4);
+            _yDown[i] = c*(k1_5 + 2.*(k2_5 + k3_5) + k4_5);
+            _zDown[i] = c*(k1_6 + 2.*(k2_6 + k3_6) + k4_6);
+            _xVel[i] += _xDown[i];
+            _yVel[i] += _yDown[i];
+            _zVel[i] += _zDown[i];
         }
         else
         {
-            X[i] += timestep*XVel[i];
-            Y[i] += timestep*YVel[i];
-            Z[i] += timestep*ZVel[i];
+            _x[i] += timestep*_xVel[i];
+            _y[i] += timestep*_yVel[i];
+            _z[i] += timestep*_zVel[i];
             double dx, dy, dz, du, dv, dw;
-            grav_ode(X[i], Y[i], Z[i], XVel[i], YVel[i], ZVel[i], dx, dy, dz,
-                du, dv, dw, massiveIds, gravity);
-            XDown[i] = du;
-            YDown[i] = dv;
-            ZDown[i] = dw;
+            grav_ode(_x[i], _y[i], _z[i], _xVel[i], _yVel[i], _zVel[i], dx, dy,
+                dz, du, dv, dw, massiveIds, gravity);
+            _xDown[i] = du;
+            _yDown[i] = dv;
+            _zDown[i] = dw;
         }
-        const double normSq = XDown[i]*XDown[i] + YDown[i]*YDown[i] + ZDown[i]*
-            ZDown[i];
+        const double normSq = _xDown[i]*_xDown[i] + _yDown[i]*_yDown[i] +
+            _zDown[i]*_zDown[i];
         if(normSq > 1e-6*1e-6)
         {
             const double invNorm = 1./std::sqrt(normSq);
-            XDown[i] *= invNorm;
-            YDown[i] *= invNorm;
-            ZDown[i] *= invNorm;
+            _xDown[i] *= invNorm;
+            _yDown[i] *= invNorm;
+            _zDown[i] *= invNorm;
         }
         else
         {
-            XDown[i] = 0.;
-            YDown[i] = 0.;
-            ZDown[i] = 1.;
+            _xDown[i] = 0.;
+            _yDown[i] = 0.;
+            _zDown[i] = 1.;
         }
     }
     for(std::size_t i = 0; i < n; ++i)
     {
-        double WAtt = std::sqrt(1. - XAtt[i]*XAtt[i] - YAtt[i]*YAtt[i] - ZAtt[
-            i]*ZAtt[i]);
-        const double deltaX = normalize_angle(0.5*timestep*XAngRate[i] + Pi) -
+        double WAtt = std::sqrt(1. - _xAtt[i]*_xAtt[i] - _yAtt[i]*_yAtt[i] -
+            _zAtt[i]*_zAtt[i]);
+        const double deltaX = normalize_angle(0.5*timestep*_xAngRate[i] + Pi) -
             Pi;
-        const double deltaY = normalize_angle(0.5*timestep*YAngRate[i] + Pi) -
+        const double deltaY = normalize_angle(0.5*timestep*_yAngRate[i] + Pi) -
             Pi;
-        const double deltaZ = normalize_angle(0.5*timestep*ZAngRate[i] + Pi) -
+        const double deltaZ = normalize_angle(0.5*timestep*_zAngRate[i] + Pi) -
             Pi;
-        XAtt[i] +=  WAtt   *deltaX - ZAtt[i]*deltaY + YAtt[i]*deltaZ;
-        YAtt[i] +=  ZAtt[i]*deltaX + WAtt   *deltaY - XAtt[i]*deltaZ;
-        ZAtt[i] += -YAtt[i]*deltaX + XAtt[i]*deltaY + WAtt   *deltaZ;
-        WAtt    += -XAtt[i]*deltaX - YAtt[i]*deltaY - ZAtt[i]*deltaZ;
-        const double invSignNorm = (WAtt < 0. ? -1. : 1.)/std::sqrt(XAtt[i]*
-            XAtt[i] + YAtt[i]*YAtt[i] + ZAtt[i]*ZAtt[i] + WAtt*WAtt);
-        XAtt[i] *= invSignNorm;
-        YAtt[i] *= invSignNorm;
-        ZAtt[i] *= invSignNorm;
+        _xAtt[i] +=  WAtt   *deltaX - _zAtt[i]*deltaY + _yAtt[i]*deltaZ;
+        _yAtt[i] +=  _zAtt[i]*deltaX + WAtt   *deltaY - _xAtt[i]*deltaZ;
+        _zAtt[i] += -_yAtt[i]*deltaX + _xAtt[i]*deltaY + WAtt   *deltaZ;
+        WAtt    += -_xAtt[i]*deltaX - _yAtt[i]*deltaY - _zAtt[i]*deltaZ;
+        const double invSignNorm = (WAtt < 0. ? -1. : 1.)/std::sqrt(_xAtt[i]*
+            _xAtt[i] + _yAtt[i]*_yAtt[i] + _zAtt[i]*_zAtt[i] + WAtt*WAtt);
+        _xAtt[i] *= invSignNorm;
+        _yAtt[i] *= invSignNorm;
+        _zAtt[i] *= invSignNorm;
     }
 }
 
@@ -229,15 +228,15 @@ void paz::do_collisions(Threadpool& threads, double timestep)
         NumSteps));
     for(std::size_t i = 0; i < b.size(); ++i)
     {
-        const double wAtt = std::sqrt(1. - XAtt[b[i]]*XAtt[b[i]] - YAtt[b[i]]*
-            YAtt[b[i]] - ZAtt[b[i]]*ZAtt[b[i]]);
-        const Vec att{{XAtt[b[i]], YAtt[b[i]], ZAtt[b[i]], wAtt}};
+        const double wAtt = std::sqrt(1. - _xAtt[b[i]]*_xAtt[b[i]] - _yAtt[b[
+            i]]*_yAtt[b[i]] - _zAtt[b[i]]*_zAtt[b[i]]);
+        const Vec att{{_xAtt[b[i]], _yAtt[b[i]], _zAtt[b[i]], wAtt}};
         bRot[i] = to_mat(att);
         for(std::size_t j = 0; j < NumSteps; ++j)
         {
-            bX[i][j] = XPrev[b[i]] + times[j]*(X[b[i]] - XPrev[b[i]]);
-            bY[i][j] = YPrev[b[i]] + times[j]*(Y[b[i]] - YPrev[b[i]]);
-            bZ[i][j] = ZPrev[b[i]] + times[j]*(Z[b[i]] - ZPrev[b[i]]);
+            bX[i][j] = _xPrev[b[i]] + times[j]*(_x[b[i]] - _xPrev[b[i]]);
+            bY[i][j] = _yPrev[b[i]] + times[j]*(_y[b[i]] - _yPrev[b[i]]);
+            bZ[i][j] = _zPrev[b[i]] + times[j]*(_z[b[i]] - _zPrev[b[i]]);
         }
     }
 
@@ -253,14 +252,14 @@ void paz::do_collisions(Threadpool& threads, double timestep)
             std::unordered_map<std::size_t, std::vector<std::size_t>> c;
             for(std::size_t j = 0; j < b.size(); ++j)
             {
-                Vec relPosPrev{{XPrev[a[i]] - XPrev[b[j]], YPrev[a[i]] - YPrev[
-                    b[j]], ZPrev[a[i]] - ZPrev[b[j]]}};
+                Vec relPosPrev{{_xPrev[a[i]] - _xPrev[b[j]], _yPrev[a[i]] -
+                    _yPrev[b[j]], _zPrev[a[i]] - _zPrev[b[j]]}};
                 relPosPrev = bRot[j]*relPosPrev;
-                Vec relPos{{X[a[i]] - X[b[j]], Y[a[i]] - Y[b[j]], Z[a[i]] - Z[b[
-                    j]]}};
+                Vec relPos{{_x[a[i]] - _x[b[j]], _y[a[i]] - _y[b[j]], _z[a[i]] -
+                    _z[b[j]]}};
                 relPos = bRot[j]*relPos;
                 const auto temp = GET_CMESH(b[j]).sweepVol(relPosPrev, relPos,
-                    CRadius[a[i]]);
+                    _cRadius[a[i]]);
                 if(!temp.empty())
                 {
                     c[j] = std::move(temp);
@@ -269,9 +268,9 @@ void paz::do_collisions(Threadpool& threads, double timestep)
 
             for(std::size_t j = 0; j < NumSteps; ++j)
             {
-                double x = XPrev[a[i]] + times[j]*(X[a[i]] - XPrev[a[i]]);
-                double y = YPrev[a[i]] + times[j]*(Y[a[i]] - YPrev[a[i]]);
-                double z = ZPrev[a[i]] + times[j]*(Z[a[i]] - ZPrev[a[i]]);
+                double x = _xPrev[a[i]] + times[j]*(_x[a[i]] - _xPrev[a[i]]);
+                double y = _yPrev[a[i]] + times[j]*(_y[a[i]] - _yPrev[a[i]]);
+                double z = _zPrev[a[i]] + times[j]*(_z[a[i]] - _zPrev[a[i]]);
                 double minDist = std::numeric_limits<double>::infinity();
                 std::size_t idx = 0;
                 double xNor = 0.;
@@ -290,9 +289,9 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                     const double z2 = relPos(2);
                     double xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp;
                     const double dist = GET_CMESH(b[n.first]).collide(x2, y2,
-                        z2, CRadius[a[i]], xNew, yNew, zNew, xNorTemp, yNorTemp,
-                        zNorTemp, n.second);
-                    if(dist < CRadius[a[i]])
+                        z2, _cRadius[a[i]], xNew, yNew, zNew, xNorTemp,
+                        yNorTemp, zNorTemp, n.second);
+                    if(dist < _cRadius[a[i]])
                     {
                         collisions.emplace_back(n.first, std::array<double, 3>{
                             xNorTemp, yNorTemp, zNorTemp});
@@ -318,50 +317,50 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                 }
                 if(std::isfinite(minDist))
                 {
-                    const double xVel = XVel[a[i]] - XVel[b[idx]];
-                    const double yVel = YVel[a[i]] - YVel[b[idx]];
-                    const double zVel = ZVel[a[i]] - ZVel[b[idx]];
+                    const double xVel = _xVel[a[i]] - _xVel[b[idx]];
+                    const double yVel = _yVel[a[i]] - _yVel[b[idx]];
+                    const double zVel = _zVel[a[i]] - _zVel[b[idx]];
                     const double norVel = xVel*xNor + yVel*yNor + zVel*zNor;
                     if(norVel < 0.)
                     {
-                        XVel[a[i]] -= norVel*xNor;
-                        YVel[a[i]] -= norVel*yNor;
-                        ZVel[a[i]] -= norVel*zNor;
+                        _xVel[a[i]] -= norVel*xNor;
+                        _yVel[a[i]] -= norVel*yNor;
+                        _zVel[a[i]] -= norVel*zNor;
                     }
 
                     // Adjust positions to fit new trajectory.
                     const double time0 = timestep*(times[j] - times[0]);
-                    XPrev[a[i]] = x - time0*XVel[a[i]];
-                    YPrev[a[i]] = y - time0*YVel[a[i]];
-                    ZPrev[a[i]] = z - time0*ZVel[a[i]];
+                    _xPrev[a[i]] = x - time0*_xVel[a[i]];
+                    _yPrev[a[i]] = y - time0*_yVel[a[i]];
+                    _zPrev[a[i]] = z - time0*_zVel[a[i]];
                     const double time1 = timestep*(times.back() - times[j]);
-                    X[a[i]] = x + time1*XVel[a[i]];
-                    Y[a[i]] = y + time1*YVel[a[i]];
-                    Z[a[i]] = z + time1*ZVel[a[i]];
+                    _x[a[i]] = x + time1*_xVel[a[i]];
+                    _y[a[i]] = y + time1*_yVel[a[i]];
+                    _z[a[i]] = z + time1*_zVel[a[i]];
 
                     // Collision response.
-                    std::swap(X[a[i]], x);
-                    std::swap(Y[a[i]], y);
-                    std::swap(Z[a[i]], z);
-                    Object& aObj = *reinterpret_cast<Object*>(Ids[a[i]]);
+                    std::swap(_x[a[i]], x);
+                    std::swap(_y[a[i]], y);
+                    std::swap(_z[a[i]], z);
+                    Object& aObj = *reinterpret_cast<Object*>(_ids[a[i]]);
                     for(const auto& n : collisions)
                     {
-                        Object& bObj = *reinterpret_cast<Object*>(Ids[b[n.
+                        Object& bObj = *reinterpret_cast<Object*>(_ids[b[n.
                             first]]);
                         aObj.onCollide(bObj, n.second[0], n.second[1], n.second[
                             2], bX[n.first][j], bY[n.first][j], bZ[n.first][j]);
                     }
-                    std::swap(X[a[i]], x);
-                    std::swap(Y[a[i]], y);
-                    std::swap(Z[a[i]], z);
+                    std::swap(_x[a[i]], x);
+                    std::swap(_y[a[i]], y);
+                    std::swap(_z[a[i]], z);
 
                     // Adjust positions again.
-                    XPrev[a[i]] = x - time0*XVel[a[i]];
-                    YPrev[a[i]] = y - time0*YVel[a[i]];
-                    ZPrev[a[i]] = z - time0*ZVel[a[i]];
-                    X[a[i]] = x + time1*XVel[a[i]];
-                    Y[a[i]] = y + time1*YVel[a[i]];
-                    Z[a[i]] = z + time1*ZVel[a[i]];
+                    _xPrev[a[i]] = x - time0*_xVel[a[i]];
+                    _yPrev[a[i]] = y - time0*_yVel[a[i]];
+                    _zPrev[a[i]] = z - time0*_zVel[a[i]];
+                    _x[a[i]] = x + time1*_xVel[a[i]];
+                    _y[a[i]] = y + time1*_yVel[a[i]];
+                    _z[a[i]] = z + time1*_zVel[a[i]];
                 }
             }
         }
@@ -375,73 +374,73 @@ void paz::do_collisions(Threadpool& threads, double timestep)
 
 paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
 {
-    objects()[_id] = X.size();
-    Ids.push_back(_id);
-    X.push_back(0.);
-    Y.push_back(0.);
-    Z.push_back(0.);
-    XVel.push_back(0.);
-    YVel.push_back(0.);
-    ZVel.push_back(0.);
-    XAtt.push_back(0.);
-    YAtt.push_back(0.);
-    ZAtt.push_back(0.);
-    XAngRate.push_back(0.);
-    YAngRate.push_back(0.);
-    ZAngRate.push_back(0.);
-    Mod.emplace_back();
-    CMesh.emplace_back();
-    CType.push_back(CollisionType::Default);
-    GType.push_back(GravityType::Default);
-    XPrev.push_back(std::nan(""));
-    YPrev.push_back(std::nan(""));
-    ZPrev.push_back(std::nan(""));
-    XAttPrev.push_back(std::nan(""));
-    YAttPrev.push_back(std::nan(""));
-    ZAttPrev.push_back(std::nan(""));
-    CRadius.push_back(0.2);
-    XDown.push_back(0.);
-    YDown.push_back(0.);
-    ZDown.push_back(0.);
-    StdGravParam.push_back(0.);
-    Lights.emplace_back();
+    objects()[_id] = _x.size();
+    _ids.push_back(_id);
+    _x.push_back(0.);
+    _y.push_back(0.);
+    _z.push_back(0.);
+    _xVel.push_back(0.);
+    _yVel.push_back(0.);
+    _zVel.push_back(0.);
+    _xAtt.push_back(0.);
+    _yAtt.push_back(0.);
+    _zAtt.push_back(0.);
+    _xAngRate.push_back(0.);
+    _yAngRate.push_back(0.);
+    _zAngRate.push_back(0.);
+    _mod.emplace_back();
+    _cMesh.emplace_back();
+    _cType.push_back(CollisionType::Default);
+    _gType.push_back(GravityType::Default);
+    _xPrev.push_back(std::nan(""));
+    _yPrev.push_back(std::nan(""));
+    _zPrev.push_back(std::nan(""));
+    _xAttPrev.push_back(std::nan(""));
+    _yAttPrev.push_back(std::nan(""));
+    _zAttPrev.push_back(std::nan(""));
+    _cRadius.push_back(0.2);
+    _xDown.push_back(0.);
+    _yDown.push_back(0.);
+    _zDown.push_back(0.);
+    _stdGravParam.push_back(0.);
+    _lights.emplace_back();
 }
 
 paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     this))
 {
     const auto otherIdx = objects().at(o._id);
-    objects()[_id] = X.size();
-    Ids.push_back(_id);
-    PUSH_COPY(X)
-    PUSH_COPY(Y)
-    PUSH_COPY(Z)
-    PUSH_COPY(XVel)
-    PUSH_COPY(YVel)
-    PUSH_COPY(ZVel)
-    PUSH_COPY(XAtt)
-    PUSH_COPY(YAtt)
-    PUSH_COPY(ZAtt)
-    PUSH_COPY(XAngRate)
-    PUSH_COPY(YAngRate)
-    PUSH_COPY(ZAngRate)
-    PUSH_COPY(Mod)
-    PUSH_COPY(CMesh)
-    PUSH_COPY(CType)
-    PUSH_COPY(GType)
-    PUSH_COPY(XPrev);
-    PUSH_COPY(YPrev);
-    PUSH_COPY(ZPrev);
-    PUSH_COPY(XAttPrev);
-    PUSH_COPY(YAttPrev);
-    PUSH_COPY(ZAttPrev);
-    PUSH_COPY(CRadius)
-    PUSH_COPY(XDown)
-    PUSH_COPY(YDown)
-    PUSH_COPY(ZDown)
-    PUSH_COPY(StdGravParam)
-    PUSH_COPY(Lights)
-    for(auto& n : ObjectsByTag) //TEMP - inefficient
+    objects()[_id] = _x.size();
+    _ids.push_back(_id);
+    PUSH_COPY(_x)
+    PUSH_COPY(_y)
+    PUSH_COPY(_z)
+    PUSH_COPY(_xVel)
+    PUSH_COPY(_yVel)
+    PUSH_COPY(_zVel)
+    PUSH_COPY(_xAtt)
+    PUSH_COPY(_yAtt)
+    PUSH_COPY(_zAtt)
+    PUSH_COPY(_xAngRate)
+    PUSH_COPY(_yAngRate)
+    PUSH_COPY(_zAngRate)
+    PUSH_COPY(_mod)
+    PUSH_COPY(_cMesh)
+    PUSH_COPY(_cType)
+    PUSH_COPY(_gType)
+    PUSH_COPY(_xPrev);
+    PUSH_COPY(_yPrev);
+    PUSH_COPY(_zPrev);
+    PUSH_COPY(_xAttPrev);
+    PUSH_COPY(_yAttPrev);
+    PUSH_COPY(_zAttPrev);
+    PUSH_COPY(_cRadius)
+    PUSH_COPY(_xDown)
+    PUSH_COPY(_yDown)
+    PUSH_COPY(_zDown)
+    PUSH_COPY(_stdGravParam)
+    PUSH_COPY(_lights)
+    for(auto& n : _objectsByTag) //TEMP - inefficient
     {
         if(n.second.count(o._id))
         {
@@ -463,35 +462,35 @@ paz::Object& paz::Object::operator=(const Object& o)
     if(objects().count(_id))
     {
         const auto idx = objects().at(_id);
-        COPY(X)
-        COPY(Y)
-        COPY(Z)
-        COPY(XVel)
-        COPY(YVel)
-        COPY(ZVel)
-        COPY(XAtt)
-        COPY(YAtt)
-        COPY(ZAtt)
-        COPY(XAngRate)
-        COPY(YAngRate)
-        COPY(ZAngRate)
-        COPY(Mod)
-        COPY(CMesh)
-        COPY(CType)
-        COPY(GType)
-        COPY(XPrev);
-        COPY(YPrev);
-        COPY(ZPrev);
-        COPY(XAttPrev);
-        COPY(YAttPrev);
-        COPY(ZAttPrev);
-        COPY(CRadius)
-        COPY(XDown)
-        COPY(YDown)
-        COPY(ZDown)
-        COPY(StdGravParam)
-        COPY(Lights)
-        for(auto& n : ObjectsByTag) //TEMP - inefficient
+        COPY(_x)
+        COPY(_y)
+        COPY(_z)
+        COPY(_xVel)
+        COPY(_yVel)
+        COPY(_zVel)
+        COPY(_xAtt)
+        COPY(_yAtt)
+        COPY(_zAtt)
+        COPY(_xAngRate)
+        COPY(_yAngRate)
+        COPY(_zAngRate)
+        COPY(_mod)
+        COPY(_cMesh)
+        COPY(_cType)
+        COPY(_gType)
+        COPY(_xPrev);
+        COPY(_yPrev);
+        COPY(_zPrev);
+        COPY(_xAttPrev);
+        COPY(_yAttPrev);
+        COPY(_zAttPrev);
+        COPY(_cRadius)
+        COPY(_xDown)
+        COPY(_yDown)
+        COPY(_zDown)
+        COPY(_stdGravParam)
+        COPY(_lights)
+        for(auto& n : _objectsByTag) //TEMP - inefficient
         {
             if(n.second.count(o._id))
             {
@@ -505,37 +504,37 @@ paz::Object& paz::Object::operator=(const Object& o)
     }
     else
     {
-        objects()[_id] = X.size();
-        Ids.push_back(_id);
-        PUSH_COPY(X)
-        PUSH_COPY(Y)
-        PUSH_COPY(Z)
-        PUSH_COPY(XVel)
-        PUSH_COPY(YVel)
-        PUSH_COPY(ZVel)
-        PUSH_COPY(XAtt)
-        PUSH_COPY(YAtt)
-        PUSH_COPY(ZAtt)
-        PUSH_COPY(XAngRate)
-        PUSH_COPY(YAngRate)
-        PUSH_COPY(ZAngRate)
-        PUSH_COPY(Mod)
-        PUSH_COPY(CMesh)
-        PUSH_COPY(CType)
-        PUSH_COPY(GType)
-        PUSH_COPY(XPrev);
-        PUSH_COPY(YPrev);
-        PUSH_COPY(ZPrev);
-        PUSH_COPY(XAttPrev);
-        PUSH_COPY(YAttPrev);
-        PUSH_COPY(ZAttPrev);
-        PUSH_COPY(CRadius)
-        PUSH_COPY(XDown)
-        PUSH_COPY(YDown)
-        PUSH_COPY(ZDown)
-        PUSH_COPY(StdGravParam)
-        PUSH_COPY(Lights)
-        for(auto& n : ObjectsByTag) //TEMP - inefficient
+        objects()[_id] = _x.size();
+        _ids.push_back(_id);
+        PUSH_COPY(_x)
+        PUSH_COPY(_y)
+        PUSH_COPY(_z)
+        PUSH_COPY(_xVel)
+        PUSH_COPY(_yVel)
+        PUSH_COPY(_zVel)
+        PUSH_COPY(_xAtt)
+        PUSH_COPY(_yAtt)
+        PUSH_COPY(_zAtt)
+        PUSH_COPY(_xAngRate)
+        PUSH_COPY(_yAngRate)
+        PUSH_COPY(_zAngRate)
+        PUSH_COPY(_mod)
+        PUSH_COPY(_cMesh)
+        PUSH_COPY(_cType)
+        PUSH_COPY(_gType)
+        PUSH_COPY(_xPrev);
+        PUSH_COPY(_yPrev);
+        PUSH_COPY(_zPrev);
+        PUSH_COPY(_xAttPrev);
+        PUSH_COPY(_yAttPrev);
+        PUSH_COPY(_zAttPrev);
+        PUSH_COPY(_cRadius)
+        PUSH_COPY(_xDown)
+        PUSH_COPY(_yDown)
+        PUSH_COPY(_zDown)
+        PUSH_COPY(_stdGravParam)
+        PUSH_COPY(_lights)
+        for(auto& n : _objectsByTag) //TEMP - inefficient
         {
             if(n.second.count(o._id))
             {
@@ -552,8 +551,8 @@ paz::Object::Object(Object&& o) noexcept : _id(reinterpret_cast<std::uintptr_t>(
     const auto idx = objects().at(o._id);
     objects()[_id] = idx;
     objects().erase(o._id);
-    Ids[idx] = _id;
-    for(auto& n : ObjectsByTag) //TEMP - inefficient
+    _ids[idx] = _id;
+    for(auto& n : _objectsByTag) //TEMP - inefficient
     {
         if(n.second.count(o._id))
         {
@@ -578,41 +577,41 @@ paz::Object& paz::Object::operator=(Object&& o) noexcept
         const auto idx = objects().at(_id);
         objects().at(_id) = otherIdx;
         objects().at(o._id) = idx;
-        std::swap(Ids[idx], Ids[otherIdx]);
+        std::swap(_ids[idx], _ids[otherIdx]);
     }
     else
     {
-        objects()[_id] = X.size();
-        Ids.push_back(_id);
-        PUSH_COPY(X)
-        PUSH_COPY(Y)
-        PUSH_COPY(Z)
-        PUSH_COPY(XVel)
-        PUSH_COPY(YVel)
-        PUSH_COPY(ZVel)
-        PUSH_COPY(XAtt)
-        PUSH_COPY(YAtt)
-        PUSH_COPY(ZAtt)
-        PUSH_COPY(XAngRate)
-        PUSH_COPY(YAngRate)
-        PUSH_COPY(ZAngRate)
-        PUSH_COPY(Mod)
-        PUSH_COPY(CMesh)
-        PUSH_COPY(CType)
-        PUSH_COPY(GType)
-        PUSH_COPY(XPrev);
-        PUSH_COPY(YPrev);
-        PUSH_COPY(ZPrev);
-        PUSH_COPY(XAttPrev);
-        PUSH_COPY(YAttPrev);
-        PUSH_COPY(ZAttPrev);
-        PUSH_COPY(CRadius)
-        PUSH_COPY(XDown)
-        PUSH_COPY(YDown)
-        PUSH_COPY(ZDown)
-        PUSH_COPY(StdGravParam)
-        PUSH_COPY(Lights)
-        for(auto& n : ObjectsByTag) //TEMP - inefficient
+        objects()[_id] = _x.size();
+        _ids.push_back(_id);
+        PUSH_COPY(_x)
+        PUSH_COPY(_y)
+        PUSH_COPY(_z)
+        PUSH_COPY(_xVel)
+        PUSH_COPY(_yVel)
+        PUSH_COPY(_zVel)
+        PUSH_COPY(_xAtt)
+        PUSH_COPY(_yAtt)
+        PUSH_COPY(_zAtt)
+        PUSH_COPY(_xAngRate)
+        PUSH_COPY(_yAngRate)
+        PUSH_COPY(_zAngRate)
+        PUSH_COPY(_mod)
+        PUSH_COPY(_cMesh)
+        PUSH_COPY(_cType)
+        PUSH_COPY(_gType)
+        PUSH_COPY(_xPrev);
+        PUSH_COPY(_yPrev);
+        PUSH_COPY(_zPrev);
+        PUSH_COPY(_xAttPrev);
+        PUSH_COPY(_yAttPrev);
+        PUSH_COPY(_zAttPrev);
+        PUSH_COPY(_cRadius)
+        PUSH_COPY(_xDown)
+        PUSH_COPY(_yDown)
+        PUSH_COPY(_zDown)
+        PUSH_COPY(_stdGravParam)
+        PUSH_COPY(_lights)
+        for(auto& n : _objectsByTag) //TEMP - inefficient
         {
             if(n.second.count(o._id))
             {
@@ -631,41 +630,41 @@ paz::Object::~Object()
         return;
     }
     const auto idx = objects().at(_id);
-    if(Ids.size() > 1)
+    if(_ids.size() > 1)
     {
-        objects().at(Ids.back()) = idx;
+        objects().at(_ids.back()) = idx;
     }
     objects().erase(_id);
-    SWAP_AND_POP(Ids)
-    SWAP_AND_POP(X)
-    SWAP_AND_POP(Y)
-    SWAP_AND_POP(Z)
-    SWAP_AND_POP(XVel)
-    SWAP_AND_POP(YVel)
-    SWAP_AND_POP(ZVel)
-    SWAP_AND_POP(XAtt)
-    SWAP_AND_POP(YAtt)
-    SWAP_AND_POP(ZAtt)
-    SWAP_AND_POP(XAngRate)
-    SWAP_AND_POP(YAngRate)
-    SWAP_AND_POP(ZAngRate)
-    SWAP_AND_POP(Mod)
-    SWAP_AND_POP(CMesh)
-    SWAP_AND_POP(CType)
-    SWAP_AND_POP(GType)
-    SWAP_AND_POP(XPrev);
-    SWAP_AND_POP(YPrev);
-    SWAP_AND_POP(ZPrev);
-    SWAP_AND_POP(XAttPrev);
-    SWAP_AND_POP(YAttPrev);
-    SWAP_AND_POP(ZAttPrev);
-    SWAP_AND_POP(CRadius)
-    SWAP_AND_POP(XDown)
-    SWAP_AND_POP(YDown)
-    SWAP_AND_POP(ZDown)
-    SWAP_AND_POP(StdGravParam)
-    SWAP_AND_POP(Lights)
-    for(auto& n : ObjectsByTag) //TEMP - inefficient
+    SWAP_AND_POP(_ids)
+    SWAP_AND_POP(_x)
+    SWAP_AND_POP(_y)
+    SWAP_AND_POP(_z)
+    SWAP_AND_POP(_xVel)
+    SWAP_AND_POP(_yVel)
+    SWAP_AND_POP(_zVel)
+    SWAP_AND_POP(_xAtt)
+    SWAP_AND_POP(_yAtt)
+    SWAP_AND_POP(_zAtt)
+    SWAP_AND_POP(_xAngRate)
+    SWAP_AND_POP(_yAngRate)
+    SWAP_AND_POP(_zAngRate)
+    SWAP_AND_POP(_mod)
+    SWAP_AND_POP(_cMesh)
+    SWAP_AND_POP(_cType)
+    SWAP_AND_POP(_gType)
+    SWAP_AND_POP(_xPrev);
+    SWAP_AND_POP(_yPrev);
+    SWAP_AND_POP(_zPrev);
+    SWAP_AND_POP(_xAttPrev);
+    SWAP_AND_POP(_yAttPrev);
+    SWAP_AND_POP(_zAttPrev);
+    SWAP_AND_POP(_cRadius)
+    SWAP_AND_POP(_xDown)
+    SWAP_AND_POP(_yDown)
+    SWAP_AND_POP(_zDown)
+    SWAP_AND_POP(_stdGravParam)
+    SWAP_AND_POP(_lights)
+    for(auto& n : _objectsByTag) //TEMP - inefficient
     {
         n.second.erase(_id);
     }
@@ -687,11 +686,11 @@ void paz::Object::notify(Object& o, const Bytes& data) const
 
 void paz::Object::notifyTagged(const std::string& tag, const Bytes& data) const
 {
-    if(!ObjectsByTag.count(tag))
+    if(!_objectsByTag.count(tag))
     {
         return;
     }
-    for(auto n : ObjectsByTag.at(tag))
+    for(auto n : _objectsByTag.at(tag))
     {
         reinterpret_cast<Object*>(n)->onNotify(*this, data);
     }
@@ -699,247 +698,247 @@ void paz::Object::notifyTagged(const std::string& tag, const Bytes& data) const
 
 double& paz::Object::x()
 {
-    return X[objects().at(_id)];
+    return _x[objects().at(_id)];
 }
 
 double paz::Object::x() const
 {
-    return X[objects().at(_id)];
+    return _x[objects().at(_id)];
 }
 
 double& paz::Object::y()
 {
-    return Y[objects().at(_id)];
+    return _y[objects().at(_id)];
 }
 
 double paz::Object::y() const
 {
-    return Y[objects().at(_id)];
+    return _y[objects().at(_id)];
 }
 
 double& paz::Object::z()
 {
-    return Z[objects().at(_id)];
+    return _z[objects().at(_id)];
 }
 
 double paz::Object::z() const
 {
-    return Z[objects().at(_id)];
+    return _z[objects().at(_id)];
 }
 
 double& paz::Object::xVel()
 {
-    return XVel[objects().at(_id)];
+    return _xVel[objects().at(_id)];
 }
 
 double paz::Object::xVel() const
 {
-    return XVel[objects().at(_id)];
+    return _xVel[objects().at(_id)];
 }
 
 double& paz::Object::yVel()
 {
-    return YVel[objects().at(_id)];
+    return _yVel[objects().at(_id)];
 }
 
 double paz::Object::yVel() const
 {
-    return YVel[objects().at(_id)];
+    return _yVel[objects().at(_id)];
 }
 
 double& paz::Object::zVel()
 {
-    return ZVel[objects().at(_id)];
+    return _zVel[objects().at(_id)];
 }
 
 double paz::Object::zVel() const
 {
-    return ZVel[objects().at(_id)];
+    return _zVel[objects().at(_id)];
 }
 
 double& paz::Object::xAtt()
 {
-    return XAtt[objects().at(_id)];
+    return _xAtt[objects().at(_id)];
 }
 
 double paz::Object::xAtt() const
 {
-    return XAtt[objects().at(_id)];
+    return _xAtt[objects().at(_id)];
 }
 
 double& paz::Object::yAtt()
 {
-    return YAtt[objects().at(_id)];
+    return _yAtt[objects().at(_id)];
 }
 
 double paz::Object::yAtt() const
 {
-    return YAtt[objects().at(_id)];
+    return _yAtt[objects().at(_id)];
 }
 
 double& paz::Object::zAtt()
 {
-    return ZAtt[objects().at(_id)];
+    return _zAtt[objects().at(_id)];
 }
 
 double paz::Object::zAtt() const
 {
-    return ZAtt[objects().at(_id)];
+    return _zAtt[objects().at(_id)];
 }
 
 double& paz::Object::xAngRate()
 {
-    return XAngRate[objects().at(_id)];
+    return _xAngRate[objects().at(_id)];
 }
 
 double paz::Object::xAngRate() const
 {
-    return XAngRate[objects().at(_id)];
+    return _xAngRate[objects().at(_id)];
 }
 
 double& paz::Object::yAngRate()
 {
-    return YAngRate[objects().at(_id)];
+    return _yAngRate[objects().at(_id)];
 }
 
 double paz::Object::yAngRate() const
 {
-    return YAngRate[objects().at(_id)];
+    return _yAngRate[objects().at(_id)];
 }
 
 double& paz::Object::zAngRate()
 {
-    return ZAngRate[objects().at(_id)];
+    return _zAngRate[objects().at(_id)];
 }
 
 double paz::Object::zAngRate() const
 {
-    return ZAngRate[objects().at(_id)];
+    return _zAngRate[objects().at(_id)];
 }
 
 paz::Model& paz::Object::model()
 {
-    return Mod[objects().at(_id)];
+    return _mod[objects().at(_id)];
 }
 
 const paz::Model& paz::Object::model() const
 {
-    return Mod[objects().at(_id)];
+    return _mod[objects().at(_id)];
 }
 
 paz::CollisionMesh& paz::Object::collisionMesh()
 {
-    return CMesh[objects().at(_id)];
+    return _cMesh[objects().at(_id)];
 }
 
 const paz::CollisionMesh& paz::Object::collisionMesh() const
 {
-    return CMesh[objects().at(_id)];
+    return _cMesh[objects().at(_id)];
 }
 
 paz::CollisionType& paz::Object::collisionType()
 {
-    return CType[objects().at(_id)];
+    return _cType[objects().at(_id)];
 }
 
 const paz::CollisionType& paz::Object::collisionType() const
 {
-    return CType[objects().at(_id)];
+    return _cType[objects().at(_id)];
 }
 
 paz::GravityType& paz::Object::gravityType()
 {
-    return GType[objects().at(_id)];
+    return _gType[objects().at(_id)];
 }
 
 const paz::GravityType& paz::Object::gravityType() const
 {
-    return GType[objects().at(_id)];
+    return _gType[objects().at(_id)];
 }
 
 double paz::Object::xPrev() const
 {
-    return XPrev[objects().at(_id)];
+    return _xPrev[objects().at(_id)];
 }
 
 double paz::Object::yPrev() const
 {
-    return YPrev[objects().at(_id)];
+    return _yPrev[objects().at(_id)];
 }
 
 double paz::Object::zPrev() const
 {
-    return ZPrev[objects().at(_id)];
+    return _zPrev[objects().at(_id)];
 }
 
 double paz::Object::xAttPrev() const
 {
-    return XAttPrev[objects().at(_id)];
+    return _xAttPrev[objects().at(_id)];
 }
 
 double paz::Object::yAttPrev() const
 {
-    return YAttPrev[objects().at(_id)];
+    return _yAttPrev[objects().at(_id)];
 }
 
 double paz::Object::zAttPrev() const
 {
-    return ZAttPrev[objects().at(_id)];
+    return _zAttPrev[objects().at(_id)];
 }
 
 double& paz::Object::collisionRadius()
 {
-    return CRadius[objects().at(_id)];
+    return _cRadius[objects().at(_id)];
 }
 
 double paz::Object::collisionRadius() const
 {
-    return CRadius[objects().at(_id)];
+    return _cRadius[objects().at(_id)];
 }
 
 double paz::Object::xDown() const
 {
-    return XDown[objects().at(_id)];
+    return _xDown[objects().at(_id)];
 }
 
 double paz::Object::yDown() const
 {
-    return YDown[objects().at(_id)];
+    return _yDown[objects().at(_id)];
 }
 
 double paz::Object::zDown() const
 {
-    return ZDown[objects().at(_id)];
+    return _zDown[objects().at(_id)];
 }
 
 double& paz::Object::stdGravParam()
 {
-    return StdGravParam[objects().at(_id)];
+    return _stdGravParam[objects().at(_id)];
 }
 
 double paz::Object::stdGravParam() const
 {
-    return StdGravParam[objects().at(_id)];
+    return _stdGravParam[objects().at(_id)];
 }
 
 std::vector<std::array<double, 7>>& paz::Object::lights()
 {
-    return Lights[objects().at(_id)];
+    return _lights[objects().at(_id)];
 }
 
 const std::vector<std::array<double, 7>>& paz::Object::lights() const
 {
-    return Lights[objects().at(_id)];
+    return _lights[objects().at(_id)];
 }
 
 void paz::Object::addTag(const std::string& tag)
 {
-    ObjectsByTag[tag].insert(_id);
+    _objectsByTag[tag].insert(_id);
 }
 
 bool paz::Object::isTagged(const std::string& tag) const
 {
-    return ObjectsByTag.count(tag) && ObjectsByTag.at(tag).count(_id);
+    return _objectsByTag.count(tag) && _objectsByTag.at(tag).count(_id);
 }
 
 void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
@@ -950,17 +949,17 @@ void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
     alt = std::numeric_limits<double>::infinity();
     for(auto n : objects())
     {
-        if(n.first == _id || CType[n.second] != CollisionType::World)
+        if(n.first == _id || _cType[n.second] != CollisionType::World)
         {
             continue;
         }
-        const double wAtt = std::sqrt(1. - XAtt[n.second]*XAtt[n.second] - YAtt[
-            n.second]*YAtt[n.second] - ZAtt[n.second]*ZAtt[n.second]);
-        const Mat rot = to_mat(Vec{{XAtt[n.second], YAtt[n.second], ZAtt[n.
+        const double wAtt = std::sqrt(1. - _xAtt[n.second]*_xAtt[n.second] -
+            _yAtt[n.second]*_yAtt[n.second] - _zAtt[n.second]*_zAtt[n.second]);
+        const Mat rot = to_mat(Vec{{_xAtt[n.second], _yAtt[n.second], _zAtt[n.
             second], wAtt}});
-        const Vec relPos = rot*Vec{{X[idx] - X[n.second], Y[idx] - Y[n.second],
-            Z[idx] - Z[n.second]}};
-        const Vec dir = rot*Vec{{XDown[idx], YDown[idx], ZDown[idx]}};
+        const Vec relPos = rot*Vec{{_x[idx] - _x[n.second], _y[idx] - _y[n.
+            second], _z[idx] - _z[n.second]}};
+        const Vec dir = rot*Vec{{_xDown[idx], _yDown[idx], _zDown[idx]}};
         double dist;
         Vec tempNor(3);
         GET_CMESH(n.second).castRay(relPos(0), relPos(1), relPos(2), dir(0),
@@ -969,10 +968,10 @@ void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
         {
             alt = dist;
             nor = rot.trans()*tempNor;
-            vel(0) = XVel[n.second];
-            vel(1) = YVel[n.second];
-            vel(2) = ZVel[n.second];
+            vel(0) = _xVel[n.second];
+            vel(1) = _yVel[n.second];
+            vel(2) = _zVel[n.second];
         }
     }
-    alt -= CRadius[idx];
+    alt -= _cRadius[idx];
 }

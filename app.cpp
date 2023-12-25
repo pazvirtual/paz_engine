@@ -13,86 +13,86 @@ static constexpr double InteractRangeInFrontSq = 9.;
 static constexpr std::size_t MaxConsoleLines = 1000;
 static constexpr float FontScale = 1.5f;
 static constexpr int CharWidth = 5;
+static constexpr double Timestep = 1./60.;
 
-static paz::Framebuffer GeometryBuffer;
-static paz::Framebuffer OitAccumBuffer;
-static paz::Framebuffer OitDepthBuffer;
-static paz::Framebuffer RenderBuffer;
-static paz::Framebuffer DofBuffer;
-static paz::Framebuffer PostBuffer;
-static paz::Framebuffer LumBuffer;
+static paz::Framebuffer _geometryBuffer;
+static paz::Framebuffer _oitAccumBuffer;
+static paz::Framebuffer _oitDepthBuffer;
+static paz::Framebuffer _renderBuffer;
+static paz::Framebuffer _dofBuffer;
+static paz::Framebuffer _postBuffer;
+static paz::Framebuffer _lumBuffer;
 
-static paz::RenderTarget DiffuseMap(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _diffuseMap(paz::TextureFormat::RGBA16Float);
 // ...
-static paz::RenderTarget EmissMap(paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget NormalMap(paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget DepthMap(paz::TextureFormat::Depth32Float);
-static paz::RenderTarget HdrRender(paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget DofRender(paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget FinalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
-static paz::RenderTarget FinalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
-static paz::RenderTarget OitAccumTex(paz::TextureFormat::RGBA16Float);
-static paz::RenderTarget OitRevealTex(paz::TextureFormat::RGBA8UNorm);
+static paz::RenderTarget _emissMap(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _normalMap(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _depthMap(paz::TextureFormat::Depth32Float);
+static paz::RenderTarget _hdrRender(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _dofRender(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _finalRender(paz::TextureFormat::RGBA16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
+static paz::RenderTarget _oitAccumTex(paz::TextureFormat::RGBA16Float);
+static paz::RenderTarget _oitRevealTex(paz::TextureFormat::RGBA8UNorm);
 
-static std::unordered_map<void*, paz::InstanceBuffer> Instances;
+static std::unordered_map<void*, paz::InstanceBuffer> _instances;
 
-static paz::RenderPass GeometryPass;
-static paz::RenderPass RenderPass0;
-static paz::RenderPass RenderPass1;
-static paz::RenderPass DofPass;
-static paz::RenderPass OitAccumPass;
-static paz::RenderPass OitCompositePass;
-static paz::RenderPass OitDepthPass;
-static paz::RenderPass PostPass0;
-static paz::RenderPass LumPass;
-static paz::RenderPass FxaaPass;
-static paz::RenderPass PostPass1;
-static paz::RenderPass ConsolePass;
-static paz::RenderPass TextPass;
-static paz::RenderPass CursorPass;
+static paz::RenderPass _geometryPass;
+static paz::RenderPass _renderPass0;
+static paz::RenderPass _renderPass1;
+static paz::RenderPass _dofPass;
+static paz::RenderPass _oitAccumPass;
+static paz::RenderPass _oitCompositePass;
+static paz::RenderPass _oitDepthPass;
+static paz::RenderPass _postPass0;
+static paz::RenderPass _lumPass;
+static paz::RenderPass _fxaaPass;
+static paz::RenderPass _postPass1;
+static paz::RenderPass _consolePass;
+static paz::RenderPass _textPass;
+static paz::RenderPass _cursorPass;
 
-static paz::VertexBuffer QuadVertices;
-static paz::VertexBuffer SphereVertices;
-static paz::IndexBuffer SphereIndices;
+static paz::VertexBuffer _quadVertices;
+static paz::VertexBuffer _sphereVertices;
+static paz::IndexBuffer _sphereIndices;
 
-static paz::Texture FontTex;
-static paz::Texture ConsoleFontTex;
-static std::stringstream MsgStream;
-static std::deque<std::string> Console;
-static paz::ConsoleMode CurConsoleMode = paz::ConsoleMode::Disable;
-static std::queue<std::pair<std::string, double>> Dialogs;
-static double DialogTime;
-static bool DialogSkipFrame;
+static paz::Texture _fontTex;
+static paz::Texture _consoleFontTex;
+static std::stringstream _msgStream;
+static std::deque<std::string> _console;
+static paz::ConsoleMode _consoleMode = paz::ConsoleMode::Disable;
+static std::queue<std::pair<std::string, double>> _dialogs;
+static double _dialogTime;
+static bool _dialogSkipFrame;
 
-static std::string Title;
+static std::string _title;
 
-static paz::Texture DefaultDiffTex;
+static paz::Texture _defaultDiffTex;
 
-static paz::Texture Cursor;
-static paz::Texture Reticule;
-static int ReticuleIdx;
-static bool ReticuleHighlight;
+static paz::Texture _cursor;
+static paz::Texture _reticule;
+static int _reticuleIdx;
+static bool _reticuleHighlight;
 
-static paz::ObjectPtr CameraObject;
-static paz::ObjectPtr MicObject;
+static paz::ObjectPtr _cameraObject;
+static paz::ObjectPtr _micObject;
 
-static paz::ObjectPtr SoundSrc;
+static paz::ObjectPtr _soundSrc;
 
-static bool Paused;
-static double AccumTime;
-static constexpr double Timestep = 1./60.; //TEMP
-static int LookSensitivity = 5;
+static bool _paused;
+static double _accumTime;
+static int _lookSensitivity = 5;
 
-static double GravAcc;
-static paz::Threadpool Threads;
+static double _gravAcc;
+static paz::Threadpool _threads;
 
-static bool FxaaEnabled = true;
+static bool _fxaaEnabled = true;
 
-static float DofMinDepth = 0.;//0.97;
-static float DofMaxDepth = 0.99;
+static float _dofMinDepth = 0.;//0.97;
+static float _dofMaxDepth = 0.99;
 
-static paz::Vec SunDir = paz::Vec::Zero(4);
-static std::array<float, 4> SunIll;
+static paz::Vec _sunDir = paz::Vec::Zero(4);
+static std::array<float, 4> _sunIll;
 
 static const std::vector<paz::Button> OptionsButtons =
 {
@@ -148,23 +148,23 @@ static const std::vector<paz::Button> OptionsButtons =
         }
     },
     {
-        [](){ return FxaaEnabled ? "FXAA:        ON" : "FXAA:        OFF"; },
+        [](){ return _fxaaEnabled ? "FXAA:        ON" : "FXAA:        OFF"; },
         [](paz::Menu&)
         {
-            FxaaEnabled = !FxaaEnabled;
-            paz::save_setting("fxaa", FxaaEnabled ? "1" : "0");
+            _fxaaEnabled = !_fxaaEnabled;
+            paz::save_setting("fxaa", _fxaaEnabled ? "1" : "0");
         }
     },
     {
-        [](){ return "Sensitivity: " + std::to_string(LookSensitivity); },
+        [](){ return "Sensitivity: " + std::to_string(_lookSensitivity); },
         [](paz::Menu&)
         {
-            ++LookSensitivity;
-            if(LookSensitivity > 10)
+            ++_lookSensitivity;
+            if(_lookSensitivity > 10)
             {
-                LookSensitivity = 1;
+                _lookSensitivity = 1;
             }
-            paz::save_setting("sensitivity", std::to_string(LookSensitivity));
+            paz::save_setting("sensitivity", std::to_string(_lookSensitivity));
         }
     },
     {"Back", [](paz::Menu& m){ m.setState(0, 1); }}
@@ -214,40 +214,40 @@ void paz::App::Init(const std::string& title)
     }
     if(load_setting("fxaa") == "0")
     {
-        FxaaEnabled = false;
+        _fxaaEnabled = false;
     }
     {
         const auto str = load_setting("sensitivity");
         if(!str.empty())
         {
-            LookSensitivity = std::stoi(str);
+            _lookSensitivity = std::stoi(str);
         }
     }
 
     Window::EnableDithering();
 
-    Title = title;
-    Window::SetTitle(Title);
+    _title = title;
+    Window::SetTitle(_title);
 
-    GeometryBuffer.attach(DiffuseMap);
+    _geometryBuffer.attach(_diffuseMap);
     // ...
-    GeometryBuffer.attach(EmissMap);
-    GeometryBuffer.attach(NormalMap);
-    GeometryBuffer.attach(DepthMap);
+    _geometryBuffer.attach(_emissMap);
+    _geometryBuffer.attach(_normalMap);
+    _geometryBuffer.attach(_depthMap);
 
-    RenderBuffer.attach(HdrRender);
+    _renderBuffer.attach(_hdrRender);
 
-    DofBuffer.attach(DofRender);
+    _dofBuffer.attach(_dofRender);
 
-    OitAccumBuffer.attach(OitAccumTex);
-    OitAccumBuffer.attach(OitRevealTex);
-    OitAccumBuffer.attach(DepthMap);
+    _oitAccumBuffer.attach(_oitAccumTex);
+    _oitAccumBuffer.attach(_oitRevealTex);
+    _oitAccumBuffer.attach(_depthMap);
 
-    OitDepthBuffer.attach(DepthMap);
+    _oitDepthBuffer.attach(_depthMap);
 
-    PostBuffer.attach(FinalRender);
+    _postBuffer.attach(_finalRender);
 
-    LumBuffer.attach(FinalLumMap);
+    _lumBuffer.attach(_finalLumMap);
 
     const VertexFunction geometryVert(get_builtin("geometry.vert").str());
     const VertexFunction quadVert(get_builtin("quad.vert").str());
@@ -271,28 +271,28 @@ void paz::App::Init(const std::string& title)
     const FragmentFunction dofFrag(get_builtin("dof.frag").str());
     const FragmentFunction emptyFrag(get_builtin("empty.frag").str());
 
-    GeometryPass = RenderPass(GeometryBuffer, geometryVert, geometryFrag);
-    RenderPass0 = RenderPass(RenderBuffer, sceneVert0, sceneFrag0);
-    RenderPass1 = RenderPass(RenderBuffer, sceneVert1, sceneFrag1, {BlendMode::
+    _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
+    _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
+    _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1, {BlendMode::
         One_One});
-    DofPass = RenderPass(DofBuffer, quadVert, dofFrag);
-    OitAccumPass = RenderPass(OitAccumBuffer, oitVert, oitFrag, {BlendMode::
+    _dofPass = RenderPass(_dofBuffer, quadVert, dofFrag);
+    _oitAccumPass = RenderPass(_oitAccumBuffer, oitVert, oitFrag, {BlendMode::
         One_One, BlendMode::Zero_InvSrcAlpha});
-    OitCompositePass = RenderPass(RenderBuffer, quadVert, compositeFrag,
+    _oitCompositePass = RenderPass(_renderBuffer, quadVert, compositeFrag,
         {BlendMode::InvSrcAlpha_SrcAlpha});
-    OitDepthPass = RenderPass(OitDepthBuffer, oitDepthVert, emptyFrag);
-    PostPass0 = RenderPass(PostBuffer, quadVert, postFrag);
-    LumPass = RenderPass(LumBuffer, quadVert, lumFrag);
-    FxaaPass = RenderPass(quadVert, fxaaFrag);
-    PostPass1 = RenderPass(quadVert, postFrag);
-    ConsolePass = RenderPass(quadVert, consoleFrag, {BlendMode::
+    _oitDepthPass = RenderPass(_oitDepthBuffer, oitDepthVert, emptyFrag);
+    _postPass0 = RenderPass(_postBuffer, quadVert, postFrag);
+    _lumPass = RenderPass(_lumBuffer, quadVert, lumFrag);
+    _fxaaPass = RenderPass(quadVert, fxaaFrag);
+    _postPass1 = RenderPass(quadVert, postFrag);
+    _consolePass = RenderPass(quadVert, consoleFrag, {BlendMode::
         SrcAlpha_InvSrcAlpha});
-    TextPass = RenderPass(textVert, textFrag, {BlendMode::
+    _textPass = RenderPass(textVert, textFrag, {BlendMode::
         SrcAlpha_InvSrcAlpha});
-    CursorPass = RenderPass(cursorVert, cursorFrag, {BlendMode::
+    _cursorPass = RenderPass(cursorVert, cursorFrag, {BlendMode::
         SrcAlpha_InvSrcAlpha});
 
-    QuadVertices.addAttribute(2, QuadPos);
+    _quadVertices.addAttribute(2, QuadPos);
 
     {
         std::vector<float> positions;
@@ -304,18 +304,18 @@ void paz::App::Init(const std::string& title)
         std::vector<unsigned int> indices;
         parse_model(get_builtin("icosphere3.pazmodel"), positions, uvs, normals,
             materials, materialNames, materialLibs, indices);
-        SphereVertices.addAttribute(4, positions);
-        SphereIndices = IndexBuffer(indices);
+        _sphereVertices.addAttribute(4, positions);
+        _sphereIndices = IndexBuffer(indices);
     }
 
-    ConsoleFontTex = Texture(get_builtin_image("consolefont.pbm")); //TEMP - note that only red channel is used
+    _consoleFontTex = Texture(get_builtin_image("consolefont.pbm")); //TEMP - note that only red channel is used
     try
     {
-        FontTex = Texture(get_asset_image("font.pbm")); //TEMP - note that only red channel is used
+        _fontTex = Texture(get_asset_image("font.pbm")); //TEMP - note that only red channel is used
     }
     catch(...)
     {
-        FontTex = ConsoleFontTex;
+        _fontTex = _consoleFontTex;
     }
 
     std::vector<unsigned char> temp(4*512*512);
@@ -338,21 +338,21 @@ void paz::App::Init(const std::string& title)
             temp[4*(512*i + j) + 3] = 255;
         }
     }
-    DefaultDiffTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.
+    _defaultDiffTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.
         data(), MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::
         Linear, WrapMode::Repeat, WrapMode::Repeat);
 
-    Cursor = Texture(get_asset_image("cursor.pbm")); //TEMP - note that only red channel is used
-    Reticule = Texture(get_asset_image("reticule.pbm")); //TEMP - note that only red channel is used
+    _cursor = Texture(get_asset_image("cursor.pbm")); //TEMP - note that only red channel is used
+    _reticule = Texture(get_asset_image("reticule.pbm")); //TEMP - note that only red channel is used
 }
 
 void paz::App::Run()
 {
-    Font menuFont(FontTex, 2.*FontScale, CharWidth);
+    Font menuFont(_fontTex, 2.*FontScale, CharWidth);
 
     {
         bool done = false;
-        Menu startMenu(menuFont, Title,
+        Menu startMenu(menuFont, _title,
         {
             {
                 {"Start", [&](Menu&){ done = true; }},
@@ -375,39 +375,39 @@ void paz::App::Run()
 
             startMenu.update();
 
-            TextPass.begin({LoadAction::Clear});
-            TextPass.read("font", startMenu.font().tex());
-            TextPass.uniform("u", 0.f);
-            TextPass.uniform("v", 0.f);
-            TextPass.uniform("width", Window::ViewportWidth());
-            TextPass.uniform("height", Window::ViewportHeight());
-            TextPass.uniform("charWidth", startMenu.font().charWidth());
-            TextPass.uniform("baseWidth", startMenu.font().tex().width());
-            TextPass.uniform("baseHeight", startMenu.font().tex().height());
-            TextPass.uniform("scale", startMenu.font().curScale());
-            TextPass.draw(PrimitiveType::TriangleStrip, QuadVertices, startMenu.
+            _textPass.begin({LoadAction::Clear});
+            _textPass.read("font", startMenu.font().tex());
+            _textPass.uniform("u", 0.f);
+            _textPass.uniform("v", 0.f);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", startMenu.font().charWidth());
+            _textPass.uniform("baseWidth", startMenu.font().tex().width());
+            _textPass.uniform("baseHeight", startMenu.font().tex().height());
+            _textPass.uniform("scale", startMenu.font().curScale());
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, startMenu.
                 chars());
-            TextPass.end();
+            _textPass.end();
 
             if(Window::MouseActive())
             {
-                CursorPass.begin({LoadAction::Load});
-                CursorPass.uniform("x", static_cast<float>(Window::MousePos().
+                _cursorPass.begin({LoadAction::Load});
+                _cursorPass.uniform("x", static_cast<float>(Window::MousePos().
                     first)/(Window::Width() - 1));
-                CursorPass.uniform("y", static_cast<float>(Window::MousePos().
+                _cursorPass.uniform("y", static_cast<float>(Window::MousePos().
                     second)/(Window::Height() - 1));
-                CursorPass.uniform("idx", 0);
-                CursorPass.uniform("aspect", static_cast<float>(Cursor.
-                    height())/Cursor.width());
-                CursorPass.uniform("h", static_cast<float>(startMenu.
+                _cursorPass.uniform("idx", 0);
+                _cursorPass.uniform("aspect", static_cast<float>(_cursor.
+                    height())/_cursor.width());
+                _cursorPass.uniform("h", static_cast<float>(startMenu.
                     curButtonEnabled()));
-                CursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::
+                _cursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::
                     round(20.f*Window::UiScale())))); //TEMP
-                CursorPass.uniform("width", Window::ViewportWidth());
-                CursorPass.uniform("height", Window::ViewportHeight());
-                CursorPass.read("tex", Cursor);
-                CursorPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-                CursorPass.end();
+                _cursorPass.uniform("width", Window::ViewportWidth());
+                _cursorPass.uniform("height", Window::ViewportHeight());
+                _cursorPass.read("tex", _cursor);
+                _cursorPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+                _cursorPass.end();
             }
 
             Window::EndFrame();
@@ -425,7 +425,7 @@ void paz::App::Run()
         {
             {"Resume", [&](Menu&)
                 {
-                    Paused = false;
+                    _paused = false;
                     Window::SetCursorMode(CursorMode::Disable);
                 }
             },
@@ -441,35 +441,35 @@ void paz::App::Run()
     while(!Window::Done())
     {
         bool justPaused = false;
-        if(Paused)
+        if(_paused)
         {
-            AccumTime = 0.;
+            _accumTime = 0.;
             Window::PollEvents();
             input.resetEvents();
         }
         else
         {
-            AccumTime += Window::FrameTime();
+            _accumTime += Window::FrameTime();
 
             Window::PollEvents();
             if(Window::KeyPressed(Key::Escape) || Window::GamepadPressed(
                 GamepadButton::Start))
             {
                 justPaused = true;
-                Paused = true;
+                _paused = true;
                 pauseMenu.setState(0, 0);
             }
-            input.copyEvents(Timestep, 0.2*LookSensitivity);
+            input.copyEvents(Timestep, 0.2*_lookSensitivity);
 
-            while(AccumTime > 0.)
+            while(_accumTime > 0.)
             {
-                if(CurConsoleMode == ConsoleMode::LatestStep)
+                if(_consoleMode == ConsoleMode::LatestStep)
                 {
-                    std::stringstream{}.swap(::MsgStream);
+                    std::stringstream{}.swap(_msgStream);
                 }
 
-                do_physics(GravAcc, Timestep);
-                do_collisions(Threads, Timestep);
+                do_physics(_gravAcc, Timestep);
+                do_collisions(_threads, Timestep);
                 const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
                 for(const auto& n : tempObjects)
                 {
@@ -480,33 +480,33 @@ void paz::App::Run()
                 }
 
                 input.resetEvents();
-                AccumTime -= Timestep;
+                _accumTime -= Timestep;
             }
         }
 
-        const double fac = 1. + AccumTime/Timestep;
+        const double fac = 1. + _accumTime/Timestep;
 
-        if(!Paused && MicObject && SoundSrc)
+        if(!_paused && _micObject && _soundSrc)
         {
-            const Vec relPos{{mix(SoundSrc->xPrev() - MicObject->xPrev(),
-                SoundSrc->x() - MicObject->x(), fac), mix(SoundSrc->yPrev() -
-                MicObject->yPrev(), SoundSrc->y() - MicObject->y(), fac), mix(
-                SoundSrc->zPrev() - MicObject->zPrev(), SoundSrc->z() -
-                MicObject->z(), fac)}};
-            const Vec relVel{{SoundSrc->xVel() - MicObject->xVel(), SoundSrc->
-                yVel() - MicObject->yVel(), SoundSrc->zVel() - MicObject->
+            const Vec relPos{{mix(_soundSrc->xPrev() - _micObject->xPrev(),
+                _soundSrc->x() - _micObject->x(), fac), mix(_soundSrc->yPrev() -
+                _micObject->yPrev(), _soundSrc->y() - _micObject->y(), fac), mix(
+                _soundSrc->zPrev() - _micObject->zPrev(), _soundSrc->z() -
+                _micObject->z(), fac)}};
+            const Vec relVel{{_soundSrc->xVel() - _micObject->xVel(), _soundSrc->
+                yVel() - _micObject->yVel(), _soundSrc->zVel() - _micObject->
                 zVel()}};
             const double dist = relPos.norm();
             const Vec dir = relPos/dist;
-            const double wAttPrev = std::sqrt(1. - MicObject->xAttPrev()*
-                MicObject->xAttPrev() - MicObject->yAttPrev()*MicObject->
-                yAttPrev() - MicObject->zAttPrev()*MicObject->zAttPrev());
-            const double wAtt = std::sqrt(1. - MicObject->xAtt()*MicObject->
-                xAtt() - MicObject->yAtt()*MicObject->yAtt() - MicObject->
-                zAtt()*MicObject->zAtt());
-            const Vec micAtt = nlerp({{MicObject->xAttPrev(), MicObject->
-                yAttPrev(), MicObject->zAttPrev(), wAttPrev}}, {{MicObject->
-                xAtt(), MicObject->yAtt(), MicObject->zAtt(), wAtt}}, fac);
+            const double wAttPrev = std::sqrt(1. - _micObject->xAttPrev()*
+                _micObject->xAttPrev() - _micObject->yAttPrev()*_micObject->
+                yAttPrev() - _micObject->zAttPrev()*_micObject->zAttPrev());
+            const double wAtt = std::sqrt(1. - _micObject->xAtt()*_micObject->
+                xAtt() - _micObject->yAtt()*_micObject->yAtt() - _micObject->
+                zAtt()*_micObject->zAtt());
+            const Vec micAtt = nlerp({{_micObject->xAttPrev(), _micObject->
+                yAttPrev(), _micObject->zAttPrev(), wAttPrev}}, {{_micObject->
+                xAtt(), _micObject->yAtt(), _micObject->zAtt(), wAtt}}, fac);
             const Mat micRot = to_mat(micAtt);
             const Vec micX = micRot.row(1).trans();
             const Vec micY = -micRot.row(0).trans();
@@ -536,20 +536,20 @@ void paz::App::Run()
             AudioEngine::SetVolume(0.);
         }
 
-        const double cameraWAttPrev = std::sqrt(1. - CameraObject->xAttPrev()*
-            CameraObject->xAttPrev() - CameraObject->yAttPrev()*CameraObject->
-            yAttPrev() - CameraObject->zAttPrev()*CameraObject->zAttPrev());
-        const double cameraWAtt = std::sqrt(1. - CameraObject->xAtt()*
-            CameraObject->xAtt() - CameraObject->yAtt()*CameraObject->yAtt() -
-            CameraObject->zAtt()*CameraObject->zAtt());
-        const Vec cameraAtt = nlerp(Vec{{CameraObject->xAttPrev(),
-            CameraObject->yAttPrev(), CameraObject->zAttPrev(),
-            cameraWAttPrev}}, Vec{{CameraObject->xAtt(), CameraObject->yAtt(),
-            CameraObject->zAtt(), cameraWAtt}}, fac);
+        const double cameraWAttPrev = std::sqrt(1. - _cameraObject->xAttPrev()*
+            _cameraObject->xAttPrev() - _cameraObject->yAttPrev()*_cameraObject->
+            yAttPrev() - _cameraObject->zAttPrev()*_cameraObject->zAttPrev());
+        const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
+            _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() -
+            _cameraObject->zAtt()*_cameraObject->zAtt());
+        const Vec cameraAtt = nlerp(Vec{{_cameraObject->xAttPrev(),
+            _cameraObject->yAttPrev(), _cameraObject->zAttPrev(),
+            cameraWAttPrev}}, Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(),
+            _cameraObject->zAtt(), cameraWAtt}}, fac);
 
-        const Vec cameraPos{{mix(CameraObject->xPrev(), CameraObject->x(), fac),
-            mix(CameraObject->yPrev(), CameraObject->y(), fac), mix(
-            CameraObject->zPrev(), CameraObject->z(), fac)}};
+        const Vec cameraPos{{mix(_cameraObject->xPrev(), _cameraObject->x(), fac),
+            mix(_cameraObject->yPrev(), _cameraObject->y(), fac), mix(
+            _cameraObject->zPrev(), _cameraObject->z(), fac)}};
 
         const auto projection = perspective(1., Window::AspectRatio(), 0.1,
             1e3);
@@ -577,12 +577,12 @@ void paz::App::Run()
         }
         for(const auto& n : objectsByModel)
         {
-            if(!Instances.count(n.first) || Instances.at(n.first).size() != n.
+            if(!_instances.count(n.first) || _instances.at(n.first).size() != n.
                 second.size()) //TEMP - should only need to change _numInstances if larger, not reinit whole buffer
             {
-                Instances[n.first] = InstanceBuffer(n.second.size());
-                Instances.at(n.first).addAttribute(4, DataType::Float);
-                Instances.at(n.first).addAttribute(2, DataType::Float);
+                _instances[n.first] = InstanceBuffer(n.second.size());
+                _instances.at(n.first).addAttribute(4, DataType::Float);
+                _instances.at(n.first).addAttribute(2, DataType::Float);
             }
         }
         std::vector<float> lightsData0;
@@ -646,8 +646,8 @@ void paz::App::Run()
                     }
                 }
             }
-            Instances.at(n.first).subAttribute(0, modelMatData[0]);
-            Instances.at(n.first).subAttribute(1, modelMatData[1]);
+            _instances.at(n.first).subAttribute(0, modelMatData[0]);
+            _instances.at(n.first).subAttribute(1, modelMatData[1]);
         }
         for(const auto& n : invisibleObjects)
         {
@@ -693,12 +693,12 @@ void paz::App::Run()
         lights.addAttribute(4, lightsData1);
 
         // Get geometry map.
-        GeometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
+        _geometryPass.begin(std::vector<LoadAction>(4, LoadAction::Clear),
             LoadAction::Clear);
-        GeometryPass.cull(CullMode::Back);
-        GeometryPass.depth(DepthTestMode::Less);
-        GeometryPass.uniform("projection", projection);
-        GeometryPass.uniform("view", convert_mat(view));
+        _geometryPass.cull(CullMode::Back);
+        _geometryPass.depth(DepthTestMode::Less);
+        _geometryPass.uniform("projection", projection);
+        _geometryPass.uniform("view", convert_mat(view));
         for(const auto& n : objectsByModel)
         {
             if(n.second.back()->model()._i.empty())
@@ -707,52 +707,52 @@ void paz::App::Run()
             }
             if(n.second.back()->model()._diffTex.width())
             {
-                GeometryPass.read("diffTex", n.second.back()->model()._diffTex);
+                _geometryPass.read("diffTex", n.second.back()->model()._diffTex);
             }
             else
             {
-                GeometryPass.read("diffTex", DefaultDiffTex);
+                _geometryPass.read("diffTex", _defaultDiffTex);
             }
             std::array<float, 4> emiss;
             std::copy(n.second.back()->model()._emiss.begin(), n.second.back()->
                 model()._emiss.end(), emiss.begin());
             emiss[3] = 1.f;
-            GeometryPass.uniform("emiss", emiss);
-            GeometryPass.draw(PrimitiveType::Triangles, n.second.back()->
-                model()._v, Instances.at(n.first), n.second.back()->model()._i);
+            _geometryPass.uniform("emiss", emiss);
+            _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
+                model()._v, _instances.at(n.first), n.second.back()->model()._i);
         }
-        GeometryPass.end();
+        _geometryPass.end();
 
         // Render in HDR.
-        RenderPass0.begin({LoadAction::Clear});//, LoadAction::Load);
-        RenderPass0.read("diffuseMap", DiffuseMap);
+        _renderPass0.begin({LoadAction::Clear});//, LoadAction::Load);
+        _renderPass0.read("diffuseMap", _diffuseMap);
         // ...
-        RenderPass0.read("emissMap", EmissMap);
-        RenderPass0.read("normalMap", NormalMap);
-        RenderPass0.read("depthMap", DepthMap);
-        RenderPass0.uniform("invProjection", convert_mat(convert_mat(
+        _renderPass0.read("emissMap", _emissMap);
+        _renderPass0.read("normalMap", _normalMap);
+        _renderPass0.read("depthMap", _depthMap);
+        _renderPass0.uniform("invProjection", convert_mat(convert_mat(
             projection).inv()));
-        RenderPass0.uniform("lightDir", convert_vec(view*SunDir));
-        RenderPass0.uniform("ill", SunIll);
-        RenderPass0.draw(PrimitiveType::TriangleStrip, QuadVertices);
-        RenderPass0.end();
+        _renderPass0.uniform("lightDir", convert_vec(view*_sunDir));
+        _renderPass0.uniform("ill", _sunIll);
+        _renderPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
+        _renderPass0.end();
 
         if(!lights.empty())
         {
-            RenderPass1.begin({LoadAction::Load});//, LoadAction::Load);
-            RenderPass1.cull(CullMode::Front);
-//            RenderPass1.depth(DepthTestMode::GreaterNoMask);
-            RenderPass1.read("diffuseMap", DiffuseMap);
+            _renderPass1.begin({LoadAction::Load});//, LoadAction::Load);
+            _renderPass1.cull(CullMode::Front);
+//            _renderPass1.depth(DepthTestMode::GreaterNoMask);
+            _renderPass1.read("diffuseMap", _diffuseMap);
             // ...
-            RenderPass1.read("emissMap", EmissMap);
-            RenderPass1.read("normalMap", NormalMap);
-            RenderPass1.read("depthMap", DepthMap);
-            RenderPass1.uniform("projection", projection);
-            RenderPass1.uniform("invProjection", convert_mat(convert_mat(
+            _renderPass1.read("emissMap", _emissMap);
+            _renderPass1.read("normalMap", _normalMap);
+            _renderPass1.read("depthMap", _depthMap);
+            _renderPass1.uniform("projection", projection);
+            _renderPass1.uniform("invProjection", convert_mat(convert_mat(
                 projection).inv()));
-            RenderPass1.draw(PrimitiveType::Triangles, SphereVertices, lights,
-                SphereIndices);
-            RenderPass1.end();
+            _renderPass1.draw(PrimitiveType::Triangles, _sphereVertices, lights,
+                _sphereIndices);
+            _renderPass1.end();
         }
 
         // Render transparent objects.
@@ -772,97 +772,97 @@ void paz::App::Run()
             {
                 throw std::runtime_error("Too many lights (" + std::to_string(numLights) + " > 100).");
             }
-            OitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::Load);
-            OitAccumPass.depth(DepthTestMode::LessNoMask);
-            OitAccumPass.uniform("numLights", numLights);
-            OitAccumPass.uniform("light0", lightsData0);
-            OitAccumPass.uniform("light1", lightsData1);
-            OitAccumPass.uniform("projection", projection);
-            OitAccumPass.uniform("invProjection", convert_mat(convert_mat(projection).inv())); //TEMP - precompute - used elsewhere
-            OitAccumPass.uniform("sunDir", convert_vec(view*SunDir)); //TEMP - precompute
-            OitAccumPass.uniform("sunIll", SunIll);
-            OitAccumPass.uniform("view", convert_mat(view)); //TEMP - precompute
+            _oitAccumPass.begin({LoadAction::Clear, LoadAction::Clear}, LoadAction::Load);
+            _oitAccumPass.depth(DepthTestMode::LessNoMask);
+            _oitAccumPass.uniform("numLights", numLights);
+            _oitAccumPass.uniform("light0", lightsData0);
+            _oitAccumPass.uniform("light1", lightsData1);
+            _oitAccumPass.uniform("projection", projection);
+            _oitAccumPass.uniform("invProjection", convert_mat(convert_mat(projection).inv())); //TEMP - precompute - used elsewhere
+            _oitAccumPass.uniform("sunDir", convert_vec(view*_sunDir)); //TEMP - precompute
+            _oitAccumPass.uniform("sunIll", _sunIll);
+            _oitAccumPass.uniform("view", convert_mat(view)); //TEMP - precompute
             for(const auto& n : objectsByModel)
             {
                 if(!n.second.back()->model()._transp.empty())
                 {
-                    OitAccumPass.draw(PrimitiveType::Triangles, n.second.back()->model()._transp, Instances.at(n.first));
+                    _oitAccumPass.draw(PrimitiveType::Triangles, n.second.back()->model()._transp, _instances.at(n.first));
                 }
             }
-            OitAccumPass.end();
+            _oitAccumPass.end();
 
-            OitCompositePass.begin({LoadAction::Load});
-            OitCompositePass.read("accumTex", OitAccumTex);
-            OitCompositePass.read("revealTex", OitRevealTex);
-            OitCompositePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            OitCompositePass.end();
+            _oitCompositePass.begin({LoadAction::Load});
+            _oitCompositePass.read("accumTex", _oitAccumTex);
+            _oitCompositePass.read("revealTex", _oitRevealTex);
+            _oitCompositePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _oitCompositePass.end();
         }
 
-        const bool dofEnabled = DofMinDepth < DofMaxDepth;
+        const bool dofEnabled = _dofMinDepth < _dofMaxDepth;
         if(dofEnabled)
         {
             if(oitEnabled) //TEMP - can we get nearest transparent depth while performing OIT ?
             {
-                OitDepthPass.begin();
-                OitDepthPass.depth(DepthTestMode::Less);
-                OitDepthPass.uniform("project", projection);
-                OitDepthPass.uniform("view", convert_mat(view));
+                _oitDepthPass.begin();
+                _oitDepthPass.depth(DepthTestMode::Less);
+                _oitDepthPass.uniform("project", projection);
+                _oitDepthPass.uniform("view", convert_mat(view));
                 for(const auto& n : objectsByModel)
                 {
                     if(!n.second.back()->model()._transp.empty())
                     {
-                        OitDepthPass.draw(PrimitiveType::Triangles, n.second.back()->model()._transp, Instances.at(n.first));
+                        _oitDepthPass.draw(PrimitiveType::Triangles, n.second.back()->model()._transp, _instances.at(n.first));
                     }
                 }
-                OitDepthPass.end();
+                _oitDepthPass.end();
             }
 
-            DofPass.begin();
-            DofPass.read("hdrRender", HdrRender);
-            DofPass.read("depthMap", DepthMap);
-            DofPass.uniform("minDepth", DofMinDepth);
-            DofPass.uniform("maxDepth", DofMaxDepth);
-            DofPass.uniform("aspectRatio", Window::AspectRatio());
-            DofPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            DofPass.end();
+            _dofPass.begin();
+            _dofPass.read("hdrRender", _hdrRender);
+            _dofPass.read("depthMap", _depthMap);
+            _dofPass.uniform("minDepth", _dofMinDepth);
+            _dofPass.uniform("maxDepth", _dofMaxDepth);
+            _dofPass.uniform("aspectRatio", Window::AspectRatio());
+            _dofPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _dofPass.end();
         }
 
-        if(FxaaEnabled)
+        if(_fxaaEnabled)
         {
             // Tonemap to linear LDR.
-            PostPass0.begin();
-            PostPass0.read("hdrRender", dofEnabled ? DofRender : HdrRender);
-            PostPass0.uniform("whitePoint", 1.f);
-            PostPass0.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            PostPass0.end();
+            _postPass0.begin();
+            _postPass0.read("hdrRender", dofEnabled ? _dofRender : _hdrRender);
+            _postPass0.uniform("whitePoint", 1.f);
+            _postPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _postPass0.end();
 
             // Get luminance map.
-            LumPass.begin();
-            LumPass.read("img", FinalRender);
-            LumPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            LumPass.end();
+            _lumPass.begin();
+            _lumPass.read("img", _finalRender);
+            _lumPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _lumPass.end();
 
             // Anti-alias.
-            FxaaPass.begin();
-            FxaaPass.read("img", FinalRender);
-            FxaaPass.read("lum", FinalLumMap);
-            FxaaPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            FxaaPass.end();
+            _fxaaPass.begin();
+            _fxaaPass.read("img", _finalRender);
+            _fxaaPass.read("lum", _finalLumMap);
+            _fxaaPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _fxaaPass.end();
         }
         else
         {
             // Tonemap to linear LDR.
-            PostPass1.begin();
-            PostPass1.read("hdrRender", dofEnabled ? DofRender : HdrRender);
-            PostPass1.uniform("whitePoint", 1.f);
-            PostPass1.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            PostPass1.end();
+            _postPass1.begin();
+            _postPass1.read("hdrRender", dofEnabled ? _dofRender : _hdrRender);
+            _postPass1.uniform("whitePoint", 1.f);
+            _postPass1.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _postPass1.end();
         }
 
-        InstanceBuffer dialogChars; //TEMP - needs wider scope because of MTLBuffer purge issue
-        if(!Dialogs.empty())
+        InstanceBuffer _dialogChars; //TEMP - needs wider scope because of MTLBuffer purge issue
+        if(!_dialogs.empty())
         {
-            if(!DialogSkipFrame)
+            if(!_dialogSkipFrame)
             {
                 const float scale = std::max(1.f, std::round(2.f*FontScale*
                     Window::UiScale()));
@@ -875,7 +875,7 @@ void paz::App::Run()
                 bool highlight = false;
                 int row = 0;
                 int col = 0;
-                for(auto n : Dialogs.front().first)
+                for(auto n : _dialogs.front().first)
                 {
                     if(n == '`')
                     {
@@ -905,107 +905,107 @@ void paz::App::Run()
                     maxCols = std::max(maxCols, col);;
                 }
                 const int maxRows = 1 - row;
-                const float dialogWidth = (1 + maxCols*(CharWidth + 1))*scale/
+                const float _dialogWidth = (1 + maxCols*(CharWidth + 1))*scale/
                     Window::ViewportWidth();
-                const float dialogHeight = (maxRows + 1.f/FontTex.height())*
-                    scale*FontTex.height()/Window::ViewportHeight();
-                const float u = 0.5f - 0.5f*dialogWidth;
+                const float _dialogHeight = (maxRows + 1.f/_fontTex.height())*
+                    scale*_fontTex.height()/Window::ViewportHeight();
+                const float u = 0.5f - 0.5f*_dialogWidth;
                 static constexpr float v = 0.1f;
 
-                ConsolePass.begin({LoadAction::Load});
-                ConsolePass.uniform("u", u);
-                ConsolePass.uniform("v", v);
-                ConsolePass.uniform("width", dialogWidth);
-                ConsolePass.uniform("height", dialogHeight);
-                ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-                ConsolePass.end();
+                _consolePass.begin({LoadAction::Load});
+                _consolePass.uniform("u", u);
+                _consolePass.uniform("v", v);
+                _consolePass.uniform("width", _dialogWidth);
+                _consolePass.uniform("height", _dialogHeight);
+                _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+                _consolePass.end();
 
-                dialogChars.addAttribute(1, highlightAttr);
-                dialogChars.addAttribute(1, characterAttr);
-                dialogChars.addAttribute(1, colAttr);
-                dialogChars.addAttribute(1, rowAttr);
+                _dialogChars.addAttribute(1, highlightAttr);
+                _dialogChars.addAttribute(1, characterAttr);
+                _dialogChars.addAttribute(1, colAttr);
+                _dialogChars.addAttribute(1, rowAttr);
 
-                TextPass.begin({LoadAction::Load});
-                TextPass.read("font", FontTex);
-                TextPass.uniform("u", u);
+                _textPass.begin({LoadAction::Load});
+                _textPass.read("font", _fontTex);
+                _textPass.uniform("u", u);
                 const float v1 = v + (maxRows - 1)*scale*
-                    FontTex.height()/Window::ViewportHeight(); //TEMP - fix text/UI coords
-                TextPass.uniform("v", v1);
-                TextPass.uniform("width", Window::ViewportWidth());
-                TextPass.uniform("height", Window::ViewportHeight());
-                TextPass.uniform("charWidth", CharWidth);
-                TextPass.uniform("baseWidth", FontTex.width());
-                TextPass.uniform("baseHeight", FontTex.height());
-                TextPass.uniform("scale", static_cast<int>(scale));
-                TextPass.draw(PrimitiveType::TriangleStrip, QuadVertices,
-                    dialogChars);
-                TextPass.end();
+                    _fontTex.height()/Window::ViewportHeight(); //TEMP - fix text/UI coords
+                _textPass.uniform("v", v1);
+                _textPass.uniform("width", Window::ViewportWidth());
+                _textPass.uniform("height", Window::ViewportHeight());
+                _textPass.uniform("charWidth", CharWidth);
+                _textPass.uniform("baseWidth", _fontTex.width());
+                _textPass.uniform("baseHeight", _fontTex.height());
+                _textPass.uniform("scale", static_cast<int>(scale));
+                _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
+                    _dialogChars);
+                _textPass.end();
             }
 
-            if(!Paused)
+            if(!_paused)
             {
-                DialogTime += Window::FrameTime();
-                if(Dialogs.front().second < DialogTime)
+                _dialogTime += Window::FrameTime();
+                if(_dialogs.front().second < _dialogTime)
                 {
-                    if(DialogSkipFrame)
+                    if(_dialogSkipFrame)
                     {
-                        DialogSkipFrame = false;
-                        Dialogs.pop();
-                        DialogTime = 0.;
+                        _dialogSkipFrame = false;
+                        _dialogs.pop();
+                        _dialogTime = 0.;
                     }
                     else
                     {
-                        DialogSkipFrame = true;
+                        _dialogSkipFrame = true;
                     }
                 }
             }
         }
 
-        CursorPass.begin({LoadAction::Load});
-        CursorPass.uniform("x", 0.5f);
-        CursorPass.uniform("y", 0.5f);
-        CursorPass.uniform("idx", ReticuleIdx);
-        CursorPass.uniform("aspect", static_cast<float>(Reticule.height())/
-            Reticule.width());
-        CursorPass.uniform("h", ReticuleHighlight ? 1.f : -1.f);
-        CursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::round(
+        _cursorPass.begin({LoadAction::Load});
+        _cursorPass.uniform("x", 0.5f);
+        _cursorPass.uniform("y", 0.5f);
+        _cursorPass.uniform("idx", _reticuleIdx);
+        _cursorPass.uniform("aspect", static_cast<float>(_reticule.height())/
+            _reticule.width());
+        _cursorPass.uniform("h", _reticuleHighlight ? 1.f : -1.f);
+        _cursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::round(
             20.f*Window::UiScale())))); //TEMP
-        CursorPass.uniform("width", Window::ViewportWidth());
-        CursorPass.uniform("height", Window::ViewportHeight());
-        CursorPass.read("tex", Reticule);
-        CursorPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-        CursorPass.end();
+        _cursorPass.uniform("width", Window::ViewportWidth());
+        _cursorPass.uniform("height", Window::ViewportHeight());
+        _cursorPass.read("tex", _reticule);
+        _cursorPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+        _cursorPass.end();
 
         std::string line;
         std::size_t numNewRows = 0;
-        while(std::getline(::MsgStream, line))
+        while(std::getline(_msgStream, line))
         {
-            Console.push_back(line);
+            _console.push_back(line);
             ++numNewRows;
-            if(Console.size() > MaxConsoleLines)
+            if(_console.size() > MaxConsoleLines)
             {
-                Console.pop_front();
+                _console.pop_front();
             }
         }
-        if(CurConsoleMode == ConsoleMode::LatestStep)
+        if(_consoleMode == ConsoleMode::LatestStep)
         {
-            ::MsgStream.clear();
-            ::MsgStream.seekg(0);
+            _msgStream.clear();
+            _msgStream.seekg(0);
         }
         else
         {
-            std::stringstream{}.swap(::MsgStream);
+            std::stringstream{}.swap(_msgStream);
         }
         InstanceBuffer consoleChars; //TEMP - needs wider scope because of MTLBuffer purge issue
-        if(CurConsoleMode != ConsoleMode::Disable && !Console.empty())
+        if(_consoleMode != ConsoleMode::Disable && !_console.empty())
         {
             const float scale = std::max(1.f, std::round(Window::UiScale()));
 
             int maxVisRows = std::ceil(Window::ViewportHeight()/(scale*
-                ConsoleFontTex.height()));
+                _consoleFontTex.height()));
             maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
-                Console.size());
-            if(CurConsoleMode == ConsoleMode::CurrentFrame || CurConsoleMode ==
+                _console.size());
+            if(_consoleMode == ConsoleMode::CurrentFrame || _consoleMode ==
                 ConsoleMode::LatestStep)
             {
                 maxVisRows = std::min(static_cast<std::size_t>(maxVisRows),
@@ -1013,23 +1013,23 @@ void paz::App::Run()
             }
 
             const float consoleHeight = std::min(1.f, (maxVisRows + 1.f/
-                ConsoleFontTex.height())*scale*ConsoleFontTex.height()/Window::
+                _consoleFontTex.height())*scale*_consoleFontTex.height()/Window::
                 ViewportHeight());
             std::size_t maxCols = 0;
             for(int i = 0; i < maxVisRows; ++i)
             {
-                maxCols = std::max(maxCols, Console.rbegin()[i].size());
+                maxCols = std::max(maxCols, _console.rbegin()[i].size());
             }
             const float consoleWidth = std::min(1.f, (1 + maxCols*(CharWidth +
                 1))*scale/Window::ViewportWidth());
 
-            ConsolePass.begin({LoadAction::Load});
-            ConsolePass.uniform("u", 0.f);
-            ConsolePass.uniform("v", 0.f);
-            ConsolePass.uniform("width", consoleWidth);
-            ConsolePass.uniform("height", consoleHeight);
-            ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            ConsolePass.end();
+            _consolePass.begin({LoadAction::Load});
+            _consolePass.uniform("u", 0.f);
+            _consolePass.uniform("v", 0.f);
+            _consolePass.uniform("width", consoleWidth);
+            _consolePass.uniform("height", consoleHeight);
+            _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _consolePass.end();
 
             std::vector<float> highlightAttr;
             std::vector<int> characterAttr;
@@ -1039,7 +1039,7 @@ void paz::App::Run()
             for(int row = 0; row < maxVisRows; ++row)
             {
                 int col = 0;
-                for(auto n : Console.rbegin()[row])
+                for(auto n : _console.rbegin()[row])
                 {
                     if(n == ' ')
                     {
@@ -1065,38 +1065,38 @@ void paz::App::Run()
             consoleChars.addAttribute(1, colAttr);
             consoleChars.addAttribute(1, rowAttr);
 
-            TextPass.begin({LoadAction::Load});
-            TextPass.read("font", ConsoleFontTex);
-            TextPass.uniform("u", 0.f);
-            TextPass.uniform("v", 0.f);
-            TextPass.uniform("width", Window::ViewportWidth());
-            TextPass.uniform("height", Window::ViewportHeight());
-            TextPass.uniform("charWidth", CharWidth);
-            TextPass.uniform("baseWidth", ConsoleFontTex.width());
-            TextPass.uniform("baseHeight", ConsoleFontTex.height());
-            TextPass.uniform("scale", static_cast<int>(scale));
-            TextPass.draw(PrimitiveType::TriangleStrip, QuadVertices,
+            _textPass.begin({LoadAction::Load});
+            _textPass.read("font", _consoleFontTex);
+            _textPass.uniform("u", 0.f);
+            _textPass.uniform("v", 0.f);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", CharWidth);
+            _textPass.uniform("baseWidth", _consoleFontTex.width());
+            _textPass.uniform("baseHeight", _consoleFontTex.height());
+            _textPass.uniform("scale", static_cast<int>(scale));
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices,
                 consoleChars);
-            TextPass.end();
+            _textPass.end();
         }
 
         InstanceBuffer menuChars; //TEMP - needs wider scope because of MTLBuffer purge issue
-        if(Paused)
+        if(_paused)
         {
-            ConsolePass.begin({LoadAction::Load});
-            ConsolePass.uniform("u", 0.f);
-            ConsolePass.uniform("v", 0.f);
-            ConsolePass.uniform("width", 1.f);
-            ConsolePass.uniform("height", 1.f);
-            ConsolePass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-            ConsolePass.end();
+            _consolePass.begin({LoadAction::Load});
+            _consolePass.uniform("u", 0.f);
+            _consolePass.uniform("v", 0.f);
+            _consolePass.uniform("width", 1.f);
+            _consolePass.uniform("height", 1.f);
+            _consolePass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+            _consolePass.end();
 
             if(!justPaused)
             {
                 if(pauseMenu.curPage() == 0 && (Window::KeyPressed(Key::Escape)
                     || Window::GamepadPressed(GamepadButton::Start)))
                 {
-                    Paused = false;
+                    _paused = false;
                     Window::SetCursorMode(CursorMode::Disable);
                 }
                 else if(pauseMenu.curPage() == 1 && (Window::KeyPressed(Key::
@@ -1109,39 +1109,39 @@ void paz::App::Run()
 
             pauseMenu.update();
 
-            TextPass.begin({LoadAction::Load});
-            TextPass.read("font", pauseMenu.font().tex());
-            TextPass.uniform("u", 0.f);
-            TextPass.uniform("v", 0.f);
-            TextPass.uniform("width", Window::ViewportWidth());
-            TextPass.uniform("height", Window::ViewportHeight());
-            TextPass.uniform("charWidth", pauseMenu.font().charWidth());
-            TextPass.uniform("baseWidth", pauseMenu.font().tex().width());
-            TextPass.uniform("baseHeight", pauseMenu.font().tex().height());
-            TextPass.uniform("scale", pauseMenu.font().curScale());
-            TextPass.draw(PrimitiveType::TriangleStrip, QuadVertices, pauseMenu.
+            _textPass.begin({LoadAction::Load});
+            _textPass.read("font", pauseMenu.font().tex());
+            _textPass.uniform("u", 0.f);
+            _textPass.uniform("v", 0.f);
+            _textPass.uniform("width", Window::ViewportWidth());
+            _textPass.uniform("height", Window::ViewportHeight());
+            _textPass.uniform("charWidth", pauseMenu.font().charWidth());
+            _textPass.uniform("baseWidth", pauseMenu.font().tex().width());
+            _textPass.uniform("baseHeight", pauseMenu.font().tex().height());
+            _textPass.uniform("scale", pauseMenu.font().curScale());
+            _textPass.draw(PrimitiveType::TriangleStrip, _quadVertices, pauseMenu.
                 chars());
-            TextPass.end();
+            _textPass.end();
 
             if(Window::MouseActive())
             {
-                CursorPass.begin({LoadAction::Load});
-                CursorPass.uniform("x", static_cast<float>(Window::MousePos().
+                _cursorPass.begin({LoadAction::Load});
+                _cursorPass.uniform("x", static_cast<float>(Window::MousePos().
                     first)/(Window::Width() - 1));
-                CursorPass.uniform("y", static_cast<float>(Window::MousePos().
+                _cursorPass.uniform("y", static_cast<float>(Window::MousePos().
                     second)/(Window::Height() - 1));
-                CursorPass.uniform("idx", 0);
-                CursorPass.uniform("aspect", static_cast<float>(Cursor.
-                    height())/Cursor.width());
-                CursorPass.uniform("h", static_cast<float>(pauseMenu.
+                _cursorPass.uniform("idx", 0);
+                _cursorPass.uniform("aspect", static_cast<float>(_cursor.
+                    height())/_cursor.width());
+                _cursorPass.uniform("h", static_cast<float>(pauseMenu.
                     curButtonEnabled()));
-                CursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::
+                _cursorPass.uniform("scale", static_cast<int>(std::max(1.f, std::
                     round(20.f*Window::UiScale())))); //TEMP
-                CursorPass.uniform("width", Window::ViewportWidth());
-                CursorPass.uniform("height", Window::ViewportHeight());
-                CursorPass.read("tex", Cursor);
-                CursorPass.draw(PrimitiveType::TriangleStrip, QuadVertices);
-                CursorPass.end();
+                _cursorPass.uniform("width", Window::ViewportWidth());
+                _cursorPass.uniform("height", Window::ViewportHeight());
+                _cursorPass.read("tex", _cursor);
+                _cursorPass.draw(PrimitiveType::TriangleStrip, _quadVertices);
+                _cursorPass.end();
             }
         }
 
@@ -1151,17 +1151,17 @@ void paz::App::Run()
 
 void paz::App::AttachCamera(const Object& o)
 {
-    CameraObject.reset(o);
+    _cameraObject.reset(o);
 }
 
 void paz::App::AttachMic(const Object& o)
 {
-    MicObject.reset(o);
+    _micObject.reset(o);
 }
 
 std::stringstream& paz::App::MsgStream()
 {
-    return ::MsgStream;
+    return _msgStream;
 }
 
 paz::Bytes paz::App::GetAsset(const std::string& path)
@@ -1171,33 +1171,33 @@ paz::Bytes paz::App::GetAsset(const std::string& path)
 
 void paz::App::SetConsole(ConsoleMode mode)
 {
-    CurConsoleMode = mode;
+    _consoleMode = mode;
 }
 
 void paz::App::SetGravity(double acc)
 {
-    GravAcc = acc;
+    _gravAcc = acc;
 }
 
 void paz::App::SetSound(const Object& o, const AudioTrack& sound, bool loop)
 {
-    SoundSrc.reset(o);
+    _soundSrc.reset(o);
     AudioEngine::Play(sound, loop);
 }
 
 void paz::App::SetSun(const Vec& dir, const Vec& ill)
 {
-    std::copy(dir.begin(), dir.end(), SunDir.begin());
-    std::copy(ill.begin(), ill.end(), SunIll.begin());
+    std::copy(dir.begin(), dir.end(), _sunDir.begin());
+    std::copy(ill.begin(), ill.end(), _sunIll.begin());
 }
 
 void paz::App::PushDialog(const std::string& msg, double time)
 {
-    Dialogs.emplace(msg, time);
+    _dialogs.emplace(msg, time);
 }
 
 void paz::App::SetReticule(int n, bool h)
 {
-    ReticuleIdx = n;
-    ReticuleHighlight = h;
+    _reticuleIdx = n;
+    _reticuleHighlight = h;
 }
