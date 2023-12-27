@@ -1,5 +1,5 @@
 CXXVER := 17
-MINMACOSVER := 10.11
+MINMACOSVER := 10.12
 
 ifeq ($(OS), Windows_NT)
     LIBPATH := /mingw64/lib
