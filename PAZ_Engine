@@ -202,7 +202,6 @@ namespace paz
     {
         friend std::ostream& operator<<(std::ostream&, const ObjectPtr&);
 
-        bool _set;
         std::uintptr_t _id;
 
     public:

@@ -5,28 +5,29 @@
 
 #define OBJ_EXISTS objects().count(_id) //TEMP - wrong if new object has same ID
 
-paz::ObjectPtr::ObjectPtr() : _set(false), _id(0) {}
+static constexpr auto NullId = reinterpret_cast<std::uintptr_t>(nullptr);
 
-paz::ObjectPtr::ObjectPtr(const Object& o) : _set(true), _id(reinterpret_cast<
-    std::uintptr_t>(&o)) {}
+paz::ObjectPtr::ObjectPtr() : _id(NullId) {}
+
+paz::ObjectPtr::ObjectPtr(const Object& o) : _id(reinterpret_cast<std::
+    uintptr_t>(&o)) {}
 
 paz::ObjectPtr::ObjectPtr(std::nullptr_t) : ObjectPtr() {}
 
 void paz::ObjectPtr::swap(ObjectPtr& p) noexcept
 {
-    std::swap(_set, p._set);
     std::swap(_id, p._id);
 }
 
 paz::ObjectPtr& paz::ObjectPtr::operator=(std::nullptr_t)
 {
-    _set = false;
+    _id = NullId;
     return *this;
 }
 
 const paz::Object& paz::ObjectPtr::operator*() const
 {
-    if(!_set)
+    if(_id == NullId)
     {
         throw std::runtime_error("Object pointer is null.");
     }
@@ -39,7 +40,7 @@ const paz::Object& paz::ObjectPtr::operator*() const
 
 paz::Object& paz::ObjectPtr::operator*()
 {
-    if(!_set)
+    if(_id == NullId)
     {
         throw std::runtime_error("Object pointer is null.");
     }
@@ -52,7 +53,7 @@ paz::Object& paz::ObjectPtr::operator*()
 
 const paz::Object* paz::ObjectPtr::operator->() const
 {
-    if(!_set)
+    if(_id == NullId)
     {
         throw std::runtime_error("Object pointer is null.");
     }
@@ -65,7 +66,7 @@ const paz::Object* paz::ObjectPtr::operator->() const
 
 paz::Object* paz::ObjectPtr::operator->()
 {
-    if(!_set)
+    if(_id == NullId)
     {
         throw std::runtime_error("Object pointer is null.");
     }
@@ -78,12 +79,12 @@ paz::Object* paz::ObjectPtr::operator->()
 
 paz::ObjectPtr::operator bool() const
 {
-    return _set && OBJ_EXISTS;
+    return _id != NullId && OBJ_EXISTS;
 }
 
 bool paz::ObjectPtr::operator==(const ObjectPtr& p) const
 {
-    return (!_set && !p._set) || _id == p._id;
+    return _id == p._id;
 }
 
 bool paz::ObjectPtr::operator!=(const ObjectPtr& p) const
@@ -93,17 +94,16 @@ bool paz::ObjectPtr::operator!=(const ObjectPtr& p) const
 
 void paz::ObjectPtr::reset() noexcept
 {
-    _set = false;
+    _id = NullId;
 }
 
 void paz::ObjectPtr::reset(const Object& o) noexcept
 {
-    _set = true;
     _id = reinterpret_cast<std::uintptr_t>(&o);
 }
 
 std::ostream& paz::operator<<(std::ostream& stream, const paz::ObjectPtr& p)
 {
-    stream << (p._set ? reinterpret_cast<Object*>(p._id) : nullptr);
+    stream << reinterpret_cast<Object*>(p._id);
     return stream;
 }
