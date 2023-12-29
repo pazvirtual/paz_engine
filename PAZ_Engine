@@ -77,24 +77,24 @@ namespace paz
     {
         friend class App;
 
-        double _timestep;
-        std::array<bool, NumKeys> _keyDown;
-        std::array<bool, NumKeys> _keyPressed;
-        std::array<bool, NumKeys> _keyReleased;
-        std::array<bool, NumMouseButtons> _mouseDown;
-        std::array<bool, NumMouseButtons> _mousePressed;
-        std::array<bool, NumMouseButtons> _mouseReleased;
-        std::pair<double, double> _mousePos;
-        std::pair<double, double> _scrollOffset;
-        std::array<bool, NumGamepadButtons> _gamepadDown;
-        std::array<bool, NumGamepadButtons> _gamepadPressed;
-        std::array<bool, NumGamepadButtons> _gamepadReleased;
-        std::pair<double, double> _gamepadLeftStick;
-        std::pair<double, double> _gamepadRightStick;
-        double _gamepadLeftTrigger;
-        double _gamepadRightTrigger;
-        bool _gamepadActive;
-        bool _mouseActive;
+        double _timestep = 0.;
+        std::array<bool, NumKeys> _keyDown = {};
+        std::array<bool, NumKeys> _keyPressed = {};
+        std::array<bool, NumKeys> _keyReleased = {};
+        std::array<bool, NumMouseButtons> _mouseDown = {};
+        std::array<bool, NumMouseButtons> _mousePressed = {};
+        std::array<bool, NumMouseButtons> _mouseReleased = {};
+        std::pair<double, double> _mousePos = {};
+        std::pair<double, double> _scrollOffset = {};
+        std::array<bool, NumGamepadButtons> _gamepadDown = {};
+        std::array<bool, NumGamepadButtons> _gamepadPressed = {};
+        std::array<bool, NumGamepadButtons> _gamepadReleased = {};
+        std::pair<double, double> _gamepadLeftStick = {};
+        std::pair<double, double> _gamepadRightStick = {};
+        double _gamepadLeftTrigger = 0.;
+        double _gamepadRightTrigger = 0.;
+        bool _gamepadActive = false;
+        bool _mouseActive = false;
 
         InputData() = default;
         void copyEvents(double timestep, double sensitivity);
