@@ -181,10 +181,10 @@ void paz::do_physics(double gravity, double timestep)
             Pi;
         const double deltaZ = normalize_angle(0.5*timestep*_zAngRate[i] + Pi) -
             Pi;
-        _xAtt[i] +=  WAtt   *deltaX - _zAtt[i]*deltaY + _yAtt[i]*deltaZ;
-        _yAtt[i] +=  _zAtt[i]*deltaX + WAtt   *deltaY - _xAtt[i]*deltaZ;
-        _zAtt[i] += -_yAtt[i]*deltaX + _xAtt[i]*deltaY + WAtt   *deltaZ;
-        WAtt    += -_xAtt[i]*deltaX - _yAtt[i]*deltaY - _zAtt[i]*deltaZ;
+        _xAtt[i] +=  WAtt    *deltaX - _zAtt[i]*deltaY + _yAtt[i]*deltaZ;
+        _yAtt[i] +=  _zAtt[i]*deltaX + WAtt    *deltaY - _xAtt[i]*deltaZ;
+        _zAtt[i] += -_yAtt[i]*deltaX + _xAtt[i]*deltaY + WAtt    *deltaZ;
+        WAtt     += -_xAtt[i]*deltaX - _yAtt[i]*deltaY - _zAtt[i]*deltaZ;
         const double invSignNorm = (WAtt < 0. ? -1. : 1.)/std::sqrt(_xAtt[i]*
             _xAtt[i] + _yAtt[i]*_yAtt[i] + _zAtt[i]*_zAtt[i] + WAtt*WAtt);
         _xAtt[i] *= invSignNorm;

@@ -19,9 +19,9 @@ void Player::update(const paz::InputData& input)
 
     // Get basis vectors (rows of rotation matrix).
     paz::Mat rot = paz::to_mat(att);
-    paz::Vec forward = rot.row(1).trans();
+    paz::Vec forward = rot.row(0).trans();
     const paz::Vec gravDir{{xDown(), yDown(), zDown()}};
-    paz::Vec right = gravDir.cross(forward).normalized();
+    paz::Vec left = forward.cross(gravDir).normalized();
 
     // Check altitude regime.
     Regime reg = Regime::Floating;
@@ -76,7 +76,7 @@ paz::App::MsgStream() << alt << " | " << nor.trans() << std::endl;
 
     // Want to keep `gravPitch + _pitch` (head pitch wrt gravity)
     // constant as much as possible when grounded.
-    const paz::Vec baseForward = right.cross(gravDir).normalized();
+    const paz::Vec baseForward = gravDir.cross(left).normalized();
     const double gravPitch = std::acos(std::max(0., std::min(1., baseForward.
         dot(forward))))*(forward.dot(gravDir) > 0. ? -1. : 1.);
 paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (gravPitch + _pitch)*180./paz::Pi << std::endl;
@@ -86,8 +86,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         xAngRate() = 0.;
         zAngRate() = -0.1*(input.gamepadActive() ? 15.*input.
             gamepadRightStick().first : input.mousePos().first);
-        rot.setRow(0, right.trans());
-        rot.setRow(1, baseForward.trans());
+        rot.setRow(0, baseForward.trans());
+        rot.setRow(1, left.trans());
         rot.setRow(2, -gravDir.trans());
         paz::Vec baseAtt = paz::to_quat(rot);
         if(att.dot(baseAtt) < 0.)
@@ -121,7 +121,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         if(std::abs(_pitch) > 1e-6)
         {
             const double fac = 0.1;
-            att = paz::qmult(paz::axis_angle(paz::Vec{{1, 0, 0}}, fac*_pitch),
+            att = paz::qmult(paz::axis_angle(paz::Vec{{0, 1, 0}}, -fac*_pitch),
                 att);
             xAtt() = att(0);
             yAtt() = att(1);
@@ -147,21 +147,21 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             _mousePos = paz::Vec::Zero(2);
         }
-        xAngRate() = 0.006*_mousePos(1);
+        yAngRate() = -0.006*_mousePos(1);
         zAngRate() = -0.006*_mousePos(0);
     }
     _prevGravPitch = gravPitch;
 
-    right = rot.row(0).trans();
-    forward = rot.row(1).trans();
+    forward = rot.row(0).trans();
+    left = rot.row(1).trans();
     const paz::Vec up = rot.row(2).trans();
 
     const double h = 1.5 - collisionRadius();
     _head.x() = x() + h*up(0);
     _head.y() = y() + h*up(1);
     _head.z() = z() + h*up(2);
-    paz::Vec cameraAtt = paz::qmult(paz::axis_angle(paz::Vec{{1, 0, 0}},
-        _pitch), att);
+    paz::Vec cameraAtt = paz::qmult(paz::axis_angle(paz::Vec{{0, 1, 0}},
+        -_pitch), att);
     if(cameraAtt(3) < 0.)
     {
         cameraAtt = -cameraAtt;
@@ -172,8 +172,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
 
     _moving = false;
 
-    const paz::Vec groundRight = forward.cross(nor);
-    const paz::Vec groundForward = nor.cross(right);
+    const paz::Vec groundForward = left.cross(nor);
+    const paz::Vec groundLeft = nor.cross(forward);
     if(reg == Regime::Grounded)
     {
         double u = 0.;
@@ -181,7 +181,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         double w = 0.;
         if(input.gamepadActive())
         {
-            const paz::Vec net = input.gamepadLeftStick().first*groundRight -
+            const paz::Vec net = -input.gamepadLeftStick().first*groundLeft -
                 input.gamepadLeftStick().second*groundForward;
             const double norm = std::max(1., net.norm());
             u = 3.*net(0)/norm;
@@ -192,15 +192,15 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             if(input.keyDown(paz::Key::A))
             {
-                u -= groundRight(0);
-                v -= groundRight(1);
-                w -= groundRight(2);
+                u += groundLeft(0);
+                v += groundLeft(1);
+                w += groundLeft(2);
             }
             if(input.keyDown(paz::Key::D))
             {
-                u += groundRight(0);
-                v += groundRight(1);
-                w += groundRight(2);
+                u -= groundLeft(0);
+                v -= groundLeft(1);
+                w -= groundLeft(2);
             }
             if(input.keyDown(paz::Key::S))
             {
@@ -237,7 +237,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     {
         if(input.gamepadActive())
         {
-            const paz::Vec net = input.gamepadLeftStick().first*groundRight -
+            const paz::Vec net = -input.gamepadLeftStick().first*groundLeft -
                 input.gamepadLeftStick().second*groundForward;
             xVel() += 12.*net(0)*input.timestep();
             yVel() += 12.*net(1)*input.timestep();
@@ -247,15 +247,15 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             if(input.keyDown(paz::Key::A))
             {
-                xVel() -= 12.*groundRight(0)*input.timestep();
-                yVel() -= 12.*groundRight(1)*input.timestep();
-                zVel() -= 12.*groundRight(2)*input.timestep();
+                xVel() += 12.*groundLeft(0)*input.timestep();
+                yVel() += 12.*groundLeft(1)*input.timestep();
+                zVel() += 12.*groundLeft(2)*input.timestep();
             }
             if(input.keyDown(paz::Key::D))
             {
-                xVel() += 12.*groundRight(0)*input.timestep();
-                yVel() += 12.*groundRight(1)*input.timestep();
-                zVel() += 12.*groundRight(2)*input.timestep();
+                xVel() -= 12.*groundLeft(0)*input.timestep();
+                yVel() -= 12.*groundLeft(1)*input.timestep();
+                zVel() -= 12.*groundLeft(2)*input.timestep();
             }
             if(input.keyDown(paz::Key::W))
             {
@@ -275,7 +275,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     {
         if(input.gamepadActive())
         {
-            const paz::Vec net = input.gamepadLeftStick().first*right - input.
+            const paz::Vec net = -input.gamepadLeftStick().first*left - input.
                 gamepadLeftStick().second*forward;
             xVel() += 12.*net(0)*input.timestep();
             yVel() += 12.*net(1)*input.timestep();
@@ -285,15 +285,15 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             if(input.keyDown(paz::Key::A))
             {
-                xVel() -= 12.*right(0)*input.timestep();
-                yVel() -= 12.*right(1)*input.timestep();
-                zVel() -= 12.*right(2)*input.timestep();
+                xVel() += 12.*left(0)*input.timestep();
+                yVel() += 12.*left(1)*input.timestep();
+                zVel() += 12.*left(2)*input.timestep();
             }
             if(input.keyDown(paz::Key::D))
             {
-                xVel() += 12.*right(0)*input.timestep();
-                yVel() += 12.*right(1)*input.timestep();
-                zVel() += 12.*right(2)*input.timestep();
+                xVel() -= 12.*left(0)*input.timestep();
+                yVel() -= 12.*left(1)*input.timestep();
+                zVel() -= 12.*left(2)*input.timestep();
             }
             if(input.keyDown(paz::Key::W))
             {
@@ -336,7 +336,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     if(input.mousePressed(paz::MouseButton::Left) || input.gamepadPressed(paz::
         GamepadButton::A))
     {
-        const paz::Vec dir = paz::to_mat(cameraAtt).row(1).trans();
+        const paz::Vec dir = paz::to_mat(cameraAtt).row(0).trans();
         const paz::Vec pos{{_head.x(), _head.y(), _head.z()}};
         const paz::Vec vel{{xVel(), yVel(), zVel()}};
         _paintball.launch(pos, vel, dir);

@@ -99,16 +99,16 @@ public:
     void setDir(double xDir, double yDir, double zDir)
     {
         const paz::Vec up{{xDir, yDir, zDir}};
-        paz::Vec right{{1., 0., 0.}};
-        if(std::abs(up.dot(right)) > 0.99)
+        paz::Vec left{{0., 1., 0.}};
+        if(std::abs(up.dot(left)) > 0.99)
         {
-            right = paz::Vec{{0., 1., 0.}};
+            left = paz::Vec{{1., 0., 0.}};
         }
-        const paz::Vec forward = up.cross(right).normalized();
-        right = forward.cross(up).normalized();
+        const paz::Vec forward = left.cross(up).normalized();
+        left = up.cross(forward).normalized();
         paz::Mat rot(3);
-        rot.setCol(0, right);
-        rot.setCol(1, forward);
+        rot.setCol(0, forward);
+        rot.setCol(1, left);
         rot.setCol(2, up);
         paz::Vec att = paz::to_quat(rot);
         if(att(3) < 0.)

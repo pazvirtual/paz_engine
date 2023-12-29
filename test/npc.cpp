@@ -25,9 +25,9 @@ void Npc::update(const paz::InputData& input)
     const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}};
     const paz::Vec initialAtt{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()
         *xAtt() - yAtt()*yAtt() - zAtt()*zAtt())}};
-    const paz::Vec initialRight = paz::to_mat(initialAtt).row(0).trans();
-    const paz::Vec forward = up.cross(initialRight).normalized();
-    const paz::Vec right = forward.cross(up);
+    const paz::Vec initialForward = paz::to_mat(initialAtt).row(0).trans();
+    const paz::Vec left = up.cross(initialForward).normalized();
+    const paz::Vec forward = left.cross(up);
     if(_collided)
     {
         double alt;
@@ -53,8 +53,8 @@ void Npc::update(const paz::InputData& input)
         _collided = false;
     }
     paz::Mat rot(3);
-    rot.setCol(0, right);
-    rot.setCol(1, forward);
+    rot.setCol(0, forward);
+    rot.setCol(1, left);
     rot.setCol(2, up);
     const double h = 1.5 - collisionRadius();
     _head.x() = x() + h*up(0);
@@ -85,8 +85,7 @@ void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
         const paz::Vec att{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()*xAtt()
             - yAtt()*yAtt() - zAtt()*zAtt())}};
         const paz::Mat rot = paz::to_mat(paz::qinv(att));
-        const paz::Vec right = rot.col(0);
-        const paz::Vec forward = rot.col(1);
+        const paz::Vec forward = rot.col(0);
         const paz::Vec invParentAtt{{_parent->xAtt(), _parent->yAtt(), _parent->
             zAtt(), -std::sqrt(1. - _parent->xAtt()*_parent->xAtt() - _parent->
             yAtt()*_parent->yAtt() - _parent->zAtt()*_parent->zAtt())}};

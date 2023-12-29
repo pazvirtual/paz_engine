@@ -88,8 +88,8 @@ static paz::Threadpool _threads;
 
 static bool _fxaaEnabled = true;
 
-static float _dofMinDepth = 0.;//0.97;
-static float _dofMaxDepth = 0.99;
+static float _dofMinDepth;
+static float _dofMaxDepth;
 
 static paz::Vec _sunDir = paz::Vec::Zero(4);
 static std::array<float, 4> _sunIll;
@@ -508,8 +508,8 @@ void paz::App::Run()
                 yAttPrev(), _micObject->zAttPrev(), wAttPrev}}, {{_micObject->
                 xAtt(), _micObject->yAtt(), _micObject->zAtt(), wAtt}}, fac);
             const Mat micRot = to_mat(micAtt);
-            const Vec micX = micRot.row(1).trans();
-            const Vec micY = -micRot.row(0).trans();
+            const Vec micX = micRot.row(0).trans();
+            const Vec micY = micRot.row(1).trans();
             const Vec lEar = std::sin(1.)*micX + std::cos(1.)*micY;
             const Vec rEar = std::sin(1.)*micX - std::cos(1.)*micY;
             const double vlos = dir.dot(relVel);
@@ -555,7 +555,7 @@ void paz::App::Run()
             1e3);
         Mat view = Mat::Zero(4);
         view(3, 3) = 1.;
-        view.setBlock(0, 0, 3, 3, Mat{{1., 0., 0.}, {0., 0., 1.}, {0., -1.,
+        view.setBlock(0, 0, 3, 3, Mat{{0., -1., 0.}, {0., 0., 1.}, {-1., 0.,
             0.}}*to_mat(cameraAtt));
 
         // Prepare for rendering.
