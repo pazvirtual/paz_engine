@@ -5,7 +5,7 @@
 
 #define OBJ_EXISTS objects().count(_id) //TEMP - wrong if new object has same ID
 
-static constexpr auto NullId = reinterpret_cast<std::uintptr_t>(nullptr);
+static const auto NullId = reinterpret_cast<std::uintptr_t>(nullptr);
 
 paz::ObjectPtr::ObjectPtr() : _id(NullId) {}
 
