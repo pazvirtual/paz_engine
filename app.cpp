@@ -570,8 +570,8 @@ void paz::App::Run()
             }
             else
             {
-                // Address held to by `paz::Model::_t` identifies all copies of
-                // the same model.
+                // Address held by `paz::Model::_t` identifies all copies of the
+                // same model.
                 objectsByModel[o->model()._t.get()].push_back(o);
             }
         }
