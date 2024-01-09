@@ -1,22 +1,21 @@
 #ifndef PAZ_ENGINE_TRIANGLE_HPP
 #define PAZ_ENGINE_TRIANGLE_HPP
 
-#include <array>
-
 namespace paz
 {
     class Triangle
     {
-        const double x0, y0, z0;
+        const double _x0, _y0, _z0;
         const bool _degenerate;
-        std::array<double, 3> basisX; // Negative normal vector.
-        std::array<double, 3> basisY;
-        std::array<double, 3> basisZ;
-        double z1t, y2t, z2t;
-        const std::array<double, 3> _centroid;
+        double _basisXX, _basisXY, _basisXZ;
+        double _basisYX, _basisYY, _basisYZ;
+        double _basisZX, _basisZY, _basisZZ;
+        double _z1t, _y2t, _z2t;
+        double _centroidX, _centroidY, _centroidZ;
         double _radius;
-        double dist_transformed(double xt, double yt, double zt, double&
-            deltaYt, double& deltaZt) const;
+
+        double distTransformed(double xt, double yt, double zt, double& deltaYt,
+            double& deltaZt) const;
 
     public:
         Triangle(double x0, double y0, double z0, double x1, double y1, double
@@ -26,7 +25,7 @@ namespace paz
         double castRay(double x, double y, double z, double xDir, double yDir,
             double zDir) const;
         void getNormal(double& x, double& y, double& z) const;
-        const std::array<double, 3>& centroid() const;
+        void getCentroid(double& x, double& y, double& z) const;
         double radius() const;
     };
 }

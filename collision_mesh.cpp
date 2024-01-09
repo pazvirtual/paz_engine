@@ -199,8 +199,8 @@ std::vector<std::size_t> paz::CollisionMesh::sweepVol(const Vec& relPosPrev,
     std::vector<std::size_t> tris;
     for(std::size_t i = 0; i < _t->size(); ++i)
     {
-        const Vec mean1{{(*_t)[i].centroid()[0], (*_t)[i].centroid()[1], (*_t)[
-            i].centroid()[2]}};
+        Vec mean1(3);
+        (*_t)[i].getCentroid(mean1(0), mean1(1), mean1(2));
         const double rTotal = delta + (*_t)[i].radius() + radius;
         const double distSq = (mean1 - mean).normSq();
         if(distSq < rTotal*rTotal)
