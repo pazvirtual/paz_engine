@@ -1,5 +1,6 @@
 #include "triangle.hpp"
 #include <cmath>
+#include <algorithm>
 #include <limits>
 
 constexpr double square(double x)
