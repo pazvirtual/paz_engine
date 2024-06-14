@@ -89,4 +89,4 @@ build:
 	mkdir -p $@
 
 clean:
-	$(RM) test build/*
+	$(RM) -r test build
