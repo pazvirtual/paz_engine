@@ -216,13 +216,12 @@ void paz::App::Init(const std::string& title)
     {
         _fxaaEnabled = false;
     }
+    try
     {
-        const auto str = load_setting("sensitivity");
-        if(!str.empty())
-        {
-            _lookSensitivity = std::stoi(str);
-        }
+        _lookSensitivity = std::stoi(load_setting("sensitivity"));
     }
+    catch(...){}
+    _lookSensitivity = std::max(1, std::min(10, _lookSensitivity));
 
     Window::EnableDithering();
 

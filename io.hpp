@@ -6,7 +6,7 @@
 namespace paz
 {
     void save_setting(const std::string& name, const std::string& val);
-    std::string load_setting(const std::string& name);
+    std::string load_setting(const std::string& name) noexcept;
 }
 
 #endif

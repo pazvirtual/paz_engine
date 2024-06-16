@@ -83,7 +83,7 @@ void paz::save_setting(const std::string& name, const std::string& val)
     }
 }
 
-std::string paz::load_setting(const std::string& name)
+std::string paz::load_setting(const std::string& name) noexcept
 {
     std::string path;
     try
