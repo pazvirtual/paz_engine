@@ -26,11 +26,20 @@ LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazaudio.a
 ifeq ($(OSPRETTY), macOS)
     LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit -framework CoreAudio -framework AudioUnit
 else
-    LDLIBS += $(LIBPATH)/libportaudio.a
     ifeq ($(OSPRETTY), Linux)
-        LDLIBS += $(LIBPATH)/libglfw3.a -lGL -lX11 -ldl -lasound
+        # Try a few locations for PortAudio.
+        ifneq (, $(wildcard $(LIBPATH)/libportaudio.a))
+            LDLIBS += $(LIBPATH)/libportaudio.a
+        else ifneq (, $(wildcard /usr/lib/libportaudio.a))
+            LDLIBS += /usr/lib/libportaudio.a
+        else ifneq (, $(wildcard /usr/lib/x86_64-linux-gnu/libportaudio.a))
+            LDLIBS += /usr/lib/x86_64-linux-gnu/libportaudio.a
+        else
+            $(error Could not find "libportaudio.a".)
+        endif
+        LDLIBS += $(LIBPATH)/libglfw3.a -lGL -lX11 -ldl -lasound -ljack
     else
-        LDLIBS += $(LIBPATH)/libpthread.a -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
+        LDLIBS += $(LIBPATH)/libportaudio.a $(LIBPATH)/libpthread.a -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
         LDFLAGS += -static-libgcc -static-libstdc++
     endif
 endif
