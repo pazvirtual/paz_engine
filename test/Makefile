@@ -27,6 +27,18 @@ ifeq ($(OSPRETTY), macOS)
     LDLIBS += -framework MetalKit -framework Metal -framework Cocoa -framework IOKit -framework CoreAudio -framework AudioUnit
 else
     ifeq ($(OSPRETTY), Linux)
+        # Try a few locations for GLFW.
+        ifneq (, $(wildcard $(LIBPATH)/libglfw3.a))
+            LDLIBS += $(LIBPATH)/libglfw3.a
+        else ifneq (, $(wildcard /usr/lib/libglfw3.a))
+            LDLIBS += /usr/lib/libglfw3.a
+        else ifneq (, $(wildcard /usr/lib64/libglfw3.a))
+            LDLIBS += /usr/lib64/libglfw3.a
+        else ifneq (, $(wildcard /usr/lib/x86_64-linux-gnu/libglfw3.a))
+            LDLIBS += /usr/lib/x86_64-linux-gnu/libglfw3.a
+        else
+            $(error Could not find "libglfw3.a".)
+        endif
         # Try a few locations for PortAudio.
         ifneq (, $(wildcard $(LIBPATH)/libportaudio.a))
             LDLIBS += $(LIBPATH)/libportaudio.a
@@ -37,7 +49,7 @@ else
         else
             $(error Could not find "libportaudio.a".)
         endif
-        LDLIBS += $(LIBPATH)/libglfw3.a -lGL -lX11 -ldl -lasound -ljack
+        LDLIBS += -lGL -lX11 -ldl -lasound -ljack
     else
         LDLIBS += $(LIBPATH)/libportaudio.a $(LIBPATH)/libpthread.a -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
         LDFLAGS += -static-libgcc -static-libstdc++
