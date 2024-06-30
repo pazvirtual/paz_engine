@@ -2,7 +2,9 @@
 #include "npc.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
+#include "timer.hpp"
 #include <iomanip>
+#include <thread>
 
 static constexpr double Radius = 50.;
 
@@ -198,8 +200,13 @@ public:
     }
 };
 
-int main()
+int main(int argc, char** argv)
 {
+    double runtime = 0.;
+    if(argc > 1)
+    {
+        runtime = std::stod(argv[1]);
+    }
     paz::App::Init("PAZ Engine Test Program");
     _sphere50 = paz::Model("icosphere5.pazmodel", 0, 0., Radius,
         "earth-day.bmp", {}, {{10., 5., Radius, 0., 0., Radius + 10., -10., -5.,
@@ -264,5 +271,23 @@ int main()
     paz::App::AttachCamera(player.head());
     paz::App::AttachMic(player.head());
     paz::App::SetConsole(paz::ConsoleMode::LatestStep);
+    std::thread thread;
+    if(runtime)
+    {
+        thread = std::thread([runtime]()
+            {
+                paz::Timer t;
+                while(t.get() < runtime)
+                {
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
+                paz::Window::Quit();
+            }
+            );
+    }
     paz::App::Run();
+    if(runtime)
+    {
+        thread.join();
+    }
 }

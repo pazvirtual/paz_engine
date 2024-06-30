@@ -79,7 +79,7 @@ install: $(PROJNAME) lib$(LIBNAME).a
 
 test: lib$(LIBNAME).a
 	$(MAKE) -C test
-	test/test
+	test/test 1
 
 analyze: $(OBJCSRC)
 	$(foreach n, $(OBJCSRC), clang++ --analyze $(n) $(CXXFLAGS) && $(RM) $(n:%.mm=%.plist);)

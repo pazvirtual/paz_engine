@@ -1,0 +1,60 @@
+name: build
+on: [push, pull_request]
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Simulate Audio Device
+        shell: powershell
+        run: |
+          Start-Service audio*
+          Invoke-WebRequest https://github.com/duncanthrax/scream/releases/download/3.6/Scream3.6.zip -OutFile C:\Scream3.6.zip
+          Expand-7ZipArchive -Path C:\Scream3.6.zip -DestinationPath C:\Scream
+          $cert = (Get-AuthenticodeSignature C:\Scream\Install\driver\Scream.sys).SignerCertificate
+          $store = [System.Security.Cryptography.X509Certificates.X509Store]::new("TrustedPublisher", "LocalMachine")
+          $store.Open("ReadWrite")
+          $store.Add($cert)
+          $store.Close()
+          cd C:\Scream\Install\driver
+          C:\Scream\Install\helpers\devcon install Scream.inf *Scream
+      - name: Check Audio Device
+        shell: powershell
+        run: Get-CimInstance Win32_SoundDevice | fl *
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: make mingw-w64-x86_64-gcc mingw-w64-x86_64-portaudio
+      #- name: Build and Install Modules
+      #  run: |
+      #    for n in {audio,graphics,io,math}; do
+      #        git clone https://github.com/pazvirtual/paz_${n}.git
+      #        make -C paz_${n}
+      #        make -C paz_${n} install
+      #    done
+      - name: Download and Install Modules
+        run: |
+          for n in {Audio,Graphics,IO,Math}; do
+              lib=libpaz$(tr '[:upper:]' '[:lower:]' <<< $n).a
+              curl -O https://pazvirtual.com/misc/temp/windows-build/$lib
+              mv $lib /mingw64/lib/
+              header=PAZ_$n
+              curl -O https://pazvirtual.com/misc/temp/windows-build/$header
+              mv $header /mingw64/include/
+          done
+          curl -O https://pazvirtual.com/misc/temp/windows-build/paz-archive.exe
+          mv paz-archive.exe /mingw64/bin/
+      - name: Build and Test
+        run: make -j
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            libpazengine.a
+            test/test.exe
+#  macos:
+#  linux:
