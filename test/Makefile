@@ -18,8 +18,9 @@ ifeq ($(OSPRETTY), macOS)
 else
     ifeq ($(OSPRETTY), Windows)
         CXXFLAGS += -Wno-deprecated-copy -static -mwindows
+    else
+        CXXFLAGS += -pthread
     endif
-    CXXFLAGS += -pthread
 endif
 CXXFLAGS += -I..
 LDLIBS := ../libpazengine.a $(LIBPATH)/libpazgraphics.a $(LIBPATH)/libpazaudio.a $(LIBPATH)/libpazio.a $(LIBPATH)/libpazmath.a
@@ -51,7 +52,7 @@ else
         endif
         LDLIBS += -lGL -lX11 -ldl -lasound -ljack
     else
-        LDLIBS += $(LIBPATH)/libportaudio.a $(LIBPATH)/libpthread.a -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi
+        LDLIBS += $(LIBPATH)/libportaudio.a -ld3d11 -ldxgi -ld3dcompiler -ldxguid -lwinmm -lole32 -lsetupapi -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
         LDFLAGS += -static-libgcc -static-libstdc++
     endif
 endif
