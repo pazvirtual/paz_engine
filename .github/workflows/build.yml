@@ -28,26 +28,14 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: make mingw-w64-x86_64-gcc mingw-w64-x86_64-portaudio
-      #- name: Build and Install Modules
-      #  run: |
-      #    for n in {audio,graphics,io,math}; do
-      #        git clone https://github.com/pazvirtual/paz_${n}.git
-      #        make -C paz_${n}
-      #        make -C paz_${n} install
-      #    done
-      - name: Download and Install Modules
+          install: make git mingw-w64-x86_64-gcc mingw-w64-x86_64-portaudio
+      - name: Build and Install Modules
         run: |
-          for n in {Audio,Graphics,IO,Math}; do
-              lib=libpaz$(tr '[:upper:]' '[:lower:]' <<< $n).a
-              curl -O https://pazvirtual.com/misc/temp/windows-build/$lib
-              mv $lib /mingw64/lib/
-              header=PAZ_$n
-              curl -O https://pazvirtual.com/misc/temp/windows-build/$header
-              mv $header /mingw64/include/
+          for n in {audio,graphics,io,math}; do
+              git clone https://github.com/pazvirtual/paz_${n}.git
+              make -C paz_${n} -j
+              make -C paz_${n} install
           done
-          curl -O https://pazvirtual.com/misc/temp/windows-build/paz-archive.exe
-          mv paz-archive.exe /mingw64/bin/
       - name: Build and Test
         run: make -j
       - uses: actions/upload-artifact@v4
@@ -57,4 +45,44 @@ jobs:
             libpazengine.a
             test/test.exe
 #  macos:
-#  linux:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install cmake xorg-dev xvfb portaudio19-dev
+          curl -LO https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
+          unzip glfw-3.4.zip
+          cd glfw-3.4
+          cmake -S . -B build -D GLFW_BUILD_WAYLAND=0
+          cd build
+          make
+          sudo make install
+      - name: Simulate Display
+        run: Xvfb &
+      - name: Simulate Audio Device
+        run: |
+          sudo apt install pulseaudio
+          pulseaudio --start
+      - name: Check Audio Device
+        run: pactl list short
+      - name: Build and Install Modules
+        run: |
+          export DISPLAY=:0
+          for n in {audio,graphics,io,math}; do
+              git clone https://github.com/pazvirtual/paz_${n}.git
+              make -C paz_${n} -j
+              sudo make -C paz_${n} install
+          done
+      - name: Build and Test
+        run: |
+          export DISPLAY=:0
+          make -j
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            libpazengine.a
+            test/test
