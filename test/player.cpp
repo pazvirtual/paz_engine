@@ -69,7 +69,7 @@ case Regime::Grounded: paz::App::MsgStream() << "Grounded" << std::endl; break;
 case Regime::Low: paz::App::MsgStream() << "Low" << std::endl; break;
 case Regime::Floating: paz::App::MsgStream() << "Floating" << std::endl; break;
 }
-paz::App::MsgStream() << alt << " | " << nor.trans() << std::endl;
+paz::App::MsgStream() << alt << " | " << std::setw(7) << nor.trans() << std::endl;
 
     // Kill all roll.
     yAngRate() = 0.;
