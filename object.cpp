@@ -271,7 +271,7 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                 double x = _xPrev[a[i]] + times[j]*(_x[a[i]] - _xPrev[a[i]]);
                 double y = _yPrev[a[i]] + times[j]*(_y[a[i]] - _yPrev[a[i]]);
                 double z = _zPrev[a[i]] + times[j]*(_z[a[i]] - _zPrev[a[i]]);
-                double minDist = std::numeric_limits<double>::infinity();
+                double minDist = inf();
                 std::size_t idx = 0;
                 double xNor = 0.;
                 double yNor = 0.;
@@ -946,7 +946,7 @@ void paz::Object::computeAltitude(double& alt, Vec& nor, Vec& vel) const
     nor = {{0, 0, 1}};
     vel = Vec::Zero(3);
     const auto idx = objects().at(_id);
-    alt = std::numeric_limits<double>::infinity();
+    alt = inf();
     for(auto n : objects())
     {
         if(n.first == _id || _cType[n.second] != CollisionType::World)

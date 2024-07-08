@@ -77,8 +77,8 @@ paz::App::MsgStream() << alt << " | " << std::setw(7) << nor.trans() << std::end
     // Want to keep `gravPitch + _pitch` (head pitch wrt gravity)
     // constant as much as possible when grounded.
     const paz::Vec baseForward = gravDir.cross(left).normalized();
-    const double gravPitch = std::acos(std::max(0., std::min(1., baseForward.
-        dot(forward))))*(forward.dot(gravDir) > 0. ? -1. : 1.);
+    const double gravPitch = std::acos(paz::clamp(baseForward.dot(forward), 0.,
+        1.))*(forward.dot(gravDir) > 0. ? -1. : 1.);
 paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (gravPitch + _pitch)*180./paz::Pi << std::endl;
     if(reg != Regime::Floating)
     {
@@ -96,8 +96,8 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         }
         if((baseAtt - att).normSq() > 1e-6)
         {
-            const double fac = std::max(0., std::min(1., 1. - std::sqrt(alt/
-                LowAltitude)));
+            const double fac = paz::clamp(1. - std::sqrt(alt/LowAltitude), 0.,
+                1.);
             baseAtt = ((1. - fac)*att + fac*baseAtt).normalized();
             if(baseAtt(3) < 0.)
             {
@@ -113,8 +113,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         const double deltaPitch = -deltaGravPitch + 0.1*(input.gamepadActive() ?
             15.*-input.gamepadRightStick().second : input.mousePos().second)*
             input.timestep();
-        _pitch = std::max(-0.45*paz::Pi, std::min(0.45*paz::Pi, _pitch +
-            deltaPitch));
+        _pitch = paz::clamp(_pitch + deltaPitch, -0.45*paz::Pi, 0.45*paz::Pi);
     }
     else
     {

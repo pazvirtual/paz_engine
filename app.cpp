@@ -221,7 +221,7 @@ void paz::App::Init(const std::string& title)
         _lookSensitivity = std::stoi(load_setting("sensitivity"));
     }
     catch(...){}
-    _lookSensitivity = std::max(1, std::min(10, _lookSensitivity));
+    _lookSensitivity = paz::clamp(_lookSensitivity, 1, 10);
 
     Window::EnableDithering();
 

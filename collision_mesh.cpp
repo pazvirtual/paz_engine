@@ -118,7 +118,7 @@ double paz::CollisionMesh::collide(double x, double y, double z, double radius, 
     xNew, double& yNew, double& zNew, double& xNor, double& yNor, double& zNor,
     const std::vector<std::size_t>& tris) const
 {
-    double minDist = std::numeric_limits<double>::infinity();
+    double minDist = inf();
     xNor = 0.;
     yNor = 0.;
     zNor = 1.;
@@ -157,7 +157,7 @@ double paz::CollisionMesh::collide(double x, double y, double z, double radius, 
 void paz::CollisionMesh::castRay(double x, double y, double z, double xDir, double yDir,
     double zDir, double& xNor, double& yNor, double& zNor, double& dist) const
 {
-    dist = std::numeric_limits<double>::infinity();
+    dist = inf();
     xNor = 0.;
     yNor = 0.;
     zNor = 1.;
