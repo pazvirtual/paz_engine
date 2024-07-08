@@ -81,7 +81,8 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
     if(!diffTexPath.empty())
     {
         _diffTex = Texture(get_asset_image(diffTexPath), MinMagFilter::Linear,
-            MinMagFilter::Linear, MipmapFilter::Anisotropic);
+            MinMagFilter::Linear, MipmapFilter::Anisotropic, WrapMode::Repeat,
+            WrapMode::Repeat);
     }
     if(!transp.empty())
     {
@@ -164,7 +165,8 @@ paz::Model::Model(const std::vector<float>& positions, const std::vector<float>&
     if(!diffTexPath.empty())
     {
         _diffTex = Texture(get_asset_image(diffTexPath), MinMagFilter::Linear,
-            MinMagFilter::Linear, MipmapFilter::Anisotropic);
+            MinMagFilter::Linear, MipmapFilter::Anisotropic, WrapMode::Repeat,
+            WrapMode::Repeat);
     }
     if(!transp.empty())
     {
