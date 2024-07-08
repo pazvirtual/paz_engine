@@ -339,7 +339,7 @@ void paz::App::Init(const std::string& title)
     }
     _defaultDiffTex = Texture(TextureFormat::RGBA8UNorm_sRGB, 512, 512, temp.
         data(), MinMagFilter::Linear, MinMagFilter::Linear, MipmapFilter::
-        Linear, WrapMode::Repeat, WrapMode::Repeat);
+        Anisotropic, WrapMode::Repeat, WrapMode::Repeat);
 
     _cursor = Texture(get_asset_image("cursor.pbm")); //TEMP - note that only red channel is used
     _reticule = Texture(get_asset_image("reticule.pbm")); //TEMP - note that only red channel is used
