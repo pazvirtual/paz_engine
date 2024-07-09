@@ -221,7 +221,7 @@ void paz::App::Init(const std::string& title)
         _lookSensitivity = std::stoi(load_setting("sensitivity"));
     }
     catch(...){}
-    _lookSensitivity = paz::clamp(_lookSensitivity, 1, 10);
+    _lookSensitivity = clamp(_lookSensitivity, 1, 10);
 
     Window::EnableDithering();
 
@@ -366,7 +366,7 @@ void paz::App::Run()
             Window::PollEvents();
 
             if(startMenu.curPage() == 1 && (Window::KeyPressed(Key::Escape) ||
-                Window::MousePressed(paz::MouseButton::Back) || Window::
+                Window::MousePressed(MouseButton::Back) || Window::
                 GamepadPressed(GamepadButton::Start)))
             {
                 startMenu.setState(0, 1);
@@ -1099,7 +1099,7 @@ void paz::App::Run()
                     Window::SetCursorMode(CursorMode::Disable);
                 }
                 else if(pauseMenu.curPage() == 1 && (Window::KeyPressed(Key::
-                    Escape) || Window::MousePressed(paz::MouseButton::Back) ||
+                    Escape) || Window::MousePressed(MouseButton::Back) ||
                     Window::GamepadPressed(GamepadButton::Start)))
                 {
                     pauseMenu.setState(0, 1);
