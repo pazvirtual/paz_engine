@@ -44,8 +44,8 @@ void Npc::update(const paz::InputData& input)
                 yAngRate(), _parent->zAngRate()}};
             const paz::Vec relPos{{x() - _parent->x(), y() - _parent->y(), z() -
                 _parent->z()}};
-            const paz::Vec relVel = static_cast<paz::Vec>(paz::to_mat(
-                invParentAtt)*parentAngRate).cross(relPos);
+            const paz::Vec relVel = (paz::to_mat(invParentAtt)*parentAngRate).
+                cross(relPos);
             xVel() = relVel(0) + _parent->xVel() + forward(0);
             yVel() = relVel(1) + _parent->yVel() + forward(1);
             zVel() = relVel(2) + _parent->zVel() + forward(2);
@@ -92,8 +92,8 @@ void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
         const paz::Vec parentAngRate{{_parent->xAngRate(), _parent->yAngRate(),
             _parent->zAngRate()}};
         const paz::Vec relPos{{x() - xB, y() - yB, z() - zB}};
-        const paz::Vec relVel = static_cast<paz::Vec>(paz::to_mat(invParentAtt)*
-            parentAngRate).cross(relPos);
+        const paz::Vec relVel = (paz::to_mat(invParentAtt)*parentAngRate).cross(
+            relPos);
         xVel() = relVel(0) + _parent->xVel() + forward(0);
         yVel() = relVel(1) + _parent->yVel() + forward(1);
         zVel() = relVel(2) + _parent->zVel() + forward(2);
