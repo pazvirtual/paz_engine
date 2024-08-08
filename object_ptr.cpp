@@ -19,39 +19,7 @@ void paz::ObjectPtr::swap(ObjectPtr& p) noexcept
     std::swap(_id, p._id);
 }
 
-paz::ObjectPtr& paz::ObjectPtr::operator=(std::nullptr_t)
-{
-    _id = NullId;
-    return *this;
-}
-
-const paz::Object& paz::ObjectPtr::operator*() const
-{
-    if(_id == NullId)
-    {
-        throw std::runtime_error("Object pointer is null.");
-    }
-    if(!OBJ_EXISTS)
-    {
-        throw std::runtime_error("Object has been deleted.");
-    }
-    return *reinterpret_cast<const Object*>(_id);
-}
-
-paz::Object& paz::ObjectPtr::operator*()
-{
-    if(_id == NullId)
-    {
-        throw std::runtime_error("Object pointer is null.");
-    }
-    if(!OBJ_EXISTS)
-    {
-        throw std::runtime_error("Object has been deleted.");
-    }
-    return *reinterpret_cast<Object*>(_id);
-}
-
-const paz::Object* paz::ObjectPtr::operator->() const
+const paz::Object* paz::ObjectPtr::get() const
 {
     if(_id == NullId)
     {
@@ -64,7 +32,7 @@ const paz::Object* paz::ObjectPtr::operator->() const
     return reinterpret_cast<const Object*>(_id);
 }
 
-paz::Object* paz::ObjectPtr::operator->()
+paz::Object* paz::ObjectPtr::get()
 {
     if(_id == NullId)
     {
@@ -75,6 +43,32 @@ paz::Object* paz::ObjectPtr::operator->()
         throw std::runtime_error("Object has been deleted.");
     }
     return reinterpret_cast<Object*>(_id);
+}
+
+paz::ObjectPtr& paz::ObjectPtr::operator=(std::nullptr_t)
+{
+    _id = NullId;
+    return *this;
+}
+
+const paz::Object& paz::ObjectPtr::operator*() const
+{
+    return *get();
+}
+
+paz::Object& paz::ObjectPtr::operator*()
+{
+    return *get();
+}
+
+const paz::Object* paz::ObjectPtr::operator->() const
+{
+    return get();
+}
+
+paz::Object* paz::ObjectPtr::operator->()
+{
+    return get();
 }
 
 paz::ObjectPtr::operator bool() const
@@ -104,6 +98,6 @@ void paz::ObjectPtr::reset(const Object& o) noexcept
 
 std::ostream& paz::operator<<(std::ostream& stream, const paz::ObjectPtr& p)
 {
-    stream << reinterpret_cast<Object*>(p._id);
+    stream << p.get();
     return stream;
 }

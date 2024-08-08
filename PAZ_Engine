@@ -209,6 +209,8 @@ namespace paz
         ObjectPtr(const Object& o);
         ObjectPtr(std::nullptr_t);
         void swap(ObjectPtr& p) noexcept;
+        const Object* get() const;
+        Object* get();
         ObjectPtr& operator=(std::nullptr_t);
         const Object& operator*() const;
         Object& operator*();
