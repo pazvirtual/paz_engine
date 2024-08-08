@@ -216,7 +216,9 @@ void paz::do_collisions(Threadpool& threads, double timestep)
     std::vector<double> times(NumSteps);
     for(std::size_t i = 0; i < NumSteps; ++i)
     {
-        times[i] = static_cast<double>(i)/(NumSteps - 1);
+        // Skip zero to avoid issues with objects that just started moving
+        // apart.
+        times[i] = static_cast<double>(i + 1)/NumSteps;
     }
 
     std::vector<Mat> bRot(b.size());
