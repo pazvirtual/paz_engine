@@ -8,9 +8,9 @@ uniform sampler2D emissMap;
 uniform sampler2D normalMap;
 uniform depthSampler2D depthMap;
 uniform mat4 invProjection;
+uniform float zFar;
+uniform float zNear;
 layout(location = 0) out vec4 color;
-const float zNear = 0.1; //TEMP
-const float zFar = 1e3; //TEMP
 void main()
 {
     vec2 uv = 0.5*loc.xy/loc.z + 0.5;

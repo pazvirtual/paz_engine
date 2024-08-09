@@ -14,8 +14,12 @@ static constexpr std::size_t MaxConsoleLines = 1000;
 static constexpr float FontScale = 1.5f;
 static constexpr int CharWidth = 5;
 static constexpr double Timestep = 1./60.;
+static constexpr int ShadowRes = 2*2*1024;
+static constexpr float ZNear = 0.1;
+static constexpr float ZFar = 1e3;
 
 static paz::Framebuffer _geometryBuffer;
+static paz::Framebuffer _shadowBuffer;
 static paz::Framebuffer _oitAccumBuffer;
 static paz::Framebuffer _oitDepthBuffer;
 static paz::Framebuffer _renderBuffer;
@@ -34,10 +38,12 @@ static paz::RenderTarget _finalRender(paz::TextureFormat::RGBA16Float, paz::MinM
 static paz::RenderTarget _finalLumMap(paz::TextureFormat::R16Float, paz::MinMagFilter::Linear, paz::MinMagFilter::Linear);
 static paz::RenderTarget _oitAccumTex(paz::TextureFormat::RGBA16Float);
 static paz::RenderTarget _oitRevealTex(paz::TextureFormat::RGBA8UNorm);
+static paz::RenderTarget _shadowMap(paz::TextureFormat::Depth32Float, ShadowRes, ShadowRes);
 
 static std::unordered_map<void*, paz::InstanceBuffer> _instances;
 
 static paz::RenderPass _geometryPass;
+static paz::RenderPass _shadowPass;
 static paz::RenderPass _renderPass0;
 static paz::RenderPass _renderPass1;
 static paz::RenderPass _dofPass;
@@ -234,6 +240,8 @@ void paz::App::Init(const std::string& title)
     _geometryBuffer.attach(_normalMap);
     _geometryBuffer.attach(_depthMap);
 
+    _shadowBuffer.attach(_shadowMap);
+
     _renderBuffer.attach(_hdrRender);
 
     _dofBuffer.attach(_dofRender);
@@ -249,6 +257,7 @@ void paz::App::Init(const std::string& title)
     _lumBuffer.attach(_finalLumMap);
 
     const VertexFunction geometryVert(get_builtin("geometry.vert").str());
+    const VertexFunction shadowVert(get_builtin("shadow.vert").str());
     const VertexFunction quadVert(get_builtin("quad.vert").str());
     const VertexFunction sceneVert0(get_builtin("scene0.vert").str());
     const VertexFunction sceneVert1(get_builtin("scene1.vert").str());
@@ -257,6 +266,7 @@ void paz::App::Init(const std::string& title)
     const VertexFunction oitVert(get_builtin("oit.vert").str());
     const VertexFunction oitDepthVert(get_builtin("oitdepth.vert").str());
     const FragmentFunction geometryFrag(get_builtin("geometry.frag").str());
+    const FragmentFunction shadowFrag(get_builtin("shadow.frag").str());
     const FragmentFunction sceneFrag0(get_asset("scene0.frag").str());
     const FragmentFunction sceneFrag1(get_asset("scene1.frag").str());
     const FragmentFunction lumFrag(get_builtin("lum.frag").str());
@@ -271,6 +281,7 @@ void paz::App::Init(const std::string& title)
     const FragmentFunction emptyFrag(get_builtin("empty.frag").str());
 
     _geometryPass = RenderPass(_geometryBuffer, geometryVert, geometryFrag);
+    _shadowPass = RenderPass(_shadowBuffer, shadowVert, shadowFrag);
     _renderPass0 = RenderPass(_renderBuffer, sceneVert0, sceneFrag0);
     _renderPass1 = RenderPass(_renderBuffer, sceneVert1, sceneFrag1, {BlendMode::
         One_One});
@@ -536,22 +547,23 @@ void paz::App::Run()
         }
 
         const double cameraWAttPrev = std::sqrt(1. - _cameraObject->xAttPrev()*
-            _cameraObject->xAttPrev() - _cameraObject->yAttPrev()*_cameraObject->
-            yAttPrev() - _cameraObject->zAttPrev()*_cameraObject->zAttPrev());
+            _cameraObject->xAttPrev() - _cameraObject->yAttPrev()*
+            _cameraObject->yAttPrev() - _cameraObject->zAttPrev()*
+            _cameraObject->zAttPrev());
         const double cameraWAtt = std::sqrt(1. - _cameraObject->xAtt()*
-            _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt() -
-            _cameraObject->zAtt()*_cameraObject->zAtt());
+            _cameraObject->xAtt() - _cameraObject->yAtt()*_cameraObject->yAtt()
+            - _cameraObject->zAtt()*_cameraObject->zAtt());
         const Vec cameraAtt = nlerp(Vec{{_cameraObject->xAttPrev(),
             _cameraObject->yAttPrev(), _cameraObject->zAttPrev(),
             cameraWAttPrev}}, Vec{{_cameraObject->xAtt(), _cameraObject->yAtt(),
             _cameraObject->zAtt(), cameraWAtt}}, fac);
 
-        const Vec cameraPos{{mix(_cameraObject->xPrev(), _cameraObject->x(), fac),
-            mix(_cameraObject->yPrev(), _cameraObject->y(), fac), mix(
+        const Vec cameraPos{{mix(_cameraObject->xPrev(), _cameraObject->x(),
+            fac), mix(_cameraObject->yPrev(), _cameraObject->y(), fac), mix(
             _cameraObject->zPrev(), _cameraObject->z(), fac)}};
 
-        const auto projection = perspective(1., Window::AspectRatio(), 0.1,
-            1e3);
+        const auto projection = perspective(1., Window::AspectRatio(), ZNear,
+            ZFar);
         Mat view = Mat::Zero(4);
         view(3, 3) = 1.;
         view.setBlock(0, 0, 3, 3, Mat{{0., -1., 0.}, {0., 0., 1.}, {-1., 0.,
@@ -706,7 +718,8 @@ void paz::App::Run()
             }
             if(n.second.back()->model()._diffTex.width())
             {
-                _geometryPass.read("diffTex", n.second.back()->model()._diffTex);
+                _geometryPass.read("diffTex", n.second.back()->model().
+                    _diffTex);
             }
             else
             {
@@ -718,9 +731,49 @@ void paz::App::Run()
             emiss[3] = 1.f;
             _geometryPass.uniform("emiss", emiss);
             _geometryPass.draw(PrimitiveType::Triangles, n.second.back()->
-                model()._v, _instances.at(n.first), n.second.back()->model()._i);
+                model()._v, _instances.at(n.first), n.second.back()->model().
+                _i);
         }
         _geometryPass.end();
+
+        static const auto lightProjection = paz::ortho(-100., 100., -100., 100., 0., ZFar); //TEMP
+        paz::Vec relLightPos(4);
+        const paz::Vec sunPos = 0.5*ZFar*_sunDir.head(3); //TEMP
+        relLightPos.setHead(3, sunPos - cameraPos);
+        relLightPos(3) = 1.;
+        paz::Mat lightView = paz::Mat::Zero(4);
+{
+const paz::Vec z = _sunDir.head(3).normalized();
+paz::Vec y = paz::Vec{{0., 1., 0.}};
+const paz::Vec x = y.cross(z).normalized();
+y = z.cross(x).normalized();
+        lightView.setBlock(0, 0, 1, 3, x.trans());
+        lightView.setBlock(1, 0, 1, 3, y.trans());
+        lightView.setBlock(2, 0, 1, 3, z.trans());
+}
+        lightView(3, 3) = 1.;
+
+        if((_sunDir(0) || _sunDir(1) || _sunDir(2)) && (_sunIll[0] || _sunIll[1]
+            || _sunIll[2]))
+        {
+            _shadowPass.begin({}, paz::LoadAction::Clear);
+            _shadowPass.cull(paz::CullMode::Back);
+            _shadowPass.depth(paz::DepthTestMode::Less);
+            _shadowPass.uniform("projection", lightProjection);
+            _shadowPass.uniform("view", convert_mat(lightView));
+            _shadowPass.uniform("relLightPos", convert_vec(relLightPos)); //TEMP - should always subtract position on CPU side (`double`s)
+            for(const auto& n : objectsByModel)
+            {
+                if(n.second.back()->model()._i.empty())
+                {
+                    continue;
+                }
+                _shadowPass.draw(PrimitiveType::Triangles, n.second.back()->
+                    model()._v, _instances.at(n.first), n.second.back()->
+                    model()._i);
+            }
+            _shadowPass.end();
+        }
 
         // Render in HDR.
         _renderPass0.begin({LoadAction::Clear});//, LoadAction::Load);
@@ -733,6 +786,13 @@ void paz::App::Run()
             projection).inv()));
         _renderPass0.uniform("lightDir", convert_vec(view*_sunDir));
         _renderPass0.uniform("ill", _sunIll);
+        _renderPass0.read("shadowMap", _shadowMap);
+        _renderPass0.uniform("invView", convert_mat(view.inv()));
+        _renderPass0.uniform("lightProjection", lightProjection);
+        _renderPass0.uniform("lightView", convert_mat(lightView));
+        _renderPass0.uniform("zNear", ZNear);
+        _renderPass0.uniform("zFar", ZFar);
+        _renderPass0.uniform("relLightPos", convert_vec(relLightPos));
         _renderPass0.draw(PrimitiveType::TriangleStrip, _quadVertices);
         _renderPass0.end();
 
@@ -749,6 +809,8 @@ void paz::App::Run()
             _renderPass1.uniform("projection", projection);
             _renderPass1.uniform("invProjection", convert_mat(convert_mat(
                 projection).inv()));
+            _renderPass1.uniform("zNear", ZNear);
+            _renderPass1.uniform("zFar", ZFar);
             _renderPass1.draw(PrimitiveType::Triangles, _sphereVertices, lights,
                 _sphereIndices);
             _renderPass1.end();
