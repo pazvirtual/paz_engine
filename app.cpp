@@ -514,9 +514,10 @@ void paz::App::Run()
             const double wAtt = std::sqrt(1. - _micObject->xAtt()*_micObject->
                 xAtt() - _micObject->yAtt()*_micObject->yAtt() - _micObject->
                 zAtt()*_micObject->zAtt());
-            const Vec micAtt = nlerp({{_micObject->xAttPrev(), _micObject->
-                yAttPrev(), _micObject->zAttPrev(), wAttPrev}}, {{_micObject->
-                xAtt(), _micObject->yAtt(), _micObject->zAtt(), wAtt}}, fac);
+            const Vec micAtt = nlerp(Vec{{_micObject->xAttPrev(), _micObject->
+                yAttPrev(), _micObject->zAttPrev(), wAttPrev}}, Vec{{
+                _micObject->xAtt(), _micObject->yAtt(), _micObject->zAtt(),
+                wAtt}}, fac);
             const Mat micRot = to_mat(micAtt);
             const Vec micX = micRot.row(0).trans();
             const Vec micY = micRot.row(1).trans();
