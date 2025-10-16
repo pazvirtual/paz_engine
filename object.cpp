@@ -394,12 +394,12 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     _cMesh.emplace_back();
     _cType.push_back(CollisionType::Default);
     _gType.push_back(GravityType::Default);
-    _xPrev.push_back(std::nan(""));
-    _yPrev.push_back(std::nan(""));
-    _zPrev.push_back(std::nan(""));
-    _xAttPrev.push_back(std::nan(""));
-    _yAttPrev.push_back(std::nan(""));
-    _zAttPrev.push_back(std::nan(""));
+    _xPrev.push_back(nan());
+    _yPrev.push_back(nan());
+    _zPrev.push_back(nan());
+    _xAttPrev.push_back(nan());
+    _yAttPrev.push_back(nan());
+    _zAttPrev.push_back(nan());
     _cRadius.push_back(0.2);
     _xDown.push_back(0.);
     _yDown.push_back(0.);
