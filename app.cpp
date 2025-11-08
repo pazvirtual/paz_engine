@@ -173,6 +173,40 @@ static const std::vector<paz::Button> OptionsButtons =
             paz::save_setting("sensitivity", std::to_string(_lookSensitivity));
         }
     },
+    {
+        []()
+        {
+            if(paz::Window::SyncToggleSupported())
+            {
+                return paz::Window::SyncEnabled() ? "V-Sync:      ON" :
+                    "V-Sync:      OFF";
+            }
+            else
+            {
+                return "V-Sync:      N/A";
+            }
+        },
+        [](paz::Menu&)
+        {
+            if(paz::Window::SyncToggleSupported())
+            {
+                if(paz::Window::SyncEnabled())
+                {
+                    paz::Window::DisableSync();
+                    paz::save_setting("sync", "0");
+                }
+                else
+                {
+                    paz::Window::EnableSync();
+                    paz::save_setting("sync", "1");
+                }
+            }
+        },
+        []()
+        {
+            return paz::Window::SyncToggleSupported();
+        }
+    },
     {"Back", [](paz::Menu& m){ m.setState(0, 1); }}
 };
 
@@ -758,7 +792,7 @@ y = z.cross(x).normalized();
             || _sunIll[2]))
         {
             _shadowPass.begin({}, paz::LoadAction::Clear);
-            _shadowPass.cull(paz::CullMode::Back);
+            _shadowPass.cull(paz::CullMode::Front);
             _shadowPass.depth(paz::DepthTestMode::Less);
             _shadowPass.uniform("projection", lightProjection);
             _shadowPass.uniform("view", convert_mat(lightView));
