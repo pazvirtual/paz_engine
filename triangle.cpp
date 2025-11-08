@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <limits>
 
-constexpr double square(double x)
+static constexpr double square(double x)
 {
     return x*x;
 }
 
-inline double segment_dist_sq(double x, double y, double x0, double y0, double
-    x1, double y1, double& nearestDeltaX, double& nearestDeltaY)
+static inline double segment_dist_sq(double x, double y, double x0, double y0,
+    double x1, double y1, double& nearestDeltaX, double& nearestDeltaY)
 {
     const double deltaX0 = x - x0;
     const double deltaY0 = y - y0;
@@ -23,15 +23,15 @@ inline double segment_dist_sq(double x, double y, double x0, double y0, double
     return square(nearestDeltaX) + square(nearestDeltaY);
 }
 
-inline void cross(double x0, double y0, double z0, double x1, double y1, double
-    z1, double& xc, double& yc, double& zc)
+static inline void cross(double x0, double y0, double z0, double x1, double y1,
+    double z1, double& xc, double& yc, double& zc)
 {
     xc = y0*z1 - z0*y1;
     yc = z0*x1 - x0*z1;
     zc = x0*y1 - y0*x1;
 }
 
-inline void normalize(double& x, double& y, double& z)
+static inline void normalize(double& x, double& y, double& z)
 {
     const double invNorm = 1./std::sqrt(x*x + y*y + z*z);
     x *= invNorm;
@@ -39,7 +39,7 @@ inline void normalize(double& x, double& y, double& z)
     z *= invNorm;
 }
 
-inline bool approx(double a, double b)
+static inline bool approx(double a, double b)
 {
     return std::abs(a - b) < 1e-6;
 }
