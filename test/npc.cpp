@@ -21,7 +21,7 @@ void Npc::update(const paz::InputData& input)
         paz::App::PushDialog("`" + _name + "`\nAsdfj asdf asdf asdf." + (paz::
             uniform() < 0.5 ? "\nBLAHBjLAH blah." : ""), 1.);
     }
-    _walkTime += input.timestep();
+    _walkTime += paz::App::Timestep();
     const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}};
     const paz::Vec initialAtt{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()
         *xAtt() - yAtt()*yAtt() - zAtt()*zAtt())}};

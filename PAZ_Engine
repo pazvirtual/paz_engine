@@ -77,7 +77,6 @@ namespace paz
     {
         friend class App;
 
-        double _timestep = 0.;
         std::array<bool, NumKeys> _keyDown = {};
         std::array<bool, NumKeys> _keyPressed = {};
         std::array<bool, NumKeys> _keyReleased = {};
@@ -97,11 +96,10 @@ namespace paz
         bool _mouseActive = false;
 
         InputData() = default;
-        void copyEvents(double timestep, double sensitivity);
+        void copyEvents(double sensitivity);
         void resetEvents();
 
     public:
-        double timestep() const;
         bool keyDown(Key key) const;
         bool keyPressed(Key key) const;
         bool keyReleased(Key key) const;
@@ -235,7 +233,7 @@ namespace paz
     public:
         App() = delete;
         static void Init(const std::string& title);
-        static void Run();
+        static void Run(bool autostart = false);
         static void AttachCamera(const Object& o);
         static void AttachMic(const Object& o);
         static double CameraYaw();
@@ -248,6 +246,8 @@ namespace paz
         static void SetSun(const Vec& dir, const Vec& ill);
         static void PushDialog(const std::string& msg, double time);
         static void SetReticule(int n, bool h);
+        static double LogicTime();
+        static double Timestep();
     };
 }
 

@@ -114,9 +114,9 @@ paz::CollisionMesh::CollisionMesh(const std::vector<float>& positions)
     _radius = std::sqrt(radiusSq);
 }
 
-double paz::CollisionMesh::collide(double x, double y, double z, double radius, double&
-    xNew, double& yNew, double& zNew, double& xNor, double& yNor, double& zNor,
-    const std::vector<std::size_t>& tris) const
+double paz::CollisionMesh::collide(double x, double y, double z, double radius,
+    double& xNew, double& yNew, double& zNew, double& xNor, double& yNor,
+    double& zNor, const std::vector<std::size_t>& tris) const
 {
     double minDist = inf();
     xNor = 0.;
@@ -154,8 +154,9 @@ double paz::CollisionMesh::collide(double x, double y, double z, double radius, 
     return minDist;
 }
 
-void paz::CollisionMesh::castRay(double x, double y, double z, double xDir, double yDir,
-    double zDir, double& xNor, double& yNor, double& zNor, double& dist) const
+void paz::CollisionMesh::castRay(double x, double y, double z, double xDir,
+    double yDir, double zDir, double& xNor, double& yNor, double& zNor, double&
+    dist) const
 {
     dist = inf();
     xNor = 0.;

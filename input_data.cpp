@@ -1,8 +1,7 @@
 #include "PAZ_Engine"
 
-void paz::InputData::copyEvents(double timestep, double sensitivity)
+void paz::InputData::copyEvents(double sensitivity)
 {
-    _timestep = timestep;
     //TEMP - would be nice to copy these structures directly in PAZ_Graphics
     for(int i = 0; i < NumKeys; ++i)
     {
@@ -51,11 +50,6 @@ void paz::InputData::resetEvents()
     _mouseReleased = {};
     _gamepadPressed = {};
     _gamepadReleased = {};
-}
-
-double paz::InputData::timestep() const
-{
-    return _timestep;
 }
 
 bool paz::InputData::keyDown(Key key) const

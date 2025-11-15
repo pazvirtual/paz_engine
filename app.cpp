@@ -3,6 +3,7 @@
 #include "shared.hpp"
 #include "io.hpp"
 #include "threads.hpp"
+#include "timer.hpp"
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include <limits>
@@ -99,6 +100,8 @@ static float _dofMaxDepth;
 
 static paz::Vec _sunDir = paz::Vec::Zero(4);
 static std::array<float, 4> _sunIll;
+
+double _logicTime = 0.;
 
 static const std::vector<paz::Button> OptionsButtons =
 {
@@ -390,12 +393,12 @@ void paz::App::Init(const std::string& title)
     _reticule = Texture(get_asset_image("reticule.pbm")); //TEMP - note that only red channel is used
 }
 
-void paz::App::Run()
+void paz::App::Run(bool autostart)
 {
     Font menuFont(_fontTex, 2.*FontScale, CharWidth);
 
     {
-        bool done = false;
+        bool done = autostart;
         Menu startMenu(menuFont, _title,
         {
             {
@@ -503,7 +506,7 @@ void paz::App::Run()
                 _paused = true;
                 pauseMenu.setState(0, 0);
             }
-            input.copyEvents(Timestep, 0.2*_lookSensitivity);
+            input.copyEvents(0.2*_lookSensitivity);
 
             while(_accumTime > 0.)
             {
@@ -512,8 +515,9 @@ void paz::App::Run()
                     std::stringstream{}.swap(_msgStream);
                 }
 
-                do_physics(_gravAcc, Timestep);
-                do_collisions(_threads, Timestep);
+                Timer t;
+                do_physics(_gravAcc, ::Timestep);
+                do_collisions(_threads, ::Timestep);
                 const auto tempObjects = objects(); //TEMP - this prevents missed or multiple updates when `objects()` changes, but is not ideal
                 for(const auto& n : tempObjects)
                 {
@@ -522,13 +526,14 @@ void paz::App::Run()
                         reinterpret_cast<Object*>(n.first)->update(input);
                     }
                 }
+                _logicTime = t.get();
 
                 input.resetEvents();
-                _accumTime -= Timestep;
+                _accumTime -= ::Timestep;
             }
         }
 
-        const double fac = 1. + _accumTime/Timestep;
+        const double fac = 1. + _accumTime/::Timestep;
 
         if(!_paused && _micObject && _soundSrc)
         {
@@ -1296,4 +1301,14 @@ void paz::App::SetReticule(int n, bool h)
 {
     _reticuleIdx = n;
     _reticuleHighlight = h;
+}
+
+double paz::App::LogicTime()
+{
+    return _logicTime;
+}
+
+double paz::App::Timestep()
+{
+    return ::Timestep;
 }

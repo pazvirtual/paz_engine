@@ -3,8 +3,9 @@
 #include "PAZ_Engine"
 #include "PAZ_Math"
 #include "timer.hpp"
-#include <iomanip>
 #include <thread>
+#include <iomanip>
+#include <iostream>
 
 static constexpr double Radius = 50.;
 
@@ -29,7 +30,7 @@ public:
     {
         if(_stuck)
         {
-            _timer += input.timestep();
+            _timer += paz::App::Timestep();
         }
         Paintball::update(input);
     }
@@ -64,7 +65,7 @@ public:
 
     void update(const paz::InputData& input) final
     {
-        _timer += input.timestep();
+        _timer += paz::App::Timestep();
         if(_timer > 0.1)
         {
             const paz::Vec pos{{x(), y(), z()}};
@@ -195,7 +196,7 @@ public:
 
     void update(const paz::InputData& input) override
     {
-        _angle = paz::normalize_angle(_angle + AngRate*input.timestep());
+        _angle = paz::normalize_angle(_angle + AngRate*paz::App::Timestep());
         updateInternal();
     }
 };
@@ -285,9 +286,11 @@ int main(int argc, char** argv)
             }
             );
     }
-    paz::App::Run();
+    paz::App::Run(runtime);
     if(runtime)
     {
         thread.join();
     }
+    std::cout << std::fixed << std::setprecision(2) << player.avgLogicRate()*
+        100. << "%" << std::endl;
 }

@@ -13,6 +13,9 @@ Player::Player()
 
 void Player::update(const paz::InputData& input)
 {
+    _avgLogicRate = 0.95*_avgLogicRate + 0.05*paz::App::LogicTime()/paz::App::
+        Timestep();
+
     const double wAtt = std::sqrt(1. - xAtt()*xAtt() - yAtt()*yAtt() - zAtt()*
         zAtt());
     paz::Vec att{{xAtt(), yAtt(), zAtt(), wAtt}};
@@ -70,6 +73,7 @@ case Regime::Low: paz::App::MsgStream() << "Low" << std::endl; break;
 case Regime::Floating: paz::App::MsgStream() << "Floating" << std::endl; break;
 }
 paz::App::MsgStream() << alt << " | " << std::setw(7) << nor.trans() << std::endl;
+paz::App::MsgStream() << "Logic " << std::fixed << std::setprecision(2) << _avgLogicRate*100. << "%" << std::endl;
 
     // Kill all roll.
     yAngRate() = 0.;
@@ -112,7 +116,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         const double deltaGravPitch = gravPitch - _prevGravPitch;
         const double deltaPitch = -deltaGravPitch + 0.1*(input.gamepadActive() ?
             15.*-input.gamepadRightStick().second : input.mousePos().second)*
-            input.timestep();
+            paz::App::Timestep();
         _pitch = paz::clamp(_pitch + deltaPitch, -0.45*paz::Pi, 0.45*paz::Pi);
     }
     else
@@ -140,7 +144,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         }
         else if(norm > 0.1)
         {
-            _mousePos -= 50.0/norm*input.timestep()*_mousePos;
+            _mousePos -= 50.0/norm*paz::App::Timestep()*_mousePos;
         }
         else
         {
@@ -238,35 +242,35 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             const paz::Vec net = -input.gamepadLeftStick().first*groundLeft -
                 input.gamepadLeftStick().second*groundForward;
-            xVel() += 12.*net(0)*input.timestep();
-            yVel() += 12.*net(1)*input.timestep();
-            zVel() += 12.*net(2)*input.timestep();
+            xVel() += 12.*net(0)*paz::App::Timestep();
+            yVel() += 12.*net(1)*paz::App::Timestep();
+            zVel() += 12.*net(2)*paz::App::Timestep();
         }
         else
         {
             if(input.keyDown(paz::Key::A))
             {
-                xVel() += 12.*groundLeft(0)*input.timestep();
-                yVel() += 12.*groundLeft(1)*input.timestep();
-                zVel() += 12.*groundLeft(2)*input.timestep();
+                xVel() += 12.*groundLeft(0)*paz::App::Timestep();
+                yVel() += 12.*groundLeft(1)*paz::App::Timestep();
+                zVel() += 12.*groundLeft(2)*paz::App::Timestep();
             }
             if(input.keyDown(paz::Key::D))
             {
-                xVel() -= 12.*groundLeft(0)*input.timestep();
-                yVel() -= 12.*groundLeft(1)*input.timestep();
-                zVel() -= 12.*groundLeft(2)*input.timestep();
+                xVel() -= 12.*groundLeft(0)*paz::App::Timestep();
+                yVel() -= 12.*groundLeft(1)*paz::App::Timestep();
+                zVel() -= 12.*groundLeft(2)*paz::App::Timestep();
             }
             if(input.keyDown(paz::Key::W))
             {
-                xVel() += 12.*groundForward(0)*input.timestep();
-                yVel() += 12.*groundForward(1)*input.timestep();
-                zVel() += 12.*groundForward(2)*input.timestep();
+                xVel() += 12.*groundForward(0)*paz::App::Timestep();
+                yVel() += 12.*groundForward(1)*paz::App::Timestep();
+                zVel() += 12.*groundForward(2)*paz::App::Timestep();
             }
             if(input.keyDown(paz::Key::S))
             {
-                xVel() -= 12.*groundForward(0)*input.timestep();
-                yVel() -= 12.*groundForward(1)*input.timestep();
-                zVel() -= 12.*groundForward(2)*input.timestep();
+                xVel() -= 12.*groundForward(0)*paz::App::Timestep();
+                yVel() -= 12.*groundForward(1)*paz::App::Timestep();
+                zVel() -= 12.*groundForward(2)*paz::App::Timestep();
             }
         }
     }
@@ -276,35 +280,35 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
         {
             const paz::Vec net = -input.gamepadLeftStick().first*left - input.
                 gamepadLeftStick().second*forward;
-            xVel() += 12.*net(0)*input.timestep();
-            yVel() += 12.*net(1)*input.timestep();
-            zVel() += 12.*net(2)*input.timestep();
+            xVel() += 12.*net(0)*paz::App::Timestep();
+            yVel() += 12.*net(1)*paz::App::Timestep();
+            zVel() += 12.*net(2)*paz::App::Timestep();
         }
         else
         {
             if(input.keyDown(paz::Key::A))
             {
-                xVel() += 12.*left(0)*input.timestep();
-                yVel() += 12.*left(1)*input.timestep();
-                zVel() += 12.*left(2)*input.timestep();
+                xVel() += 12.*left(0)*paz::App::Timestep();
+                yVel() += 12.*left(1)*paz::App::Timestep();
+                zVel() += 12.*left(2)*paz::App::Timestep();
             }
             if(input.keyDown(paz::Key::D))
             {
-                xVel() -= 12.*left(0)*input.timestep();
-                yVel() -= 12.*left(1)*input.timestep();
-                zVel() -= 12.*left(2)*input.timestep();
+                xVel() -= 12.*left(0)*paz::App::Timestep();
+                yVel() -= 12.*left(1)*paz::App::Timestep();
+                zVel() -= 12.*left(2)*paz::App::Timestep();
             }
             if(input.keyDown(paz::Key::W))
             {
-                xVel() += 12.*forward(0)*input.timestep();
-                yVel() += 12.*forward(1)*input.timestep();
-                zVel() += 12.*forward(2)*input.timestep();
+                xVel() += 12.*forward(0)*paz::App::Timestep();
+                yVel() += 12.*forward(1)*paz::App::Timestep();
+                zVel() += 12.*forward(2)*paz::App::Timestep();
             }
             if(input.keyDown(paz::Key::S))
             {
-                xVel() -= 12.*forward(0)*input.timestep();
-                yVel() -= 12.*forward(1)*input.timestep();
-                zVel() -= 12.*forward(2)*input.timestep();
+                xVel() -= 12.*forward(0)*paz::App::Timestep();
+                yVel() -= 12.*forward(1)*paz::App::Timestep();
+                zVel() -= 12.*forward(2)*paz::App::Timestep();
             }
         }
     }
@@ -327,9 +331,9 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     if(net)
     {
         _moving = true;
-        xVel() += 12.*up(0)*net*input.timestep();
-        yVel() += 12.*up(1)*net*input.timestep();
-        zVel() += 12.*up(2)*net*input.timestep();
+        xVel() += 12.*up(0)*net*paz::App::Timestep();
+        yVel() += 12.*up(1)*net*paz::App::Timestep();
+        zVel() += 12.*up(2)*net*paz::App::Timestep();
     }
 
     if(input.mousePressed(paz::MouseButton::Left) || input.gamepadPressed(paz::
@@ -372,4 +376,9 @@ void Player::onCollide(const paz::Object& o, double xNor, double yNor, double
 const paz::Object& Player::head() const
 {
     return _head;
+}
+
+double Player::avgLogicRate() const
+{
+    return _avgLogicRate;
 }
