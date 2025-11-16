@@ -159,7 +159,7 @@ paz::Model::Model(const std::vector<float>& positions, const std::vector<float>&
         _v.addAttribute(1, std::vector<unsigned int>(numVertices, 1));
         _v.addAttribute(2, uvs);
         std::vector<unsigned int> indices(numVertices);
-        std::iota(indices.begin(), indices.end(), 0);
+        std::iota(indices.begin(), indices.end(), 0u);
         _i = IndexBuffer(indices);
     }
     if(!diffTexPath.empty())

@@ -186,25 +186,63 @@ void paz::CollisionMesh::castRay(double x, double y, double z, double xDir,
 std::vector<std::size_t> paz::CollisionMesh::sweepVol(const Vec& relPosPrev,
     const Vec& relPos, double radius) const
 {
-    //TEMP - capped cylinders would give a tighter bound
-    const Vec mean = 0.5*(relPosPrev + relPos);
-    const double delta = (relPos - mean).norm();
+    // Sweep collision sphere and check if resulting capsule intersects
+    // bounding sphere.
+    const double delta1X = relPos(0) - relPosPrev(0);
+    const double delta1Y = relPos(1) - relPosPrev(1);
+    const double delta1Z = relPos(2) - relPosPrev(2);
+    const double lenSq = delta1X*delta1X + delta1Y*delta1Y + delta1Z*delta1Z;
     {
-        const double rTotal = delta + _radius + radius;
-        const double distSq = relPos.normSq();
-        if(distSq > rTotal*rTotal)
+        const double deltaX = -relPosPrev(0);
+        const double deltaY = -relPosPrev(1);
+        const double deltaZ = -relPosPrev(2);
+        double minDistSq;
+        if(lenSq < 1e-6)
+        {
+            minDistSq = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
+        }
+        else
+        {
+            const double t = std::max(0., std::min(1., (deltaX*delta1X + deltaY*
+                delta1Y + deltaZ*delta1Z)/lenSq));
+            const double nearestDeltaX = deltaX - t*delta1X;
+            const double nearestDeltaY = deltaY - t*delta1Y;
+            const double nearestDeltaZ = deltaZ - t*delta1Z;
+            minDistSq = nearestDeltaX*nearestDeltaX + nearestDeltaY*
+                nearestDeltaY + nearestDeltaZ*nearestDeltaZ;
+        }
+        const double temp = _radius + radius;
+        if(minDistSq > temp*temp)
         {
             return {};
         }
     }
+    // Check if capsule intersects each triangle's bounding sphere. //TEMP - check actual triangle intersection
     std::vector<std::size_t> tris;
     for(std::size_t i = 0; i < _t->size(); ++i)
     {
-        Vec mean1(3);
-        (*_t)[i].getCentroid(mean1(0), mean1(1), mean1(2));
-        const double rTotal = delta + (*_t)[i].radius() + radius;
-        const double distSq = (mean1 - mean).normSq();
-        if(distSq < rTotal*rTotal)
+        double centroidX, centroidY, centroidZ;
+        (*_t)[i].getCentroid(centroidX, centroidY, centroidZ);
+        const double deltaX = centroidX - relPosPrev(0);
+        const double deltaY = centroidY - relPosPrev(1);
+        const double deltaZ = centroidZ - relPosPrev(2);
+        double minDistSq;
+        if(lenSq < 1e-6)
+        {
+            minDistSq = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
+        }
+        else
+        {
+            const double t = std::max(0., std::min(1., (deltaX*delta1X + deltaY*
+                delta1Y + deltaZ*delta1Z)/lenSq));
+            const double nearestDeltaX = deltaX - t*delta1X;
+            const double nearestDeltaY = deltaY - t*delta1Y;
+            const double nearestDeltaZ = deltaZ - t*delta1Z;
+            minDistSq = nearestDeltaX*nearestDeltaX + nearestDeltaY*
+                nearestDeltaY + nearestDeltaZ*nearestDeltaZ;
+        }
+        const double temp = _radius + radius;
+        if(minDistSq < temp*temp)
         {
             tris.push_back(i);
         }

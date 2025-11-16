@@ -18,8 +18,8 @@ static inline double segment_dist_sq(double x, double y, double x0, double y0,
     const double lenSq = deltaX01*deltaX01 + deltaY01*deltaY01;
     const double t = std::max(0., std::min(1., (deltaX0*deltaX01 + deltaY0*
         deltaY01)/lenSq));
-    nearestDeltaX = x - x0 - t*deltaX01;
-    nearestDeltaY = y - y0 - t*deltaY01;
+    nearestDeltaX = deltaX0 - t*deltaX01;
+    nearestDeltaY = deltaY0 - t*deltaY01;
     return square(nearestDeltaX) + square(nearestDeltaY);
 }
 
