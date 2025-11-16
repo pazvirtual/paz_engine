@@ -7,7 +7,7 @@ class Npc : public paz::Object
 {
     paz::ObjectPtr _parent;
     double _destYaw;
-    double _walkTime;
+    int _walkTime;
     paz::Object _head;
     bool _collided = false;
     std::string _name;

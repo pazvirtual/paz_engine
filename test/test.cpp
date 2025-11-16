@@ -16,7 +16,7 @@ static paz::Model _fancyBox;
 class Droplet : public Paintball
 {
     bool _stuck = false;
-    double _timer = 0.;
+    int _timer = 0;
 
 public:
     Droplet(const paz::Vec& pos, const paz::Vec& vel, const paz::Vec& dir) :
@@ -28,9 +28,9 @@ public:
 
     void update(const paz::InputData& input) override
     {
-        if(_stuck)
+        if(_stuck && _timer < 60)
         {
-            _timer += paz::App::Timestep();
+            ++_timer;
         }
         Paintball::update(input);
     }
@@ -44,15 +44,16 @@ public:
 
     bool done() const
     {
-        return _timer > 1.;
+        return _timer == 60;
     }
 };
 
 class Fountain : public paz::Object
 {
-    double _timer = 0.;
+    int _timer = 0;
     std::vector<Droplet> _droplets;
     static constexpr int NumPerLaunch = 1;
+    static constexpr int LaunchInterval = 6;
 
 public:
     Fountain()
@@ -65,8 +66,8 @@ public:
 
     void update(const paz::InputData& input) final
     {
-        _timer += paz::App::Timestep();
-        if(_timer > 0.1)
+        ++_timer;
+        if(_timer == LaunchInterval)
         {
             const paz::Vec pos{{x(), y(), z()}};
             const paz::Vec vel{{xVel(), yVel(), zVel()}};
@@ -82,7 +83,7 @@ public:
                     NumPerLaunch;
                 _droplets.emplace_back(pos + offset*dir, vel, dir);
             }
-            _timer = 0.;
+            _timer = 0;
         }
         std::size_t i = 0;
         while(i < _droplets.size())

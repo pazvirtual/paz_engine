@@ -6,7 +6,7 @@ static constexpr double CosMaxAngle = 0.7;
 static const paz::Model Body("persontest_body.pazmodel", 0, -0.2);
 static const paz::Model Head("persontest_head.pazmodel", 0, -0.1);
 
-Npc::Npc() : _destYaw(paz::uniform(0., paz::TwoPi)), _walkTime(0.)
+Npc::Npc() : _destYaw(paz::uniform(0., paz::TwoPi)), _walkTime(0)
 {
     _head.collisionType() = paz::CollisionType::None;
     _head.gravityType() = paz::GravityType::None;
@@ -21,7 +21,10 @@ void Npc::update(const paz::InputData& input)
         paz::App::PushDialog("`" + _name + "`\nAsdfj asdf asdf asdf." + (paz::
             uniform() < 0.5 ? "\nBLAHBjLAH blah." : ""), 1.);
     }
-    _walkTime += paz::App::Timestep();
+    if(_walkTime < 600)
+    {
+        ++_walkTime;
+    }
     const paz::Vec up = -paz::Vec{{xDown(), yDown(), zDown()}};
     const paz::Vec initialAtt{{xAtt(), yAtt(), zAtt(), std::sqrt(1. - xAtt()
         *xAtt() - yAtt()*yAtt() - zAtt()*zAtt())}};
@@ -104,9 +107,9 @@ void Npc::onCollide(const paz::Object& o, double xNor, double yNor, double
         const double deltaYaw = paz::normalize_angle(_destYaw - yaw + paz::Pi) -
             paz::Pi;
         zAngRate() = deltaYaw;
-        if(_walkTime > 10.)
+        if(_walkTime == 600)
         {
-            _walkTime = 0.;
+            _walkTime = 0;
             _destYaw = paz::uniform(0., paz::TwoPi);
         }
     }
