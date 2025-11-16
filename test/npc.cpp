@@ -2,12 +2,16 @@
 #include "PAZ_Math"
 
 static constexpr double CosMaxAngle = 0.7;
+static constexpr double HeadHeight = 1.5;
+static constexpr double CapsuleRadius = 0.25*paz::SqrtThree;
 
-static const paz::Model Body("persontest_body.pazmodel", 0, -0.2);
+static const paz::Model Body("persontest_body.pazmodel", 0, -CapsuleRadius);
 static const paz::Model Head("persontest_head.pazmodel", 0, -0.1);
 
 Npc::Npc() : _destYaw(paz::uniform(0., paz::TwoPi)), _walkTime(0)
 {
+    collisionRadius() = CapsuleRadius;
+    zCollisionLen() = HeadHeight - CapsuleRadius;
     _head.collisionType() = paz::CollisionType::None;
     _head.gravityType() = paz::GravityType::None;
     _head.model() = Head;
@@ -59,7 +63,7 @@ void Npc::update(const paz::InputData& input)
     rot.setCol(0, forward);
     rot.setCol(1, left);
     rot.setCol(2, up);
-    const double h = 1.5 - collisionRadius();
+    static constexpr double h = HeadHeight - CapsuleRadius;
     _head.x() = x() + h*up(0);
     _head.y() = y() + h*up(1);
     _head.z() = z() + h*up(2);

@@ -29,6 +29,9 @@ static std::vector<double> _zAngRate;
 static std::vector<paz::Model> _mod;
 static std::vector<paz::CollisionMesh> _cMesh;
 static std::vector<paz::CollisionType> _cType;
+static std::vector<double> _xCLen;
+static std::vector<double> _yCLen;
+static std::vector<double> _zCLen;
 static std::vector<paz::GravityType> _gType;
 static std::vector<double> _xPrev;
 static std::vector<double> _yPrev;
@@ -249,19 +252,44 @@ void paz::do_collisions(Threadpool& threads, double timestep)
     {
         lcvs.push_back(threads.pushTask([=]()
         {
+            const bool capsule = std::abs(_xCLen[a[i]]) > 1e-6 || std::abs(
+                _yCLen[a[i]]) > 1e-6 || std::abs(_zCLen[a[i]]) > 1e-6;
+
+            double xLen = 0.;
+            double yLen = 0.;
+            double zLen = 0.;
+            double len = 0.;
+            if(capsule)
+            {
+                const double wAtt = std::sqrt(1. - _xAtt[a[i]]*_xAtt[a[i]] -
+                    _yAtt[a[i]]*_yAtt[a[i]] - _zAtt[a[i]]*_zAtt[a[i]]);
+                const Vec att{{_xAtt[a[i]], _yAtt[a[i]], _zAtt[a[i]], wAtt}};
+                const Mat invRot = to_mat(qinv(att));
+                const Vec lenVec = invRot*Vec{{_xCLen[a[i]], _yCLen[a[i]],
+                    _zCLen[a[i]]}};
+
+                xLen = lenVec(0);
+                yLen = lenVec(1);
+                zLen = lenVec(2);
+                len = std::sqrt(xLen*xLen + yLen*yLen + zLen*zLen);
+            }
+
             // `a[i]` may collide with any `b[c[j].first]`'s triangles in
             // `c[j].second`.
+            // Note: This is based on a bounding sphere around the capsule,
+            // which forms a capsule when swept.
             std::unordered_map<std::size_t, std::vector<std::size_t>> c;
             for(std::size_t j = 0; j < b.size(); ++j)
             {
-                Vec relPosPrev{{_xPrev[a[i]] - _xPrev[b[j]], _yPrev[a[i]] -
-                    _yPrev[b[j]], _zPrev[a[i]] - _zPrev[b[j]]}};
+                Vec relPosPrev{{_xPrev[a[i]] + 0.5*xLen - _xPrev[b[j]], _yPrev[
+                    a[i]] + 0.5*yLen - _yPrev[b[j]], _zPrev[a[i]] + 0.5*zLen -
+                    _zPrev[b[j]]}};
                 relPosPrev = bRot[j]*relPosPrev;
-                Vec relPos{{_x[a[i]] - _x[b[j]], _y[a[i]] - _y[b[j]], _z[a[i]] -
-                    _z[b[j]]}};
+                Vec relPos{{_x[a[i]] + 0.5*xLen - _x[b[j]], _y[a[i]] + 0.5*yLen
+                    - _y[b[j]], _z[a[i]] + 0.5*zLen - _z[b[j]]}};
                 relPos = bRot[j]*relPos;
                 const auto temp = GET_CMESH(b[j]).sweepVol(relPosPrev, relPos,
-                    _cRadius[a[i]]);
+                    _cRadius[a[i]] + 0.5*len);
                 if(!temp.empty())
                 {
                     c[j] = std::move(temp);
@@ -290,9 +318,23 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                     const double y2 = relPos(1);
                     const double z2 = relPos(2);
                     double xNew, yNew, zNew, xNorTemp, yNorTemp, zNorTemp;
-                    const double dist = GET_CMESH(b[n.first]).collide(x2, y2,
-                        z2, _cRadius[a[i]], xNew, yNew, zNew, xNorTemp,
-                        yNorTemp, zNorTemp, n.second);
+                    double dist;
+                    if(capsule)
+                    {
+                        const Vec len2 = bRot[n.first]*Vec{{xLen, yLen, zLen}}; //TEMP - can precompute for each `b`
+                        const double xLen2 = len2(0);
+                        const double yLen2 = len2(1);
+                        const double zLen2 = len2(2);
+                        dist = GET_CMESH(b[n.first]).collideCapsule(x2, y2, z2,
+                            _cRadius[a[i]], xLen2, yLen2, zLen2, xNew, yNew,
+                            zNew, xNorTemp, yNorTemp, zNorTemp, n.second);
+                    }
+                    else
+                    {
+                        dist = GET_CMESH(b[n.first]).collideSphere(x2, y2, z2,
+                            _cRadius[a[i]], xNew, yNew, zNew, xNorTemp,
+                            yNorTemp, zNorTemp, n.second);
+                    }
                     if(dist < _cRadius[a[i]])
                     {
                         collisions.emplace_back(n.first, std::array<double, 3>{
@@ -393,6 +435,9 @@ paz::Object::Object() : _id(reinterpret_cast<std::uintptr_t>(this))
     _mod.emplace_back();
     _cMesh.emplace_back();
     _cType.push_back(CollisionType::Default);
+    _xCLen.push_back(0.);
+    _yCLen.push_back(0.);
+    _zCLen.push_back(0.);
     _gType.push_back(GravityType::Default);
     _xPrev.push_back(nan());
     _yPrev.push_back(nan());
@@ -429,6 +474,9 @@ paz::Object::Object(const Object& o) : _id(reinterpret_cast<std::uintptr_t>(
     PUSH_COPY(_mod)
     PUSH_COPY(_cMesh)
     PUSH_COPY(_cType)
+    PUSH_COPY(_xCLen)
+    PUSH_COPY(_yCLen)
+    PUSH_COPY(_zCLen)
     PUSH_COPY(_gType)
     PUSH_COPY(_xPrev);
     PUSH_COPY(_yPrev);
@@ -479,6 +527,9 @@ paz::Object& paz::Object::operator=(const Object& o)
         COPY(_mod)
         COPY(_cMesh)
         COPY(_cType)
+        COPY(_xCLen)
+        COPY(_yCLen)
+        COPY(_zCLen)
         COPY(_gType)
         COPY(_xPrev);
         COPY(_yPrev);
@@ -523,6 +574,9 @@ paz::Object& paz::Object::operator=(const Object& o)
         PUSH_COPY(_mod)
         PUSH_COPY(_cMesh)
         PUSH_COPY(_cType)
+        PUSH_COPY(_xCLen)
+        PUSH_COPY(_yCLen)
+        PUSH_COPY(_zCLen)
         PUSH_COPY(_gType)
         PUSH_COPY(_xPrev);
         PUSH_COPY(_yPrev);
@@ -600,6 +654,9 @@ paz::Object& paz::Object::operator=(Object&& o) noexcept
         PUSH_COPY(_mod)
         PUSH_COPY(_cMesh)
         PUSH_COPY(_cType)
+        PUSH_COPY(_xCLen)
+        PUSH_COPY(_yCLen)
+        PUSH_COPY(_zCLen)
         PUSH_COPY(_gType)
         PUSH_COPY(_xPrev);
         PUSH_COPY(_yPrev);
@@ -653,6 +710,9 @@ paz::Object::~Object()
     SWAP_AND_POP(_mod)
     SWAP_AND_POP(_cMesh)
     SWAP_AND_POP(_cType)
+    SWAP_AND_POP(_xCLen)
+    SWAP_AND_POP(_yCLen)
+    SWAP_AND_POP(_zCLen)
     SWAP_AND_POP(_gType)
     SWAP_AND_POP(_xPrev);
     SWAP_AND_POP(_yPrev);
@@ -846,6 +906,36 @@ paz::CollisionType& paz::Object::collisionType()
 const paz::CollisionType& paz::Object::collisionType() const
 {
     return _cType[objects().at(_id)];
+}
+
+double& paz::Object::xCollisionLen()
+{
+    return _xCLen[objects().at(_id)];
+}
+
+double paz::Object::xCollisionLen() const
+{
+    return _xCLen[objects().at(_id)];
+}
+
+double& paz::Object::yCollisionLen()
+{
+    return _yCLen[objects().at(_id)];
+}
+
+double paz::Object::yCollisionLen() const
+{
+    return _yCLen[objects().at(_id)];
+}
+
+double& paz::Object::zCollisionLen()
+{
+    return _zCLen[objects().at(_id)];
+}
+
+double paz::Object::zCollisionLen() const
+{
+    return _zCLen[objects().at(_id)];
 }
 
 paz::GravityType& paz::Object::gravityType()

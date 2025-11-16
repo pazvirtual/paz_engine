@@ -4,9 +4,13 @@
 #define NO_FRICTION
 
 static constexpr double CosMaxAngle = 0.7;
+static constexpr double HeadHeight = 1.5;
+static constexpr double CapsuleRadius = 0.25*paz::SqrtThree;
 
 Player::Player()
 {
+    collisionRadius() = CapsuleRadius;
+    zCollisionLen() = HeadHeight - CapsuleRadius;
     _head.collisionType() = paz::CollisionType::None;
     _head.gravityType() = paz::GravityType::None;
 }
@@ -159,7 +163,7 @@ paz::App::MsgStream() << std::fixed << std::setprecision(2) << std::setw(6) << (
     left = rot.row(1).trans();
     const paz::Vec up = rot.row(2).trans();
 
-    const double h = 1.5 - collisionRadius();
+    static constexpr double h = HeadHeight - CapsuleRadius;
     _head.x() = x() + h*up(0);
     _head.y() = y() + h*up(1);
     _head.z() = z() + h*up(2);

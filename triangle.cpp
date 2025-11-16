@@ -2,6 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include <stdexcept>
 
 static constexpr double square(double x)
 {
@@ -163,8 +164,8 @@ double paz::Triangle::distTransformed(double xt, double yt, double zt, double&
     return std::sqrt(dyzSq + xt*xt);
 }
 
-void paz::Triangle::collide(double x, double y, double z, double radius, double&
-    nx, double& ny, double& nz, double& d) const
+void paz::Triangle::collideSphere(double x, double y, double z, double radius,
+    double& nx, double& ny, double& nz, double& d) const
 {
     d = std::numeric_limits<double>::infinity();
     nx = 0.;
@@ -221,6 +222,33 @@ void paz::Triangle::collide(double x, double y, double z, double radius, double&
     nx = _basisXX*dirX + _basisYX*dirY + _basisZX*dirZ;
     ny = _basisXY*dirX + _basisYY*dirY + _basisZY*dirZ;
     nz = _basisXZ*dirX + _basisYZ*dirY + _basisZZ*dirZ;
+}
+
+void paz::Triangle::collideCapsule(double x, double y, double z, double radius,
+    double xLen, double yLen, double zLen, double& nx, double& ny, double& nz,
+    double& d) const
+{
+    d = std::numeric_limits<double>::infinity();
+    nx = 0.;
+    ny = 0.;
+    nz = 0.;
+
+    for(std::size_t i = 0; i < 10; ++i) //TEMP
+    {
+        const double fac = static_cast<double>(i)/(10 - 1);
+        const double curX = x + fac*xLen;
+        const double curY = y + fac*yLen;
+        const double curZ = z + fac*zLen;
+        double curNX, curNY, curNZ, curD;
+        collideSphere(curX, curY, curZ, radius, curNX, curNY, curNZ, curD);
+        if(curD < d)
+        {
+            d = curD;
+            nx = curNX;
+            ny = curNY;
+            nz = curNZ;
+        }
+    }
 }
 
 double paz::Triangle::castRay(double x, double y, double z, double xDir, double

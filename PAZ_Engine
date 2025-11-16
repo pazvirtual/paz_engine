@@ -28,9 +28,13 @@ namespace paz
         friend class Object;
         friend void do_collisions(Threadpool&, double);
 
-        double collide(double x, double y, double z, double radius, double&
-            xNew, double& yNew, double& zNew, double& xNor, double& yNor,
-            double& zNor, const std::vector<std::size_t>& tris) const;
+        double collideSphere(double x, double y, double z, double radius,
+            double& xNew, double& yNew, double& zNew, double& xNor, double&
+            yNor, double& zNor, const std::vector<std::size_t>& tris) const;
+        double collideCapsule(double x, double y, double z, double radius,
+            double xLen, double yLen, double zLen, double& xNew, double& yNew,
+            double& zNew, double& xNor, double& yNor, double& zNor, const std::
+            vector<std::size_t>& tris) const;
         void castRay(double x, double y, double z, double xDir, double yDir,
             double zDir, double& xNor, double& yNor, double& zNor, double& dist)
             const;
@@ -178,6 +182,12 @@ namespace paz
         const CollisionMesh& collisionMesh() const;
         CollisionType& collisionType();
         const CollisionType& collisionType() const;
+        double& xCollisionLen();
+        double xCollisionLen() const;
+        double& yCollisionLen();
+        double yCollisionLen() const;
+        double& zCollisionLen();
+        double zCollisionLen() const;
         GravityType& gravityType();
         const GravityType& gravityType() const;
         double& collisionHeight();

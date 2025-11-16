@@ -114,9 +114,9 @@ paz::CollisionMesh::CollisionMesh(const std::vector<float>& positions)
     _radius = std::sqrt(radiusSq);
 }
 
-double paz::CollisionMesh::collide(double x, double y, double z, double radius,
-    double& xNew, double& yNew, double& zNew, double& xNor, double& yNor,
-    double& zNor, const std::vector<std::size_t>& tris) const
+double paz::CollisionMesh::collideSphere(double x, double y, double z, double
+    radius, double& xNew, double& yNew, double& zNew, double& xNor, double&
+    yNor, double& zNor, const std::vector<std::size_t>& tris) const
 {
     double minDist = inf();
     xNor = 0.;
@@ -132,7 +132,50 @@ double paz::CollisionMesh::collide(double x, double y, double z, double radius,
     for(auto n : tris)
     {
         double xNorTemp, yNorTemp, zNorTemp, d;
-        (*_t)[n].collide(x, y, z, radius, xNorTemp, yNorTemp, zNorTemp, d);
+        (*_t)[n].collideSphere(x, y, z, radius, xNorTemp, yNorTemp, zNorTemp,
+            d);
+        if(d < radius)
+        {
+            const double a = radius - d;
+            gx += a*xNorTemp;
+            gy += a*yNorTemp;
+            gz += a*zNorTemp;
+            if(d < minDist)
+            {
+                minDist = d;
+                xNor = xNorTemp;
+                yNor = yNorTemp;
+                zNor = zNorTemp;
+            }
+        }
+    }
+    xNew = x + gx;
+    yNew = y + gy;
+    zNew = z + gz;
+    return minDist;
+}
+
+double paz::CollisionMesh::collideCapsule(double x, double y, double z, double
+    radius, double xLen, double yLen, double zLen, double& xNew, double& yNew,
+    double& zNew, double& xNor, double& yNor, double& zNor, const std::vector<
+    std::size_t>& tris) const
+{
+    double minDist = inf();
+    xNor = 0.;
+    yNor = 0.;
+    zNor = 1.;
+    if(std::sqrt(x*x + y*y + z*z) > _radius + radius)
+    {
+        return minDist;
+    }
+    double gx = 0.;
+    double gy = 0.;
+    double gz = 0.;
+    for(auto n : tris)
+    {
+        double xNorTemp, yNorTemp, zNorTemp, d;
+        (*_t)[n].collideCapsule(x, y, z, radius, xLen, yLen, zLen, xNorTemp,
+            yNorTemp, zNorTemp, d);
         if(d < radius)
         {
             const double a = radius - d;
