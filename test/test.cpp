@@ -8,10 +8,13 @@
 #include <iostream>
 
 static constexpr double Radius = 50.;
+static constexpr double HeadHeight = 1.5;
+static constexpr double CapsuleRadius = 0.25*paz::SqrtThree;
 
 static paz::Model _sphere50;
 static paz::Model _sphere10;
 static paz::Model _fancyBox;
+static paz::Model _capsule;
 
 class Droplet : public Paintball
 {
@@ -202,6 +205,35 @@ public:
     }
 };
 
+class Rotor : public paz::Object
+{
+    std::vector<paz::Vec> contactPts;
+
+public:
+    Rotor()
+    {
+        collisionRadius() = CapsuleRadius;
+        zCollisionLen() = HeadHeight - CapsuleRadius;
+        model() = _capsule;
+    }
+
+    void update(const paz::InputData& input) override
+    {
+        xAngRate() = 0.3;
+        //for(const auto& n : contactPts)
+        //{
+        //    // do friction ...
+        //}
+        //contactPts.clear();
+    }
+
+    void onCollide(const Object& o, double xNor, double yNor, double zNor,
+        double xB, double yB, double zB) override
+    {
+        //contactPts.emplace_back({{xC, yC, zC}});
+    }
+};
+
 int main(int argc, char** argv)
 {
     double runtime = 0.;
@@ -215,10 +247,12 @@ int main(int argc, char** argv)
         Radius}});
     _sphere10 = paz::Model("icosphere5.pazmodel", 0, 0., 10., "moon.bmp");
     _fancyBox = paz::Model("fancybox.pazmodel");
+    _capsule = paz::Model("personcapsule.pazmodel");
     Player player;
     player.y() = 1.;
     player.z() = Radius + 10.;
     World w;
+#if 0
     std::array<World1, 4> w1;
     w1[0].x() = 0.9*Radius;
     w1[1].x() = -0.9*Radius;
@@ -256,6 +290,11 @@ int main(int argc, char** argv)
     npc5.z() = -npc5.z();
     npc0.setName("NPC 0");
     npc1.setName("NPC 1");
+#endif
+    Rotor r;
+    r.x() = 3.;
+    r.y() = 3.;
+    r.z() = Radius + 3.;
     w.lights().push_back({ Radius + 5. + 10., 0., 0., 1., 0., 0., 0.1});
     w.lights().push_back({-Radius - 5. - 10., 0., 0., 1., 1., 0., 0.1});
     w.lights().push_back({0.,  Radius + 5. + 10., 0., 1., 1., 1., 0.1});
