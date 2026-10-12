@@ -84,7 +84,8 @@ void paz::do_physics(double gravity, double timestep)
     const auto n = _x.size();
     for(std::size_t i = 0; i < n; ++i)
     {
-        if(_cType[i] == CollisionType::World && _stdGravParam[i] > 0.) //TEMP - should go off of `_gType[i]`
+        //TEMP - should go off of `_gType[i]`
+        if(_cType[i] == CollisionType::World && _stdGravParam[i] > 0.)
         {
             massiveIds.push_back(i);
         }
@@ -321,7 +322,8 @@ void paz::do_collisions(Threadpool& threads, double timestep)
                     double dist;
                     if(capsule)
                     {
-                        const Vec len2 = bRot[n.first]*Vec{{xLen, yLen, zLen}}; //TEMP - can precompute for each `b`
+                        //TEMP - can precompute `len2` for each `b`
+                        const Vec len2 = bRot[n.first]*Vec{{xLen, yLen, zLen}};
                         const double xLen2 = len2(0);
                         const double yLen2 = len2(1);
                         const double zLen2 = len2(2);

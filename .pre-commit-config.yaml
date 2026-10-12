@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-yaml
+  - repo: https://github.com/pazmivaniye/pre-commit-hooks
+    rev: 1b68e86ecd79d6d7c5db499fac5743fdfd0a2f8a
+    hooks:
+      - id: check-chars
+      - id: check-filenames
+      - id: check-line-length
+        exclude: ^(\.github/|(test/)?Makefile$|app.cpp|test/player.cpp$)
+  - repo: local
+    hooks:
+      - id: test
+        name: test
+        description: Run test program
+        entry: make test
+        language: system
+        pass_filenames: false
+        always_run: true

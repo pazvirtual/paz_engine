@@ -1,7 +1,8 @@
 #include "PAZ_Engine"
 #include "object.hpp"
 
-//TEMP - VECTOR REALLOC CHANGES IDS/PTRS (NEED MODIFY OBJ'S MOVE CTOR & DELETE OBJ'S COPY CTOR TO FIX)
+//TEMP - VECTOR REALLOC CHANGES IDS/PTRS (NEED MODIFY OBJ'S MOVE CTOR & DELETE
+//TEMP - OBJ'S COPY CTOR TO FIX)
 
 #define OBJ_EXISTS objects().count(_id) //TEMP - wrong if new object has same ID
 

@@ -1,17 +1,32 @@
 PROJNAME := PAZ_Engine
 CXXVER := 17
-MINMACOSVER := 10.12
+MINMACOSVER := 11.0
 
 LIBNAME := $(shell echo $(PROJNAME) | sed 's/_//g' | tr '[:upper:]' '[:lower:]')
 ifeq ($(OS), Windows_NT)
-    LIBPATH := /mingw64/lib
-    INCLPATH := /mingw64/include
     OSPRETTY := Windows
+    ifeq ($(MSYSTEM), UCRT64)
+        CC := gcc
+        CXX := g++
+        LIBPATH := /ucrt64/lib
+        INCLPATH := /ucrt64/include
+    else ifeq ($(MSYSTEM), CLANG64)
+        CC := clang
+        CXX := clang++
+        LIBPATH := /clang64/lib
+        INCLPATH := /clang64/include
+    else
+        $(error Unsupported Windows environment)
+    endif
 else
     ifeq ($(shell uname -s), Darwin)
         OSPRETTY := macOS
+        CC := clang
+        CXX := clang++
     else
         OSPRETTY := Linux
+        CC := gcc
+        CXX := g++
     endif
     LIBPATH := /usr/local/lib
     INCLPATH := /usr/local/include
@@ -28,12 +43,8 @@ else
     endif
 endif
 CXXFLAGS := -std=c++$(CXXVER) $(CFLAGS) -Wold-style-cast
-ifeq ($(OSPRETTY), macOS)
+ifeq ($(CC), clang)
     CXXFLAGS += -Wno-string-plus-int
-else
-    ifeq ($(OSPRETTY), Windows)
-        CXXFLAGS += -Wno-deprecated-copy
-    endif
 endif
 ARFLAGS := -rcs
 
@@ -45,8 +56,10 @@ ifeq ($(OSPRETTY), macOS)
 endif
 OBJCSRC := $(wildcard *.mm)
 ifeq ($(OSPRETTY), macOS)
-    ARMOBJ := assets_arm64.o $(patsubst %.c, %_arm64.o, $(patsubst %.cpp, %.c, $(CSRC))) $(OBJCSRC:%.mm=%_arm64.o)
-    INTOBJ := assets_x86_64.o $(patsubst %.c, %_x86_64.o, $(patsubst %.cpp, %.c, $(CSRC))) $(OBJCSRC:%.mm=%_x86_64.o)
+    ARMOBJ := assets_arm64.o $(patsubst %.c, %_arm64.o, $(patsubst %.cpp, %.c, \
+        $(CSRC))) $(OBJCSRC:%.mm=%_arm64.o)
+    INTOBJ := assets_x86_64.o $(patsubst %.c, %_x86_64.o, $(patsubst %.cpp, \
+        %.c, $(CSRC))) $(OBJCSRC:%.mm=%_x86_64.o)
 else
     OBJ := assets.o $(patsubst %.c, %.o, $(patsubst %.cpp, %.c, $(CSRC)))
 endif
@@ -74,15 +87,26 @@ lib$(LIBNAME).a: $(OBJ)
 endif
 
 install: $(PROJNAME) lib$(LIBNAME).a
-	cmp -s $(PROJNAME) $(INCLPATH)/$(PROJNAME) || cp $(PROJNAME) $(INCLPATH)/
-	cmp -s lib$(LIBNAME).a $(LIBPATH)/lib$(LIBNAME).a || cp lib$(LIBNAME).a $(LIBPATH)/
+	@[[ -d $(INCLPATH) ]] || \
+	    { echo "mkdir -p $(INCLPATH)"; mkdir -p $(INCLPATH); }
+	@cmp -s $(PROJNAME) $(INCLPATH)/$(PROJNAME) && \
+	    echo "Nothing to do for $(INCLPATH)/$(PROJNAME)" || \
+	    { echo "cp $(PROJNAME) $(INCLPATH)/"; \
+	    cp $(PROJNAME) $(INCLPATH)/; }
+	@[[ -d $(LIBPATH) ]] || \
+	    { echo "mkdir -p $(LIBPATH)"; mkdir -p $(LIBPATH); }
+	@cmp -s lib$(LIBNAME).a $(LIBPATH)/lib$(LIBNAME).a && \
+	    echo "Nothing to do for $(LIBPATH)/lib$(LIBNAME).a" || \
+	    { echo "cp lib$(LIBNAME).a $(LIBPATH)/"; \
+	    cp lib$(LIBNAME).a $(LIBPATH)/; }
 
 test: lib$(LIBNAME).a
 	$(MAKE) -C test
 	test/test 2
 
 analyze: $(OBJCSRC)
-	$(foreach n, $(OBJCSRC), clang++ --analyze $(n) $(CXXFLAGS) && $(RM) $(n:%.mm=%.plist);)
+	$(foreach n, $(OBJCSRC), clang++ --analyze $(n) $(CXXFLAGS) && $(RM) \
+	    $(n:%.mm=%.plist);)
 
 %_arm64.o: %.cpp
 	$(CXX) -arch arm64 -c -o $@ $< $(CXXFLAGS)
@@ -118,10 +142,15 @@ assets_arm64.o assets_x86_64.o: assets.pazarchive
 	as -arch x86_64 -mmacosx-version-min=$(MINMACOSVER) include-assets.s -o assets_x86_64.o
 	$(RM) include-assets.s
 assets_x86_64.o: assets_arm64.o
-else
+else ifeq ($(CC), gcc)
 assets.o: assets.pazarchive
 	ld -r -b binary -o assets.o assets.pazarchive
 	objcopy --prefix-symbols=_paz assets.o
+else
+assets.o: assets.pazarchive
+	@printf ".section assets, \"rd\"\n.global _paz_binary_assets_pazarchive_start\n.global _paz_binary_assets_pazarchive_end\n_paz_binary_assets_pazarchive_start: .incbin \"assets.pazarchive\"\n_paz_binary_assets_pazarchive_end:" > include-assets.s
+	$(CC) -c include-assets.s -o assets.o
+	$(RM) include-assets.s
 endif
 
 assets.pazarchive: $(ASSETS)

@@ -260,7 +260,8 @@ std::vector<std::size_t> paz::CollisionMesh::sweepVol(const Vec& relPosPrev,
             return {};
         }
     }
-    // Check if capsule intersects each triangle's bounding sphere. //TEMP - check actual triangle intersection
+    // Check if capsule intersects each triangle's bounding sphere.
+    //TEMP - check actual triangle intersection
     std::vector<std::size_t> tris;
     for(std::size_t i = 0; i < _t->size(); ++i)
     {

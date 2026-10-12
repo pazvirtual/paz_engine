@@ -75,7 +75,8 @@ paz::Model::Model(const std::string& path, int idx, double zOffset, double
     }
     _v.addAttribute(4, positions[idx]);
     _v.addAttribute(4, normals[idx]);
-    _v.addAttribute(1, std::vector<unsigned int>(positions[idx].size()/4, 1)); //TEMP
+    _v.addAttribute(1, std::vector<unsigned int>(positions[idx].size()/4, //TEMP
+        1));
     _v.addAttribute(2, uvs[idx]);
     _i = IndexBuffer(indices[idx]);
     if(!diffTexPath.empty())

@@ -38,9 +38,11 @@ void main()
     temp1 = 0.5*temp1/temp1.w + 0.5;
     vec2 shadowUv = temp1.xy;
     float depthLs = temp1.z;
-    float bias = min(3e-3*sqrt(1. - cosAngle*cosAngle)/cosAngle, 3e-2); // should compute in shadow map
+    // should compute `bias` in shadow map
+    float bias = min(3e-3*sqrt(1. - cosAngle*cosAngle)/cosAngle, 3e-2);
     uint c1 = 0;
-    for(uint i = 0u; i < res; ++i) // should be gaussian kernel
+    // should be gaussian kernel
+    for(uint i = 0u; i < res; ++i)
     {
         for(uint j = 0u; j < res; ++j)
         {

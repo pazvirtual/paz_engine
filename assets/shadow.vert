@@ -22,6 +22,7 @@ void main()
     mat4 model = mat4(1. - 2.*(yy + zz), 2.*(xy + zw), 2.*(xz - yw), 0.,
                       2.*(xy - zw), 1. - 2.*(xx + zz), 2.*(yz + xw), 0.,
                       2.*(xz + yw), 2.*(yz - xw), 1. - 2.*(xx + yy), 0.,
-                      model0.w - relLightPos.x, model1.x - relLightPos.y, model1.y - relLightPos.z, 1.);
+                      model0.w - relLightPos.x, model1.x - relLightPos.y,
+                          model1.y - relLightPos.z, 1.);
     gl_Position = mul(projection, mul(view, mul(model, position)));
 }
