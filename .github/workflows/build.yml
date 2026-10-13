@@ -32,7 +32,7 @@ jobs:
       - name: Build and Install Modules
         run: |
           for n in {audio,graphics,io,math}; do
-              git clone https://github.com/pazvirtual/paz_${n}.git
+              git clone --recurse-submodules https://github.com/pazvirtual/paz_${n}.git
               make -C paz_${n} -j
               make -C paz_${n} install
           done
@@ -75,7 +75,7 @@ jobs:
       - name: Build and Install Modules
         run: |
           for n in {audio,graphics,io,math}; do
-              git clone https://github.com/pazvirtual/paz_${n}.git
+              git clone --recurse-submodules https://github.com/pazvirtual/paz_${n}.git
               make -C paz_${n} -j
               make -C paz_${n} install
           done
@@ -115,7 +115,7 @@ jobs:
         run: |
           export DISPLAY=:0
           for n in {audio,graphics,io,math}; do
-              git clone https://github.com/pazvirtual/paz_${n}.git
+              git clone --recurse-submodules https://github.com/pazvirtual/paz_${n}.git
               make -C paz_${n} -j
               sudo make -C paz_${n} install
           done
