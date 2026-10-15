@@ -23,22 +23,22 @@ jobs:
       - name: Check Audio Device
         shell: powershell
         run: Get-CimInstance Win32_SoundDevice | fl *
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           update: true
-          install: make git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-portaudio
+          install: diffutils make git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-portaudio
       - name: Build and Install Modules
         run: |
           for n in {audio,graphics,io,math}; do
               git clone --recurse-submodules https://github.com/pazvirtual/paz_${n}.git
-              make -C paz_${n} -j
+              make -C paz_${n} libpaz${n}.a -j
               make -C paz_${n} install
           done
       - name: Build and Test
         run: make -j
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-ucrt64-build
           path: |
@@ -66,22 +66,22 @@ jobs:
       - name: Check Audio Device
         shell: powershell
         run: Get-CimInstance Win32_SoundDevice | fl *
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: CLANG64
           update: true
-          install: make git mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-portaudio
+          install: diffutils make git mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-portaudio
       - name: Build and Install Modules
         run: |
           for n in {audio,graphics,io,math}; do
               git clone --recurse-submodules https://github.com/pazvirtual/paz_${n}.git
-              make -C paz_${n} -j
+              make -C paz_${n} libpaz${n}.a -j
               make -C paz_${n} install
           done
       - name: Build and Test
         run: make -j
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-clang64-build
           path: |
@@ -91,18 +91,16 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install cmake xorg-dev xvfb portaudio19-dev
           curl -LO https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
           unzip glfw-3.4.zip
-          cd glfw-3.4
-          cmake -S . -B build -D GLFW_BUILD_WAYLAND=0
-          cd build
-          make
-          sudo make install
+          cmake -S glfw-3.4 -B glfw-3.4/build -D GLFW_BUILD_WAYLAND=0
+          make -C glfw-3.4/build
+          sudo make -C glfw-3.4/build install
       - name: Simulate Display
         run: Xvfb &
       - name: Simulate Audio Device
@@ -116,14 +114,14 @@ jobs:
           export DISPLAY=:0
           for n in {audio,graphics,io,math}; do
               git clone --recurse-submodules https://github.com/pazvirtual/paz_${n}.git
-              make -C paz_${n} -j
+              make -C paz_${n} libpaz${n}.a -j
               sudo make -C paz_${n} install
           done
       - name: Build and Test
         run: |
           export DISPLAY=:0
           make -j
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-build
           path: |
